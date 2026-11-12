@@ -29,6 +29,7 @@ ap.add_argument('--out', default='render/out')
 ap.add_argument('--name', default='')
 ap.add_argument('--sun', type=float, default=None, help="azimut du soleil en degrés (0 = +X), pour les essais")
 ap.add_argument('--exposure', type=float, default=None)
+ap.add_argument('--view', default='', choices=['', 'top'], help='vue de contrôle du matériel')
 args = ap.parse_args(argv)
 V = Vector
 T0 = time.time()
@@ -112,7 +113,11 @@ def stop_0():
 
     cam_pos = V((0.96, -0.56, 0.092))
     target = V((-0.131, 0.012, 0.044))
-    cam = camera(cam_pos, target, lens=115, fstop=2.8, focus=(0, 0, lift + P.BALL_R))
+    if args.view == 'top':  # contrôle du club, vu du joueur
+        cam_pos, target = V((0.16, 0.34, 0.50)), V((-0.035, 0.0, 0.02))
+        cam = camera(cam_pos, target, lens=85, fstop=8, focus=(-0.03, 0, 0.03))
+    else:
+        cam = camera(cam_pos, target, lens=115, fstop=2.8, focus=(0, 0, lift + P.BALL_R))
 
     # L'herbe du départ : dense devant la caméra, plus rare au loin, là où tout est flou.
     view = (target - cam_pos).normalized()

@@ -4,6 +4,7 @@ import math
 import os
 import warnings
 
+import bmesh
 import bpy
 import numpy as np
 from mathutils import Matrix, Vector
@@ -243,19 +244,23 @@ def wood3(loft=15.0, lie=57.0):
     # Contour vu de dessus : superellipse plus carrée devant (la face), plus ronde derrière.
     ex = np.where(c > 0, 3.6, 2.15)
     rad = (np.abs(c) ** ex + np.abs(s) ** ex) ** (-1 / ex)
-    ox, oy = a * rad * c, b * rad * s
+    # Forme en poire : la pointe (−Y) plus large que le talon (+Y), où s'attache le manche.
+    ox, oy = a * rad * c, b * rad * s * (0.98 - 0.07 * s)
     # Une pointe un peu plus haute que le talon, un arrière qui s'abaisse.
-    lift = 1 + 0.10 * (-s) * (c > -0.3) - 0.22 * np.clip(-c, 0, 1) ** 1.5
+    lift_y = 0.07 * (-s)
+    lift_x = -0.24 * np.clip(-c, 0, 1) ** 1.6
 
     def shell(height, p, q, sign):
         z = height * (1 - rho[:, None] ** p) ** (1 / q)
         v = np.zeros((n_r + 1, n_s, 3))
         v[:, :, 0] = xc + rho[:, None] * ox[None]
         v[:, :, 1] = rho[:, None] * oy[None]
-        v[:, :, 2] = zmid + sign * z * (lift[None] if sign > 0 else 1)
+        # La pente de la couronne s'installe depuis le centre : tous les rayons s'y rejoignent à la même hauteur.
+        tilt = 1 + lift_y[None] * rho[:, None] + lift_x[None] * rho[:, None] ** 2 if sign > 0 else 1
+        v[:, :, 2] = zmid + sign * z * tilt
         return v
 
-    top = shell(h_top, 2.3, 2.1, +1)
+    top = shell(h_top, 2.5, 2.7, +1)
     bot = shell(h_bot, 3.6, 2.6, -1)
     verts = np.concatenate([top.reshape(-1, 3), bot[:-1].reshape(-1, 3)])  # l'anneau du bord est partagé
     n_top = (n_r + 1) * n_s
@@ -273,56 +278,92 @@ def wood3(loft=15.0, lie=57.0):
                 q = [idx(part, i, j), idx(part, i, j + 1), idx(part, i + 1, j + 1), idx(part, i + 1, j)]
                 faces.append(q if part == 'bot' else q[::-1])
                 part_of.append(0 if part == 'top' else 1)
-    faces = np.array(faces)
-    part_of = np.array(part_of)
+    head = mesh_obj('Bois3', verts, np.array(faces))
+    me = head.data
+    me.polygons.foreach_set('material_index', np.array(part_of, dtype=np.int32))
+    rho_v = np.zeros(len(verts), dtype=np.float32)
+    back_v = np.zeros(len(verts), dtype=np.float32)
+    rho_v[:n_top] = np.repeat(rho, n_s)
+    back_v[:n_top] = np.tile(np.clip(-c, 0, 1), n_r + 1)
+    me.attributes.new('rho', 'FLOAT', 'POINT').data.foreach_set('value', rho_v)
+    me.attributes.new('back', 'FLOAT', 'POINT').data.foreach_set('value', back_v)
 
-    # La face : tout ce qui dépasse le plan incliné du loft est ramené dessus (bombé horizontal et vertical).
-    normal = np.array([math.cos(L), 0.0, math.sin(L)])
-    p0 = np.array([0.0, 0.0, 0.017])
-    dist = (verts - p0) @ normal
-    bulge = -(verts[:, 1] ** 2) / (2 * 0.28) - ((verts[:, 2] - p0[2]) ** 2) / (2 * 0.30)
-    over = dist - bulge
-    on_face = over > 0
-    verts[on_face] -= normal[None] * over[on_face, None]
-    face_poly = on_face[faces].all(axis=1)
-    part_of[face_poly] = 2
-    verts[:, 2] -= verts[:, 2].min()  # la semelle touche z = 0
+    # La face : le corps est tranché net par le plan incliné du loft, et la coupe est refermée.
+    bm = bmesh.new()
+    bm.from_mesh(me)
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-6)
+    normal = V((math.cos(L), 0.0, math.sin(L)))
+    cut = bmesh.ops.bisect_plane(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:], dist=1e-7, plane_co=V((0.0, 0.0, 0.017)), plane_no=normal, clear_outer=True)
+    rim = [e for e in cut['geom_cut'] if isinstance(e, bmesh.types.BMEdge)]
+    for f in bmesh.ops.holes_fill(bm, edges=rim)['faces']:
+        f.material_index = 2
+        f.smooth = False
+    bm.normal_update()
+    bm.to_mesh(me)
+    bm.free()
+    me.update()
 
-    head = mesh_obj('Bois3', verts, faces)
-    # Tête tout en noir : couronne mate à trois points ambre, flancs satinés, face noire à stries blanches.
-    crown = mat('Couronne', (0.016, 0.017, 0.020), rough=0.44, coat_weight=0.12, coat_roughness=0.3)
+    # Tête tout en noir : couronne brillante en carbone tressé, liseré ambre à l'arrière, repère
+    # d'alignement à l'avant ; flancs satinés ; face noire à stries blanches.
+    crown = mat('Couronne', (0.012, 0.013, 0.015), rough=0.3, coat_weight=1.0, coat_roughness=0.035)
     nt = crown.node_tree
+    cb = bsdf(crown)
+
+    def cal(kind, a, b=None, c=None):
+        n = nt.nodes.new('ShaderNodeMath')
+        n.operation = kind
+        for k, v in enumerate((a, b, c)):
+            if v is None:
+                continue
+            if isinstance(v, (int, float)):
+                n.inputs[k].default_value = v
+            else:
+                nt.links.new(v, n.inputs[k])
+        return n.outputs[0]
+
     tc = nt.nodes.new('ShaderNodeTexCoord')
     sep = nt.nodes.new('ShaderNodeSeparateXYZ')
     nt.links.new(tc.outputs['Object'], sep.inputs[0])
+    # Carbone tressé : un damier fin en diagonale, qui s'efface vers la face.
+    mp = nt.nodes.new('ShaderNodeMapping')
+    mp.inputs['Rotation'].default_value = (0, 0, math.radians(45))
+    nt.links.new(tc.outputs['Object'], mp.inputs['Vector'])
+    chk = nt.nodes.new('ShaderNodeTexChecker')
+    chk.inputs['Scale'].default_value = 800
+    nt.links.new(mp.outputs['Vector'], chk.inputs['Vector'])
+    fade = nt.nodes.new('ShaderNodeMapRange')
+    fade.inputs['From Min'].default_value = -0.012
+    fade.inputs['From Max'].default_value = -0.034
+    nt.links.new(sep.outputs['X'], fade.inputs['Value'])
+    weave = cal('MULTIPLY', chk.outputs['Fac'], fade.outputs[0])
+    # Liseré ambre le long du bord arrière, et un point d'alignement à l'avant.
+    att_r = nt.nodes.new('ShaderNodeAttribute')
+    att_r.attribute_name = 'rho'
+    att_b = nt.nodes.new('ShaderNodeAttribute')
+    att_b.attribute_name = 'back'
+    ring = cal('MULTIPLY', cal('GREATER_THAN', att_r.outputs['Fac'], 0.930), cal('LESS_THAN', att_r.outputs['Fac'], 0.952))
+    trim = cal('MULTIPLY', ring, cal('GREATER_THAN', att_b.outputs['Fac'], 0.12))
     flat = nt.nodes.new('ShaderNodeCombineXYZ')
     nt.links.new(sep.outputs['X'], flat.inputs['X'])
     nt.links.new(sep.outputs['Y'], flat.inputs['Y'])
-    dots = None
-    for (dx, dy, dr) in ((-0.017, 0.0, 0.0017), (-0.0195, 0.0085, 0.0009), (-0.0195, -0.0085, 0.0009)):
-        dist = nt.nodes.new('ShaderNodeVectorMath')
-        dist.operation = 'DISTANCE'
-        dist.inputs[1].default_value = (dx, dy, 0)
-        nt.links.new(flat.outputs[0], dist.inputs[0])
-        inside = nt.nodes.new('ShaderNodeMath')
-        inside.operation = 'LESS_THAN'
-        inside.inputs[1].default_value = dr
-        nt.links.new(dist.outputs['Value'], inside.inputs[0])
-        if dots is None:
-            dots = inside
-        else:
-            add = nt.nodes.new('ShaderNodeMath')
-            add.operation = 'MAXIMUM'
-            nt.links.new(dots.outputs[0], add.inputs[0])
-            nt.links.new(inside.outputs[0], add.inputs[1])
-            dots = add
+    dist = nt.nodes.new('ShaderNodeVectorMath')
+    dist.operation = 'DISTANCE'
+    dist.inputs[1].default_value = (-0.017, 0.0, 0)
+    nt.links.new(flat.outputs[0], dist.inputs[0])
+    amber = cal('MAXIMUM', trim, cal('LESS_THAN', dist.outputs['Value'], 0.0016))
+    base = nt.nodes.new('ShaderNodeMix')
+    base.data_type = 'RGBA'
+    base.inputs['A'].default_value = (0.009, 0.010, 0.012, 1)
+    base.inputs['B'].default_value = (0.022, 0.024, 0.027, 1)
+    nt.links.new(weave, base.inputs['Factor'])
     gold = nt.nodes.new('ShaderNodeMix')
     gold.data_type = 'RGBA'
-    gold.inputs['A'].default_value = (0.016, 0.017, 0.020, 1)
     gold.inputs['B'].default_value = (0.90, 0.55, 0.12, 1)
-    nt.links.new(dots.outputs[0], gold.inputs['Factor'])
-    nt.links.new(gold.outputs['Result'], bsdf(crown).inputs['Base Color'])
-    nt.links.new(dots.outputs[0], bsdf(crown).inputs['Metallic'])
+    nt.links.new(amber, gold.inputs['Factor'])
+    nt.links.new(base.outputs['Result'], gold.inputs['A'])
+    nt.links.new(gold.outputs['Result'], cb.inputs['Base Color'])
+    nt.links.new(amber, cb.inputs['Metallic'])
+    nt.links.new(cal('MULTIPLY_ADD', weave, 0.12, 0.26), cb.inputs['Roughness'])
     sole = mat('Flancs', (0.030, 0.031, 0.034), rough=0.30, metal=1.0)
     face = mat('Face', (0.022, 0.022, 0.024), rough=0.34, metal=1.0)
     nt = face.node_tree
@@ -342,7 +383,7 @@ def wood3(loft=15.0, lie=57.0):
                 nt.links.new(v, n.inputs[k])
         return n.outputs[0]
 
-    pitch, thick, z0, zr, yr = 0.0042, 0.00055, 0.0185, 0.0150, 0.036
+    pitch, thick, z0, zr, yr = 0.0046, 0.00055, 0.0180, 0.0135, 0.031
     # Une strie blanche tous les 4,2 mm, dans une enveloppe ovale (plus courtes en haut et en bas).
     row = calc('ABSOLUTE', calc('SUBTRACT', calc('FRACT', calc('DIVIDE', sep.outputs['Z'], pitch)), 0.5))
     line = calc('LESS_THAN', row, thick / pitch / 2)
@@ -359,7 +400,6 @@ def wood3(loft=15.0, lie=57.0):
     nt.links.new(calc('SUBTRACT', 1.0, mask), bsdf(face).inputs['Metallic'])
     nt.links.new(calc('MULTIPLY_ADD', mask, 0.2, 0.34), bsdf(face).inputs['Roughness'])
     assign(head, crown, sole, face)
-    head.data.polygons.foreach_set('material_index', part_of.astype(np.int32))
     bev = head.modifiers.new('Bevel', 'BEVEL')
     bev.width = 0.0009
     bev.segments = 3
@@ -375,12 +415,12 @@ def wood3(loft=15.0, lie=57.0):
     shaft = lathe('Manche', prof, 40)
     steel = mat('Hosel', (0.030, 0.031, 0.034), rough=0.34, metal=1.0)
     ferr = mat('Bague', (0.70, 0.71, 0.73), rough=0.18, metal=1.0)
-    graph = mat('Graphite', (0.022, 0.024, 0.028), rough=0.42, coat_weight=0.25, coat_roughness=0.3)
+    graph = mat('Graphite', (0.010, 0.011, 0.013), rough=0.38, coat_weight=0.3, coat_roughness=0.25)
     assign(shaft, steel, ferr, graph)
     zf = np.array([np.mean([shaft.data.vertices[i].co.z for i in p.vertices]) for p in shaft.data.polygons])
     shaft.data.polygons.foreach_set('material_index', np.where(zf < 0.0308, 0, np.where(zf < 0.0345, 1, 2)).astype(np.int32))
-    top_z = float(verts[:, 2].max())
-    shaft.location = (-0.020, 0.036, top_z - 0.010)
+    top_z = zmid + h_top
+    shaft.location = (-0.015, 0.0385, top_z - 0.012)
     shaft.rotation_euler = (-(math.pi / 2 - math.radians(lie)), 0, 0)
 
     root = link(bpy.data.objects.new('Club', None))
