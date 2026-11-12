@@ -7,8 +7,7 @@ Portfolio IA & data d'Antoine Millot, raconté par un seul coup de golf. Même m
 > On voit la tête du bois 3 traverser la balle, puis on suit la balle : chaque arrêt du vol est un
 > projet. Elle se pose à 40 cm du trou. Le dernier putt, c'est le contact.
 
-Rien n'est construit tant que ce plan n'est pas validé. Les décisions marquées **Défaut** sont celles
-que j'applique sans réponse contraire.
+Plan validé le 12 novembre 2026, avec les décisions de la section 11.
 
 ---
 
@@ -43,7 +42,7 @@ d'arrière-plan. C'est ce qui rend l'image photoréaliste et lisible, sur ordina
 | 2 | Le vol | Montée (`#fnac-darty`) | Derrière la balle, au-dessus de l'étang : reflets du soleil en flou. | Projet 2 : **pipeline de données**. |
 | 3 | Le vol | Sommet (`#spendmap`) | À hauteur de balle, 28 m au-dessus du trou : la balle sur le ciel, tout le parcours en dessous. | Projet 3 : **RAG + graphe**, la vue d'ensemble. |
 | 4 | Le vol | Descente (`#payfit`) | Au-dessus de la balle qui plonge : bunkers, green et drapeau flous en contrebas. | Projet 4 : **évaluation**, le contrôle de trajectoire. |
-| 5 | Le vol | Atterrissage (`#riskscope`) | Ras du green : la balle figée à l'instant du premier rebond, gouttes de rosée, drapeau au fond. | Projet 5 : **agents + sources**, se poser sur un verdict. |
+| 5 | Le vol | Atterrissage (`#estimia`) | Ras du green : la balle figée à l'instant du premier rebond, gouttes de rosée, drapeau au fond. | Projet 5 : **produit data en ligne**, se poser sur le bon prix. |
 | → | | *Le roulement* | Deux rebonds, la balle roule et s'arrête à 40 cm du trou. | |
 | 6 | Le green | Le chemin parcouru (`#parcours`) | Derrière le trou, on regarde vers le départ : la balle au premier plan, toute la trajectoire tracée jusqu'au tee. | Parcours : 4 étapes posées sur la trajectoire. |
 | 7 | Le green | Le sac (`#sac`) | Gros plan sur le sac posé au bord du green : têtes de clubs, serviette, étiquettes de sac. | Savoir-faire (3 familles) et 7 certifications. |
@@ -82,7 +81,7 @@ Cinq projets, un concept chacun, pour couvrir toute la chaîne sans redite.
 | Montée | BDD Licter × Fnac Darty | Pipeline de données | Du scraping au tableau de bord COMEX en 5 jours : collecte, sentiment GPT-4o, clustering, Supabase. Code public. | Pipeline 100 % automatisé |
 | Sommet | SpendMap | RAG + graphe | Le plus architecturé : extraction IA des PDF, embeddings, clustering, graphe Neo4j, agent qui traduit une question en SQL. | Les dépenses du groupe, interrogées en langage naturel |
 | Descente | Hackathon PayFit | Évaluation | Une IA rédige, une seconde note, et tout repart sous 70/100 : la boucle de qualité que les équipes IA attendent. | Publication automatique, qualité contrôlée |
-| Atterrissage | RiskScope | Agents + sources | Application complète : 5 angles d'analyse, des centaines de sources, chaque affirmation sourcée, un verdict. Code public. | Mémo IC en 3 min |
+| Atterrissage | Estimia | Produit data en ligne | Le seul qu'un recruteur peut essayer lui-même : plusieurs sources croisées, un prix au m², un niveau de confiance, un rapport. Démo publique. | Une estimation en quelques secondes |
 
 Chaque arrêt projet affiche : le concept, **l'obstacle** (le problème, une phrase), **le coup joué**
 (la solution, une phrase, avec un schéma source → traitement → sortie), **le score** (le résultat),
@@ -90,10 +89,12 @@ les outils, et les liens vers l'étude de cas et le code.
 
 Laissés hors du vol, et pourquoi :
 
-- **Meridian** : très proche de RiskScope (recherche sourcée par IA) ; un seul des deux suffit.
+- **RiskScope** : remplacé par Estimia à la demande d'Antoine. Conséquence : le volet « agents qui
+  citent leurs sources » n'a plus d'arrêt dans le vol. **Meridian** couvre le même sujet et peut le
+  reprendre si un sixième arrêt est souhaité.
 - **Hackathon 3M** (finaliste) et **IKORY** (−4 h de travail par jour en stage) : placés dans le
   parcours, à l'arrêt 6, là où un prix et un résultat en entreprise pèsent le plus.
-- **LVMH, Carrefour, Estimia, Devis Traiteur, SEO/GEO Control Room** : peu ou pas d'IA à montrer, ou
+- **LVMH, Carrefour, Devis Traiteur, SEO/GEO Control Room** : peu ou pas d'IA à montrer, ou
   contenu confidentiel. Ils restent accessibles par le lien « Portfolio complet ».
 
 ---
@@ -235,12 +236,11 @@ des cadrages.
 
 ---
 
-## 11. Décisions à confirmer
+## 11. Décisions prises
 
-1. **Droitier ou gaucher ?** Cela fixe le côté du club et de la caméra. **Défaut : droitier.**
-2. **Titre de l'arrêt 0.** Pour des postes IA, je mettrais « AI Engineer & Data Analyst » plutôt que
-   l'ordre actuel. **Défaut : AI Engineer & Data Analyst.**
-3. **Les cinq projets** du tableau, dans cet ordre. **Défaut : oui.**
-4. **Tes vrais repères de golf** (index, club, palmarès) : je ne les invente pas. Si tu me les donnes,
-   ils vont à l'arrêt 0 ou 6. **Défaut : aucun chiffre de golf personnel.**
-5. **Le dépôt `TeeTime`** : si c'est un projet data ou IA montrable, il a sa place ici. **Défaut : non inclus.**
+1. **Droitier.** Le club arrive par la droite de la balle vue de face ; l'ombre du joueur suit.
+2. **Les cinq projets** : Revenue Engine, Licter × Fnac Darty, SpendMap, Hackathon PayFit, Estimia.
+3. **Aucun repère de golf personnel** (index, club, palmarès) sur le site.
+4. **`TeeTime`** n'est pas un projet à montrer.
+5. **Titre de l'arrêt 0** : sans réponse, j'applique « AI Engineer & Data Analyst ». Un mot suffit
+   pour revenir à « Data Analyst & AI Engineer ».
