@@ -154,20 +154,23 @@ def stop_0():
 
 def study_finish():
     """Étude : le joueur de dos, au finish, à contre-jour dans l'aube (d'après la photo de practice)."""
-    hdr = 'lilienstein'
+    hdr = 'kloppenheim_06_8k'
     az0, el = sun_azimuth(hdr)
-    want = math.radians(args.sun if args.sun is not None else 3)
-    P.sky(hdr, rotation=want - az0, strength=1.0)
-    scene.view_settings.exposure = args.exposure if args.exposure is not None else -1.1
+    # Dans ce ciel le soleil est derrière les nuages : la percée a été repérée à la main.
+    want = math.radians(args.sun if args.sun is not None else 107)
+    P.sky(hdr, rotation=want - az0, strength=1.0, light=0.4)
+    P.sun(azimuth=1.0, elevation=6.0, strength=2.6)
+    scene.view_settings.exposure = args.exposure if args.exposure is not None else -0.9
     print(f'soleil : hauteur {math.degrees(el):.1f}°')
     player.golfer_finish()
-    cam_pos = V((-7.2, -0.50, 0.50))
-    target = V((0.0, -0.62, 1.04))
-    cam = camera(cam_pos, target, lens=85, fstop=2.0, focus=(0, -0.09, 1.2))
+    # Caméra basse qui lève les yeux, comme sur la photo : la silhouette se découpe sur le ciel.
+    cam_pos = V((-4.7, -0.55, 0.38))
+    target = V((0.0, 0.42, 1.06))
+    cam = camera(cam_pos, target, lens=40, fstop=2.8, focus=(0, -0.09, 1.2))
     view = (target - cam_pos).normalized()
     view.z = 0
     xy = np.concatenate([
-        P.scatter_cone(1_100_000, cam_pos - view * 0.3, view, 0.2, 16.0, math.radians(22), seed=1, falloff=0.6),
+        P.scatter_cone(1_500_000, cam_pos - view * 0.6, view, 0.2, 22.0, math.radians(33), seed=1, falloff=0.6),
         P.scatter_cone(250_000, (0.0, -0.1), view, 0.0, 1.6, math.pi, seed=2, falloff=0.0),
     ])
     rng = np.random.default_rng(5)

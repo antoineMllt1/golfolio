@@ -95,8 +95,9 @@ def look_at(o, target):
 
 
 # ---------------------------------------------------------------- ciel
-def sky(hdr, rotation=0.0, strength=1.0):
-    """Ciel photographié : il éclaire la scène et sert de fond."""
+def sky(hdr, rotation=0.0, strength=1.0, light=None):
+    """Ciel photographié : il éclaire la scène et sert de fond.
+    `light` : force de l'éclairage si elle doit différer de ce que voit la caméra (pour une silhouette)."""
     world = bpy.data.worlds.new('World')
     bpy.context.scene.world = world
     world.use_nodes = True
@@ -111,7 +112,28 @@ def sky(hdr, rotation=0.0, strength=1.0):
     bg = nt.nodes['Background']
     nt.links.new(env.outputs['Color'], bg.inputs['Color'])
     bg.inputs['Strength'].default_value = strength
+    if light is not None:
+        path = nt.nodes.new('ShaderNodeLightPath')
+        pick = nt.nodes.new('ShaderNodeMix')
+        pick.data_type = 'FLOAT'
+        pick.inputs['A'].default_value = light
+        pick.inputs['B'].default_value = strength
+        nt.links.new(path.outputs['Is Camera Ray'], pick.inputs['Factor'])
+        nt.links.new(pick.outputs['Result'], bg.inputs['Strength'])
     return world
+
+
+def sun(azimuth, elevation, strength=2.5, color=(1.0, 0.74, 0.48), angle=2.0):
+    """Soleil d'appoint, quand celui du ciel est voilé. Angles en degrés, azimut 0 = +X."""
+    l = bpy.data.lights.new('Soleil', 'SUN')
+    l.energy = strength
+    l.color = color
+    l.angle = math.radians(angle)
+    o = link(bpy.data.objects.new('Soleil', l))
+    az, el = math.radians(azimuth), math.radians(elevation)
+    d = V((math.cos(el) * math.cos(az), math.cos(el) * math.sin(az), math.sin(el)))
+    o.rotation_euler = (-d).to_track_quat('-Z', 'Y').to_euler()
+    return o
 
 
 # ---------------------------------------------------------------- balle

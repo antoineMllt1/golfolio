@@ -1,5 +1,5 @@
 # Télécharge les fichiers Poly Haven (CC0) utilisés par les scènes dans render/assets (non versionné).
-#   python3 render/fetch_assets.py [nom ...]      sans argument : tous les ciels de SKIES
+#   python3 render/fetch_assets.py [nom[@8k] ...]      sans argument : tous les ciels de SKIES
 import json
 import os
 import sys
@@ -34,6 +34,10 @@ def files(asset):
     return json.load(urllib.request.urlopen(urllib.request.Request(f'https://api.polyhaven.com/files/{asset}', headers=UA)))
 
 
-for name in sys.argv[1:] or SKIES:
-    print(name)
-    get(files(name)['hdri'][SKIES.get(name, '4k')]['hdr']['url'], os.path.join(OUT, f'{name}.hdr'))
+for arg in sys.argv[1:] or SKIES:
+    # « nom » ou « nom@8k » : la résolution par défaut est celle de SKIES, sinon 4k.
+    name, _, res = arg.partition('@')
+    res = res or SKIES.get(name, '4k')
+    print(name, res)
+    suffix = '' if res == SKIES.get(name, '4k') else f'_{res}'
+    get(files(name)['hdri'][res]['hdr']['url'], os.path.join(OUT, f'{name}{suffix}.hdr'))

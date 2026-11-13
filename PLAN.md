@@ -51,11 +51,16 @@ Image nette en 4K, sujet toujours au même endroit de l'écran.
 
 Seul le coup du 6 vers le 7 est suivi d'un bout à l'autre (même trou) : c'est la fin de la partie.
 
-### Le joueur, seulement en flou
+### Le joueur ressemble à Antoine
 
-Le joueur (droitier) n'est jamais net ni entier. Dans les vues serrées, seuls la tête et le bas du
-manche sont dans le cadre. Dans les vues de face, ses chaussures blanches et le bas de ses jambes
-apparaissent flous à l'arrière-plan, comme sur les photos de référence d'Antoine.
+Construit d'après ses photos (`render/player.py`) : silhouette fine, casquette marine, cheveux bruns
+ondulés qui dépassent, haut blanc à manches longues, chino beige, baskets blanches, gant blanc à la
+main gauche. C'est une silhouette stylisée, sans visage : il est montré de dos, à contre-jour ou
+dans le flou, jamais net de face.
+
+- **De dos, au finish**, découpé sur le ciel, comme sur sa photo de practice (étude : `--study finish`).
+- **De face, en flou** : ses baskets et le bas du chino derrière la balle.
+- **Dans les vues serrées** : seuls la tête du club et le bas du manche sont dans le cadre.
 
 ### Pourquoi ce coup pour ce projet
 
