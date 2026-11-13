@@ -17,6 +17,7 @@ from mathutils import Vector
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import parts as P  # noqa: E402
+import player  # noqa: E402
 
 argv = sys.argv[sys.argv.index('--') + 1 :] if '--' in sys.argv else []
 ap = argparse.ArgumentParser()
@@ -30,6 +31,7 @@ ap.add_argument('--name', default='')
 ap.add_argument('--sun', type=float, default=None, help="azimut du soleil en degrés (0 = +X), pour les essais")
 ap.add_argument('--exposure', type=float, default=None)
 ap.add_argument('--view', default='', choices=['', 'top'], help='vue de contrôle du matériel')
+ap.add_argument('--study', default='', choices=['', 'finish'], help="étude hors film : le joueur de dos au finish")
 args = ap.parse_args(argv)
 V = Vector
 T0 = time.time()
@@ -150,10 +152,42 @@ def stop_0():
     return cam
 
 
+def study_finish():
+    """Étude : le joueur de dos, au finish, à contre-jour dans l'aube (d'après la photo de practice)."""
+    hdr = 'lilienstein'
+    az0, el = sun_azimuth(hdr)
+    want = math.radians(args.sun if args.sun is not None else 3)
+    P.sky(hdr, rotation=want - az0, strength=1.0)
+    scene.view_settings.exposure = args.exposure if args.exposure is not None else -1.1
+    print(f'soleil : hauteur {math.degrees(el):.1f}°')
+    player.golfer_finish()
+    cam_pos = V((-7.2, -0.50, 0.50))
+    target = V((0.0, -0.62, 1.04))
+    cam = camera(cam_pos, target, lens=85, fstop=2.0, focus=(0, -0.09, 1.2))
+    view = (target - cam_pos).normalized()
+    view.z = 0
+    xy = np.concatenate([
+        P.scatter_cone(1_100_000, cam_pos - view * 0.3, view, 0.2, 16.0, math.radians(22), seed=1, falloff=0.6),
+        P.scatter_cone(250_000, (0.0, -0.1), view, 0.0, 1.6, math.pi, seed=2, falloff=0.0),
+    ])
+    rng = np.random.default_rng(5)
+    n = len(xy)
+    clump = 1 + 0.22 * np.sin(xy[:, 0] * 9.1 + 1.3) * np.cos(xy[:, 1] * 7.3 + 0.4)
+    h = (0.012 + 0.008 * rng.random(n) ** 1.4) * clump
+    w = 0.0008 + 0.0006 * rng.random(n)
+    P.grass(xy, h, w, seed=11, lean=(0.1, 0.9))
+    P.ground(color_near=(0.030, 0.085, 0.012), color_far=(0.23, 0.21, 0.10))
+    P.bloom()
+    return cam
+
+
 STOPS = [stop_0]
-STOPS[args.stop]()
+if args.study == 'finish':
+    study_finish()
+else:
+    STOPS[args.stop]()
 os.makedirs(args.out, exist_ok=True)
-path = os.path.join(args.out, (args.name or f'stop-{args.stop}') + '.png')
+path = os.path.join(args.out, (args.name or (args.study or f'stop-{args.stop}')) + '.png')
 T1 = time.time()
 scene.render.filepath = os.path.abspath(path)
 bpy.ops.render.render(write_still=True)
