@@ -18,6 +18,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import parts as P  # noqa: E402
 import player  # noqa: E402
+import human  # noqa: E402
 
 argv = sys.argv[sys.argv.index('--') + 1 :] if '--' in sys.argv else []
 ap = argparse.ArgumentParser()
@@ -30,8 +31,8 @@ ap.add_argument('--out', default='render/out')
 ap.add_argument('--name', default='')
 ap.add_argument('--sun', type=float, default=None, help="azimut du soleil en degrés (0 = +X), pour les essais")
 ap.add_argument('--exposure', type=float, default=None)
-ap.add_argument('--view', default='', choices=['', 'top'], help='vue de contrôle du matériel')
-ap.add_argument('--study', default='', choices=['', 'finish'], help="étude hors film : le joueur de dos au finish")
+ap.add_argument('--view', default='', choices=['', 'top', 'side', 'front'], help='vue de contrôle')
+ap.add_argument('--study', default='', choices=['', 'finish', 'body'], help="études hors film : le joueur de dos au finish, ou son corps seul")
 args = ap.parse_args(argv)
 V = Vector
 T0 = time.time()
@@ -184,9 +185,26 @@ def study_finish():
     return cam
 
 
+def study_body():
+    """Contrôle : le corps posé, en gris neutre, pour vérifier l'anatomie et la pose."""
+    P.sky('lilienstein', rotation=math.radians(args.sun if args.sun is not None else 200), strength=1.0)
+    scene.view_settings.exposure = args.exposure if args.exposure is not None else -0.8
+    body = human.Body()
+    verts, marks = human.finish_pose(body)
+    origin = marks['left_foot']
+    o = P.mesh_obj('Corps', human.to_scene(verts, origin), body.faces)
+    P.assign(o, P.mat('Gris', (0.55, 0.55, 0.55), rough=0.6))
+    P.ground(color_near=(0.10, 0.11, 0.10), color_far=(0.2, 0.2, 0.2))
+    cams = {'': ((-5.0, 0.0, 1.0), (0, 0, 0.95)), 'side': ((0.0, -5.0, 1.0), (0, 0, 0.95)), 'front': ((5.0, 0.0, 1.0), (0, 0, 0.95)), 'top': ((-2.5, 2.5, 3.2), (0, 0, 1.0))}
+    pos, tgt = cams[args.view]
+    return camera(V(pos), V(tgt), lens=45, fstop=11, focus=(0, 0, 1))
+
+
 STOPS = [stop_0]
 if args.study == 'finish':
     study_finish()
+elif args.study == 'body':
+    study_body()
 else:
     STOPS[args.stop]()
 os.makedirs(args.out, exist_ok=True)
