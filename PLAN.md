@@ -1,231 +1,197 @@
-# Golfolio — plan d'action
+# Golfolio — plan d'action (version 3)
 
-Portfolio IA & data d'Antoine Millot, raconté par une partie de golf. Même méthode que
-`portfolio-3d` (film pré-rendu dans Blender, rejoué par la page, un geste = un arrêt), nouveau sujet.
+Portfolio IA & data d'Antoine Millot. On suit une balle de golf sur deux trous : chaque coup ouvre un
+projet, le dernier putt est le contact. Film pré-rendu dans Blender, rejoué par la page, un geste =
+un coup (méthode du guide et de `portfolio-3d`).
 
-> **Une partie, huit coups.** Chaque swipe joue un coup de golf, filmé d'un angle différent.
-> Chaque arrêt est un trou, une lumière, un projet. On part à l'aube du trou 1 ; le dernier putt,
-> au crépuscule du 18, c'est le contact.
+> **Deux trous, six coups, deux birdies.** Un par 5 puis un par 3. Sept arrêts : le départ, cinq
+> projets, le contact.
 
-Plan validé le 12 novembre 2026, puis réorienté le même jour par Antoine : « chaque swipe est un coup
-de golf d'une vue différente » et « un rendu aesthetic ». Décisions en section 11.
+Validé par Antoine le 26 novembre 2026 : « je me filmerai pas mais le reste fonce ».
 
 ---
 
-## 1. Ce qui est vérifié
+## 1. Ce qui est décidé
 
-| Sujet | Constat |
+| Sujet | Décision |
 | --- | --- |
-| Méthode | Celle du guide PDF et du dépôt `portfolio-3d` (lu en entier). Le lecteur d'images et la gestion des gestes sont repris, pas réinventés. |
-| Contenu réel | 12 projets publiés, 7 certifications, contact et liens : lus en direct sur `antoine-millot.up.railway.app/api/content`. Parcours dans `Portfolio-Pro/src/lib/content.js`. |
-| Blender ici | `pip install bpy` installe Blender 5.3.0 ; Cycles tourne sur les 4 cœurs, sans carte graphique, avec le débruiteur. |
-| Temps mesurés | 63 s pour une image de mouvement (1920×1080, 16 échantillons, flou). 177 s pour une image nette en 1920×1080 à 96 échantillons, soit environ 12 min en 3840×2160. |
-| Réseau | Environnement « Portfolios » créé : Poly Haven et les trois sites Railway sont joignables. |
-| Railway | Service `golfolio` créé dans le projet `Portfolio-Pro`, domaine `golfolio-production.up.railway.app`. Pas encore de source reliée. |
+| Structure | Trou 1 : par 5 en 4 coups. Trou 2 : par 3 en 2 coups. 7 arrêts, 6 coups, 5 projets. |
+| Image | Photoréaliste. La 3D ne montre que ce qu'elle réussit : gros plans de balle, de club, d'herbe, de sable, d'eau. Le décor et la lumière viennent de vrais panoramas photographiés (Poly Haven, CC0). Pas de parcours modélisé en plan large : les essais donnent un niveau simulateur de golf. |
+| Le joueur | Pas de tournage, pas de personnage 3D (essayé jusqu'au swing capturé : mannequin). On voit la frappe en gros plan, puis Antoine de dos au finish, en silhouette à contre-jour tirée de sa photo de practice. Image à faire valider par lui avant toute mise en ligne. Droitier. |
+| Suivre la balle | Chaque coup : frappe au ralenti en gros plan, la balle part, la caméra la suit dans le ciel, puis redescend là où elle se pose. Un plan du trou dessiné par la page montre où on en est. |
+| Geste | Un geste = un coup. Un geste pendant le vol saute à l'arrivée. Retour en arrière : fondu. |
+| Matériel | D'après ses références, sans logo de marque, monogramme « AM » : bois 3 noir à stries blanches (fait), fers en acier satiné à dos creusé et insert noir, wedge brossé, putter. Balle blanche « AM ». |
+| Projets | SpendMap, BDD Licter × Fnac Darty, Hackathon PayFit, Revenue Engine Hackathon, Estimia. Le plus fort pour un poste en IA d'abord, la démo en ligne juste avant le contact. |
+| Titre | « AI Engineer & Data Analyst » (un mot d'Antoine suffit pour inverser). |
+| Langues | Français et anglais. |
+| Mise en ligne | Railway, service `golfolio` du projet `Portfolio-Pro`, domaine `golfolio-production.up.railway.app`. |
 
 ---
 
-## 2. L'histoire : huit arrêts, sept coups, un dernier putt
+## 2. Le parcours
 
-Une partie de 18 trous résumée en huit coups choisis. La journée avance avec les trous : aube,
-matin, midi, fin d'après-midi, coucher de soleil, crépuscule. Chaque arrêt est une petite scène à
-part, avec sa lumière.
+| # | id | Où est la balle | Lumière | Ce qui s'affiche | Le geste joue |
+| --- | --- | --- | --- | --- | --- |
+| 0 | `depart` | Trou 1, par 5, sur le tee | Aube, brume | Qui est Antoine | Coup 1 : mise en jeu au bois 3 |
+| 1 | `spendmap` | Fairway, dans la rosée | Matin | Projet 1, SpendMap | Coup 2 : fer long vers le green |
+| 2 | `fnac-darty` | Bord du green | Matin | Projet 2, Licter × Fnac Darty | Coup 3 : approche roulée au wedge |
+| 3 | `payfit` | Green, à 3 m du trou | Matin clair | Projet 3, Hackathon PayFit | Coup 4 : putt pour birdie, la balle tombe |
+| 4 | `revenue-engine` | Trou 2, par 3, sur le tee au bord de l'eau | Fin d'après-midi | Projet 4, Revenue Engine | Coup 5 : fer 7 au-dessus de l'eau |
+| 5 | `estimia` | Green, à 1,5 m du trou | Heure dorée | Projet 5, Estimia | Coup 6 : le dernier putt |
+| 6 | `contact` | Au fond du trou | Heure dorée | Contact | |
 
-**La règle d'un swipe** (environ 1,6 s) : le club traverse la balle au ralenti, vu sous l'angle propre
-à l'arrêt ; la balle part, la caméra la suit et bascule vers le ciel ; elle redescend sur le trou
-suivant, où une balle attend dans une autre lumière. Le changement de lieu se fait dans le ciel.
+Les six coups (un « trajet » = les images de mouvement entre deux arrêts) :
 
-**La règle d'un arrêt** : une balle au repos, la tête du club posée derrière, un décor en flou.
-Image nette en 4K, sujet toujours au même endroit de l'écran.
-
-| # | Trou | Lumière | À l'arrêt | Coup joué au swipe | Vue | Contenu |
-| --- | --- | --- | --- | --- | --- | --- |
-| 0 | 1, départ | Aube, brume | Balle sur tee bas, face du bois 3 derrière elle | Mise en jeu au **bois 3** | De devant, au ras du sol, à contre-jour : la balle part au-dessus de nous | Qui je suis (`#depart`) |
-| 1 | 4, fairway | Matin, rosée | Balle sur les bandes de tonte, fer | **Fer long**, la motte s'envole | Trois quarts avant, au ras de la rosée | Revenue Engine (`#revenue-engine`) |
-| 2 | 7, par 3 | Matin clair | Balle sur tee au bord du lac | **Fer 7** au-dessus de l'eau | Dans l'axe, derrière la balle, le lac et le green au fond | Licter × Fnac Darty (`#fnac-darty`) |
-| 3 | 10, fairway | Midi doux | Balle vue d'en haut, lignes de tonte | **Wedge**, approche levée | Plongée verticale | SpendMap (`#spendmap`) |
-| 4 | 13, bunker | Fin d'après-midi | Balle dans le sable | **Sortie de bunker** | Depuis la lèvre, gerbe de sable | Hackathon PayFit (`#payfit`) |
-| 5 | 16, green | Heure dorée | Balle sur le green, le trou au premier plan | **Putt** qui tombe | Derrière le trou, la balle vient vers nous | Estimia (`#estimia`) |
-| 6 | 18, approche | Coucher de soleil | Balle devant le green, club-house au loin | **Approche au wedge**, suivie jusqu'au green | De côté, à contre-jour | Parcours et savoir-faire (`#parcours`) |
-| 7 | 18, green | Crépuscule | Balle à 40 cm du trou, club-house allumé | Le **dernier putt**, joué au clic sur « Me contacter » | Au ras du green | Contact (`#contact`) |
-
-Seul le coup du 6 vers le 7 est suivi d'un bout à l'autre (même trou) : c'est la fin de la partie.
-
-### Le joueur ressemble à Antoine
-
-Construit d'après ses photos (`render/player.py`) : silhouette fine, casquette marine, cheveux bruns
-ondulés qui dépassent, haut blanc à manches longues, chino beige, baskets blanches, gant blanc à la
-main gauche. C'est une silhouette stylisée, sans visage : il est montré de dos, à contre-jour ou
-dans le flou, jamais net de face.
-
-- **De dos, au finish**, découpé sur le ciel, comme sur sa photo de practice (étude : `--study finish`).
-- **De face, en flou** : ses baskets et le bas du chino derrière la balle.
-- **Dans les vues serrées** : seuls la tête du club et le bas du manche sont dans le cadre.
-
-### Pourquoi ce coup pour ce projet
-
-| Projet | Concept | Le coup | Le lien |
+| Trajet | Coup | Vue de la frappe | Ce qu'on voit ensuite |
 | --- | --- | --- | --- |
-| Revenue Engine Hackathon | Orchestration | Fer long depuis le fairway | Quatre outils enchaînés en une journée, avec l'équipe Sage : avancer loin d'un seul coup. |
-| BDD Licter × Fnac Darty | Pipeline de données | Fer 7 au-dessus de l'eau | Faire passer la donnée brute de l'autre côté : collecte, sentiment, clustering, tableau de bord. |
-| SpendMap | RAG + graphe | Vue du ciel | La vue d'ensemble : les dépenses d'un groupe, interrogées en langage naturel. |
-| Hackathon PayFit | Évaluation | Sortie de bunker | Une IA rédige, une autre note, et tout repart sous 70/100 : on rejoue jusqu'à en sortir. |
-| Estimia | Produit data en ligne | Le putt | Lire la pente et tomber juste : un prix au m², un niveau de confiance. Démo publique. |
+| 0 → 1 | Bois 3 depuis le tee | De devant, au ras du sol, à contre-jour | La balle part ; Antoine de dos au finish, en silhouette ; ciel ; la balle se pose sur le fairway |
+| 1 → 2 | Fer long | Trois quarts avant, au ras de la rosée, la motte s'envole | Ciel ; la balle retombe au bord du green |
+| 2 → 3 | Wedge, approche roulée | De côté, au ras de l'herbe | Sans coupe : la balle saute, roule sur le green et s'arrête à 3 m du trou |
+| 3 → 4 | Putt | Derrière le trou, la balle vient vers nous | Elle tombe ; noir du trou ; on redescend du ciel sur le tee du par 3 |
+| 4 → 5 | Fer 7 | Dans l'axe, derrière la balle, l'eau devant | La balle survole l'eau, se pose sur le green et roule à 1,5 m du trou |
+| 5 → 6 | Putter | De côté, au ras du green | La balle roule, tombe ; la caméra vient à l'aplomb du trou |
 
-Chaque arrêt projet affiche : le trou et le club, le concept, **l'obstacle** (une phrase), **le coup
-joué** (une phrase, avec un schéma source → traitement → sortie), **le score** (le résultat), les
-outils, les liens vers l'étude de cas, la démo ou le code.
+Règles d'image valables partout :
 
-Hors de la partie : RiskScope (remplacé par Estimia à la demande d'Antoine), Meridian, Hackathon 3M
-et IKORY (cités dans le parcours, arrêt 6), LVMH, Carrefour, Devis Traiteur, SEO/GEO Control Room.
-Tous restent accessibles par « Portfolio complet ».
-
----
-
-## 3. Direction artistique
-
-- **Image** : série de natures mortes de golf. Longue focale, faible profondeur de champ, lumière
-  rasante, rosée, brume. Une ambiance par arrêt, de l'aube au crépuscule.
-- **Matériel** (d'après les références d'Antoine, sans logo de marque, monogramme « AM » à la place) :
-  bois 3 tout noir, couronne mate à trois points ambre, face noire à stries blanches ; fers en acier
-  satiné à dos creusé avec un insert noir à deux vis ; wedge brossé ; balle blanche tamponnée « AM ».
-- **Le sac** : à l'arrêt 6, les fers dépassent du sac au premier plan, fairway flou derrière.
-- **Compositions** : beaucoup de vide, un seul sujet net, le décor en flou. Jamais deux arrêts sous
-  le même angle.
-- **Interface** : éditoriale et discrète. Titres en grande serif (Instrument Serif), texte en Inter,
-  étiquettes en JetBrains Mono (« TROU 07 · PAR 3 · FER 7 »). Texte crème `#f2efe8`, une seule touche
-  ambre `#f2a93b`, fond vert très sombre `#0a1410`.
-- **Lisibilité** : sujet à droite, texte à gauche sur un dégradé sombre ; sur téléphone, texte en bas
-  sur fond sombre.
-- **Langues** : français et anglais.
+- Le sujet (la balle) est dans la bande centrale droite de l'image, autour de x = 0,62 : il survit au
+  recadrage vertical du téléphone, et la gauche reste calme et sombre pour le texte.
+- À l'arrêt : la balle au repos, la tête du club posée derrière (sauf arrêt 6), décor en flou.
+- Jamais de joueur calculé. Jamais de logo de marque.
 
 ---
 
-## 4. La scène Blender (`render/`)
+## 3. Qui possède quoi dans le dépôt
 
-Huit petites scènes qui partagent les mêmes objets. Tout est décrit en Python, à l'échelle réelle.
-
-| Élément | Comment |
+| Chemin | Rôle |
 | --- | --- |
-| Décor et lumière | Un ciel photographié Poly Haven (CC0) par arrêt : il éclaire la scène et sert de fond, flouté par la profondeur de champ. Vrais arbres, vrais nuages, sans les modéliser. |
-| Sol proche | Maillage calculé autour de la balle : départ, fairway tondu en bandes, bord de lac, sable, green. |
-| Herbe | Vrais brins (maillage numpy, technique de `probe.py`) dans les quelques mètres autour de la balle ; une matière au-delà. De 3 mm sur le green à 12 mm sur le fairway. |
-| Balle | Vraies alvéoles en relief, tampon « AM », rotation visible dans le flou. |
-| Clubs | Trois têtes modélisées : bois 3, fer (décliné en fer long, fer 7 et wedges par l'angle de face), putter. |
-| Frappe | Une seule routine pour tous les coups : arc de la tête au ralenti, balle écrasée un instant, puis ce que le coup projette (tee, motte, sable, gouttes). |
-| Eau, sable | Surface réfléchissante à vaguelettes ; sable à grain, traces de râteau, grains projetés. |
-| Détails | Tee, trou et drapeau, club-house en silhouette avec fenêtres éclairées. |
-| Impressions | Tampon de balle, gravures, drapeau : dessinés en HTML et imprimés en textures (`scripts/prints/`). |
-
-`render/scene.py` : `--stop N` (image d'arrêt), `--leg N` (le coup qui quitte l'arrêt N), `--frames a-b`,
-`--scale`, `--samples`, `--out`. Il saute les images déjà calculées et écrit `anchors.json` (position
-de la balle à l'écran, point de recadrage pour le téléphone).
+| `content/site.json` | Tout le texte du site, français et anglais (schéma en section 4). |
+| `src/`, `index.html`, `vite.config.js`, `package.json` | Le site (Vite + React 19). |
+| `server/index.js`, `server/snapshot.json` | Serveur Express 5 : fichiers, santé, texte écrit dans la page pour les robots. |
+| `public/frames/` | Le film converti (WebP) et `manifest.json`. |
+| `scripts/placeholder_frames.py` | Film factice étiqueté, pour tester le site sans rendu. |
+| `scripts/frames.py` | Conversion des PNG de `render/out` vers `public/frames`. |
+| `render/parts.py` | Briques : balle, tee, bois 3, herbe, rosée, ciel, soleil, halo. |
+| `render/clubs.py` | Fer (long, 7, wedge) et putter. |
+| `render/scene.py` | Les 7 arrêts et les 6 trajets. |
+| `render/assets/` | Ciels téléchargés et fichiers personnels : jamais versionné. |
+| `render/human.py`, `render/golfer.py` | Essais de joueur 3D, abandonnés. Ne pas y toucher. |
 
 ---
 
-## 5. Le film
+## 4. Formats communs
+
+### `public/frames/manifest.json`
+
+```json
+{
+  "width": 1920, "height": 1080, "fps": 27,
+  "sizes": { "l": { "motion": 1920, "hold": 3840 }, "m": { "motion": 1920, "hold": 2560 }, "s": { "motion": 1280, "hold": 1600 } },
+  "stops": [ { "id": "depart", "focus": [0.62, 0.55] } ],
+  "legs":  [ { "from": 0, "to": 1, "frames": 44 } ]
+}
+```
+
+- Image nette de l'arrêt *k* : `public/frames/<taille>/h_<kk>.webp` (`h_00` … `h_06`).
+- Image *n* (à partir de 1) du trajet *k* → *k+1* : `public/frames/<taille>/l<k>_<nnnn>.webp`.
+- `focus` : position de la balle dans l'image à l'arrêt (0 à 1), pour le recadrage du téléphone.
+- Un trajet absent ou incomplet : la page fait un fondu entre les deux arrêts.
+- `public/frames/poster.webp` : première image en très petit (moins de 30 Ko).
+
+### `content/site.json`
+
+```json
+{
+  "meta": { "name": "Antoine Millot", "title": { "fr": "", "en": "" }, "description": { "fr": "", "en": "" } },
+  "ui": { "fr": { "next": "Coup suivant" }, "en": { "next": "Next shot" } },
+  "holes": [ { "n": 1, "par": 5, "length": 478 }, { "n": 2, "par": 3, "length": 152 } ],
+  "stops": [
+    { "id": "depart", "kind": "intro", "hole": 1, "stroke": 0,
+      "label": { "fr": "", "en": "" }, "title": { "fr": "", "en": "" }, "body": { "fr": "", "en": "" } },
+    { "id": "spendmap", "kind": "project", "slug": "spendmap", "hole": 1, "stroke": 1,
+      "label": { "fr": "", "en": "" }, "club": { "fr": "", "en": "" },
+      "concept": { "fr": "", "en": "" }, "name": "SpendMap",
+      "sentence": { "fr": "", "en": "" }, "result": { "fr": "", "en": "" },
+      "tools": [], "links": { "code": null, "demo": null },
+      "case": { "problem": { "fr": "", "en": "" }, "built": [ { "fr": "", "en": "" } ],
+                "flow": [ { "fr": "", "en": "" } ], "outcome": { "fr": "", "en": "" }, "role": { "fr": "", "en": "" } } },
+    { "id": "contact", "kind": "contact", "hole": 2, "stroke": 6,
+      "title": { "fr": "", "en": "" }, "body": { "fr": "", "en": "" },
+      "email": "", "links": [ { "label": "", "url": "" } ] }
+  ],
+  "next": [ { "club": { "fr": "", "en": "" }, "shot": { "fr": "", "en": "" } } ],
+  "about": { "journey": [], "skills": [], "certifications": [] }
+}
+```
+
+- `stroke` : nombre de coups joués quand on arrive à cet arrêt (0 au départ, 6 au contact).
+- `next[k]` : le coup que le geste va jouer en quittant l'arrêt *k* (six entrées).
+- Fiche projet : une phrase de 18 mots au plus, un résultat, 3 à 5 outils. Tout vient de
+  `server/snapshot.json` : aucun chiffre inventé.
+
+---
+
+## 5. Le site
+
+- **Accueil** : nom, titre, une phrase, deux boutons : « Jouer » et « Voir les projets ».
+- **Un geste = un coup** : molette, trackpad (seul le début du geste compte), balayage tactile,
+  flèches, et un bouton « Coup suivant » toujours visible.
+- **À l'arrivée** : l'image nette remplace la dernière image du trajet par un fondu, dérive très
+  lentement, puis la fiche monte.
+- **Fiche projet** : étiquette de golf (« TROU 1 · COUP 2 · FER LONG »), nom, concept, une phrase,
+  résultat en gros, outils, boutons « Étude de cas » et « Code » ou « Démo » s'ils existent.
+- **Étude de cas** : panneau qui glisse par-dessus le film, dans la page : problème, ce qui a été
+  construit, schéma source → traitement → sortie, résultat, rôle, liens. Fermeture par Échap.
+- **Carte de score** : le sommaire, toujours accessible. Une ligne par coup avec le projet ; puis
+  parcours, savoir-faire, certifications, contact. C'est aussi la version sans animation.
+- **Plan du trou** : petit dessin vu du dessus, la balle y avance coup après coup.
+- **Téléphone** : même film recadré autour de la balle, fiche en bas sur fond sombre.
+- **Pour tout le monde** : clavier, lien direct par arrêt (`#spendmap`), animations réduites en
+  fondus, vrai texte dans la page pour les lecteurs d'écran et les robots.
+- **Charte** : titres en Instrument Serif, texte en Inter, étiquettes en JetBrains Mono ; fond vert
+  très sombre `#0a1410`, texte crème `#f2efe8`, une seule touche ambre `#f2a93b`.
+
+---
+
+## 6. Le film
 
 | Élément | Images |
 | --- | --- |
-| Sept coups (0 → 7) | 7 × 42 = 294 |
-| Le dernier putt | 24 |
-| **Total mouvement** | **318** |
-| Images d'arrêt | 8 |
+| Six trajets | 6 × 44 = 264 |
+| Images d'arrêt | 7 |
 
-- **Mouvement** : 1920×1080, 16 échantillons, flou de mouvement. 42 images jouées en 1,6 s.
-- **Arrêts** : **3840×2160 (4K)**, 96 à 128 échantillons, parfaitement nets.
-- **Budget de calcul** : mouvement environ 5 h 30, arrêts environ 1 h 40, essais et animatique 1 h.
-  Compter **8 à 9 h de machine**, en lots de 2 h au plus.
-- **Sécurité** : le conteneur est éphémère. Les images sont converties et poussées sur la branche
-  après chaque lot ; un lot interrompu reprend à l'image suivante.
+- Mouvement : 1920×1080, 16 échantillons, flou de mouvement, jouées à 27 images par seconde.
+- Arrêts : 3840×2160, 96 à 128 échantillons.
+- Animatique d'abord : tout le film en 480×270 pour régler le rythme en ligne.
+- Budget de calcul mesuré ici : 63 s par image de mouvement, 12 min par arrêt 4K. Compter 11 à 12 h,
+  15 à 18 h avec une série de retouches, par lots de 2 h poussés au fur et à mesure.
 
-Conversion (`scripts/frames.py`) : WebP, trois tailles d'arrêt (3840, 2560, 1600) et deux de
-mouvement (1920, 1280), une affiche de moins de 30 Ko, `manifest.json`. Objectif : 30 Mo au plus pour
-les grands écrans, 14 Mo pour les autres.
+`render/scene.py` : `--stop N`, `--leg N`, `--frames a-b`, `--scale`, `--samples`, `--out`,
+`--view` pour les vues de contrôle. Il saute les images déjà calculées.
 
 ---
 
-## 6. Le site (`src/`, `server/`)
+## 7. Étapes
 
-Vite + React 19, Express 5, comme `portfolio-3d`.
-
-```
-render/     scene.py  parts.py  clubs.py  strike.py  fetch_assets.py  probe.py
-scripts/    frames.py  prints/prints.cjs
-src/        App.jsx  main.jsx  styles.css
-            lib/film.js  lib/input.js  lib/copy.js
-server/     index.js  snapshot.json
-public/     frames/…  favicon.svg
-railway.json  package.json  vite.config.js  index.html
-```
-
-- **Un geste = un coup** : molette, balayage du trackpad (seul le début du geste compte), balayage
-  tactile, flèches. Le coup se joue seul, à vitesse constante. Retour en arrière : fondu.
-- **Arrivée** : l'image 4K remplace la dernière image du trajet par un fondu d'un tiers de seconde,
-  puis dérive très lentement. Le texte monte bloc par bloc une fois la caméra posée.
-- **Rail** : huit repères numérotés par trou (1, 4, 7, 10, 13, 16, 18, 19e).
-- **Chargement** : affiche, puis l'arrêt 0 net, puis les coups du grossier au fin en commençant par
-  les plus proches, puis les autres arrêts. Coup pas encore chargé : fondu vers l'arrêt suivant.
-- **Téléphone** : même film, recadré autour de la balle, texte en bas sur fond sombre.
-- **Pour tout le monde** : clavier complet, lien direct vers chaque arrêt, animations réduites
-  respectées (fondus, pas de dérive), texte réel dans la page pour les lecteurs d'écran.
-- **Contenu** : `/api/content` relayé depuis le portfolio principal, avec une copie de secours. Titres,
-  résultats, outils et liens viennent de l'admin ; les phrases « obstacle / coup / score » et les
-  schémas sont dans `lib/copy.js`, en français et en anglais.
+| Étape | Livré à Antoine |
+| --- | --- |
+| 1. Site jouable avec un film factice, textes réels, en ligne | Un lien |
+| 2. Planche des 7 arrêts en basse résolution, ordinateur et téléphone | Une planche à valider |
+| 3. Animatique des 6 coups en ligne | Le même lien, rythme à valider |
+| 4. Image du finish en silhouette | Une image à valider avant publication |
+| 5. Rendu final par lots | Le site s'affine lot après lot |
+| 6. Finition : poids, téléphone réel, partage, captures de preuve | Site final |
 
 ---
 
-## 7. Mise en ligne (Railway)
-
-- Service `golfolio` (déjà créé) relié au dépôt GitHub `antoineMllt1/golfolio` sur la branche de
-  travail. Les services `portfolio`, `portfolio-3d` et `Postgres` ne sont pas touchés.
-- `railway.json` : Railpack, `npm run build`, `node server/index.js`, contrôle de santé `/api/health`.
-- Variable `MAIN_URL` vers le portfolio principal.
-- Preuve avant chaque mise en ligne : captures de chaque arrêt en 1920×1080, 1440×900 et 390×844,
-  et zéro erreur dans la console.
-
----
-
-## 8. Les phases, dans l'ordre
-
-| Phase | Travail | Ce qu'Antoine reçoit | État |
-| --- | --- | --- | --- |
-| 0. Mise en place | Accès réseau, service Railway, copie du contenu, squelette du dépôt. | Dépôt prêt. | Fait |
-| 1. Le héros | Balle à alvéoles, tee, bois 3, herbe, lumière d'aube. | **Une image** de l'arrêt 0 en 1920×1080, à valider. | Image envoyée |
-| 2. Les cadrages | Les huit scènes en volumes simples, les huit caméras, les huit lumières. | **Planche des 8 cadrages**, ordinateur et téléphone, à valider avant tout rendu long. | |
-| 3. L'animatique en ligne | Le film complet en 480×270, le site jouable, premier déploiement. | **Un lien** pour tester le rythme et les textes. | |
-| 4. Le détail | Fer, putter, sable, eau, club-house, impressions, routine de frappe. | **Trois images de référence** : frappe au bois 3, sortie de bunker, putt. | |
-| 5. Le rendu final | Les 8 arrêts en 4K, puis les 318 images de mouvement, par lots. | Le site s'affine lot après lot sur le même lien. | |
-| 6. La finition | Poids, ordre de chargement, liste de contrôle du guide, captures de preuve. | Site final, captures ordinateur et téléphone, console propre. | |
-
----
-
-## 9. Risques et plans B
+## 8. Risques
 
 | Risque | Réponse |
 | --- | --- |
-| La frappe peut sembler mécanique, et il y en a sept. | Une seule routine, mise au point une fois puis déclinée. Ralenti, cadrage serré, flou de mouvement. Plan B : commencer chaque plan à l'impact. |
-| Le raccord entre deux trous peut se voir. | Il se fait dans le ciel, pendant une bascule rapide et floue, avec quelques images fondues par la page. |
-| Huit scènes au lieu d'une. | Elles partagent balle, clubs, herbe et routine de frappe ; seuls le sol proche, le ciel et la caméra changent. |
-| Le conteneur peut être repris pendant 8 à 9 h de calcul. | Lots de 2 h, reprise automatique, poussée après chaque lot. |
-| L'application GitHub de Railway ne voit pas le dépôt `golfolio`. | Antoine l'autorise en un clic côté Railway ; signalé dès la phase 3. |
-| Un projet retenu disparaît de l'admin. | La copie de secours garde l'arrêt ; signalé. |
+| Six frappes qui semblent mécaniques. | Une seule routine de frappe mise au point une fois ; ralenti, cadrage serré, flou. |
+| Le film accroche mais ne prouve rien. | Étude de cas dans la page, liens code et démo, carte de score. Trois projets n'ont aucun lien public : à compléter par Antoine. |
+| Raccord entre deux lieux. | Il se fait dans le ciel ou dans le noir du trou, pendant un mouvement flou. |
+| Conteneur éphémère. | Rendus par lots, reprise automatique, poussée après chaque lot. |
 
----
+## 9. Crédits
 
-## 10. Crédits
-
-Ciels, textures et modèles : Poly Haven, licence CC0. Les fichiers sont téléchargés par
-`render/fetch_assets.py` dans `render/assets/` et ne sont pas versionnés.
-
----
-
-## 11. Décisions prises
-
-1. **Droitier.** Cible à droite quand on regarde le joueur de face ; le joueur n'est jamais dans le cadre.
-2. **Cinq projets** : Revenue Engine, Licter × Fnac Darty, SpendMap, Hackathon PayFit, Estimia.
-3. **Aucun repère de golf personnel** (index, club, palmarès) sur le site.
-4. **`TeeTime`** n'est pas un projet à montrer.
-5. **Chaque swipe est un coup de golf**, vu d'un angle différent ; rendu « aesthetic ».
-6. **Titre de l'arrêt 0** : sans réponse, « AI Engineer & Data Analyst ». Un mot suffit pour revenir à
-   « Data Analyst & AI Engineer ».
+Ciels et panoramas : Poly Haven, CC0. Fichiers téléchargés par `render/fetch_assets.py`.
