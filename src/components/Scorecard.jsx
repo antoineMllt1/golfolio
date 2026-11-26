@@ -36,6 +36,10 @@ export default function Scorecard({ open, stop, lang, t, onClose, onGo }) {
       <section ref={ref} className="sheet card-sheet" role="dialog" aria-modal="true" aria-labelledby="card-title" tabIndex={-1}>
         <header className="sheet-head">
           <p className="kicker mono">{SITE.meta.name}</p>
+          <a className="head-link mono" href={`#${contact.id}`} onClick={(e) => onGo(e, LAST)}>
+            {t.contact}
+            <ArrowRight />
+          </a>
           <button type="button" className="close" onClick={onClose} aria-label={`${t.close} : ${t.scorecard}`} data-autofocus>
             <Close />
           </button>

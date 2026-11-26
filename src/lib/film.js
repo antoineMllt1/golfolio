@@ -348,7 +348,8 @@ export class Film {
     if (fade) {
       if (fading < 1) {
         ctx.globalAlpha = 1 - ease(fading);
-        ctx.drawImage(this.snap, 0, 0);
+        // Étirée à la taille du canvas : la fenêtre a pu changer de taille (ou le téléphone tourner) pendant le fondu.
+        ctx.drawImage(this.snap, 0, 0, cw, ch);
       } else {
         this.fade = null;
         fade.done?.();

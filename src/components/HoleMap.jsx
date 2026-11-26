@@ -1,5 +1,6 @@
 // Le plan du trou, vu du dessus : départ, fairway, bunkers, green, eau. La balle y occupe la place de
-// l'arrêt courant et avance coup après coup ; chaque point mène à son arrêt.
+// l'arrêt courant et avance coup après coup ; chaque point mène à son arrêt. Sur téléphone, où les
+// points seraient trop petits pour le doigt, tout le plan ouvre la carte de score.
 import { COURSE, VIEW } from '../lib/course.js';
 import { STOPS, holeOf, stopName, strokeLine } from '../lib/content.js';
 
@@ -42,11 +43,14 @@ function Hole({ c, on, stop, lang, t }) {
   );
 }
 
-export default function HoleMap({ stop, flight, lang, t }) {
+export default function HoleMap({ stop, flight, lang, t, onCard }) {
   const current = STOPS[stop];
   const hole = holeOf(current);
+  // Pendant un vol, la balle du plan avance avec le film et le dessin change de trou en plein ciel ;
+  // pour un fondu, tout va plus vite.
+  const flying = flight?.shot != null;
   return (
-    <nav className="map" aria-label={`${t.holeMap} · ${t.stops}`} style={{ '--move': flight?.shot != null ? '1.5s' : '0.5s' }}>
+    <nav className="map" aria-label={`${t.holeMap} · ${t.stops}`} style={{ '--move': flying ? '1.5s' : '0.5s', '--swap': flying ? '1.05s' : '0.25s' }}>
       <p className="map-head mono">
         <b>
           {t.hole}&nbsp;{hole.n}
@@ -65,6 +69,7 @@ export default function HoleMap({ stop, flight, lang, t }) {
         ))}
       </div>
       <p className="map-foot mono">{strokeLine(current.stroke, t, lang)}</p>
+      <button type="button" className="map-open" onClick={onCard} aria-haspopup="dialog" aria-label={t.scorecard} />
     </nav>
   );
 }

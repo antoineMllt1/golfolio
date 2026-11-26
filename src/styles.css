@@ -222,12 +222,13 @@ svg {
   align-items: center;
   gap: 6px;
 }
+.top-link,
 .top-card,
 .top-lang {
   display: inline-flex;
   align-items: center;
   gap: 9px;
-  min-height: 40px;
+  min-height: 44px;
   padding: 0 15px;
   border-radius: 999px;
   font-size: 11px;
@@ -249,8 +250,17 @@ svg {
   border-color: var(--ink);
   background: rgb(var(--veil) / 0.8);
 }
+.top-link {
+  padding: 0 14px;
+  color: var(--soft);
+}
+.top-link:hover,
+.top-link[aria-current] {
+  color: var(--ink);
+}
 .top-lang {
   gap: 5px;
+  margin-right: -10px; /* « EN » s'aligne sur la marge, comme le plan du trou en dessous */
   padding: 0 10px;
   color: var(--muted);
 }
@@ -643,12 +653,12 @@ h1 .role {
   overflow: visible;
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.45s ease 0.75s, visibility 0s linear 1.2s;
+  transition: opacity 0.4s ease calc(var(--swap, 1.05s) - 0.25s), visibility 0s linear calc(var(--swap, 1.05s) + 0.15s);
 }
 .hole.on {
   opacity: 1;
   visibility: visible;
-  transition: opacity 0.45s ease 1.05s, visibility 0s linear 1.05s;
+  transition: opacity 0.4s ease var(--swap, 1.05s), visibility 0s linear var(--swap, 1.05s);
 }
 .hole * {
   vector-effect: non-scaling-stroke;
@@ -715,6 +725,18 @@ h1 .role {
 }
 .hit {
   fill: transparent;
+  stroke: transparent;
+  stroke-width: 1.5;
+}
+.hole a:focus-visible .hit {
+  stroke: var(--amber);
+}
+/* Sur téléphone, les points sont trop petits pour le doigt : tout le plan ouvre la carte de score. */
+.map-open {
+  display: none;
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
 }
 .spot {
   fill: #18241f;
@@ -824,6 +846,31 @@ h1 .role {
   min-height: 80px;
   padding: env(safe-area-inset-top) clamp(20px, 4vw, 44px) 0;
   border-bottom: 1px solid var(--line);
+}
+.head-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 44px;
+  margin-left: auto;
+  padding: 0 6px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--soft);
+  transition: color 0.2s;
+}
+.head-link svg {
+  width: 13px;
+  height: 13px;
+  transition: transform 0.3s var(--ease);
+}
+.head-link:hover {
+  color: var(--ink);
+}
+.head-link:hover svg {
+  transform: translateX(3px);
 }
 .close {
   display: grid;
@@ -1404,6 +1451,28 @@ h1 .role {
   padding-bottom: 96px;
 }
 
+/* ---------- grands écrans ----------
+   Sur un écran de bureau large, le texte et les commandes grandissent avec lui : sans cela la fiche
+   devient une vignette perdue dans l'image. (Le film, lui, n'est pas concerné : il remplit l'écran.) */
+@media (min-width: 1800px) and (min-height: 960px) {
+  .shell,
+  .sheet-wrap {
+    zoom: 1.12;
+  }
+}
+@media (min-width: 2200px) and (min-height: 1200px) {
+  .shell,
+  .sheet-wrap {
+    zoom: 1.36;
+  }
+}
+@media (min-width: 3000px) and (min-height: 1600px) {
+  .shell,
+  .sheet-wrap {
+    zoom: 1.8;
+  }
+}
+
 /* ---------- écrans bas (portables) ---------- */
 @media (max-height: 800px) and (min-aspect-ratio: 9/10) {
   .card {
@@ -1535,6 +1604,9 @@ h1 .role {
   .paper-head {
     padding: 16px 20px 14px;
   }
+  .about {
+    margin-top: 44px;
+  }
   .score-total {
     grid-template-columns: minmax(0, 1fr) auto;
     row-gap: 6px;
@@ -1542,6 +1614,63 @@ h1 .role {
   }
   .score-total .mono {
     grid-column: 1 / -1;
+  }
+}
+
+/* ---------- téléphone, debout ou couché : ce qui est commun ---------- */
+@media (max-aspect-ratio: 9/10), (max-height: 480px) {
+  /* Contact : l'adresse en un bouton, les liens sur une ligne. */
+  .card .btn-copy {
+    display: none;
+  }
+  .card .links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 22px;
+    margin-top: 12px;
+    border: 0;
+  }
+  .card .links a {
+    min-height: 44px;
+    gap: 7px;
+    border: 0;
+    font-size: 14.5px;
+    text-decoration: underline;
+    text-decoration-color: var(--line-strong);
+    text-underline-offset: 5px;
+  }
+  .card .links .mono {
+    font-size: 0;
+    gap: 0;
+    color: var(--ink);
+  }
+  /* Le plan du trou, réduit : un repère, et un bouton vers la carte de score. */
+  .map {
+    width: 66px;
+    padding: 8px 8px 7px;
+    border-radius: 9px;
+    background: rgb(var(--veil) / 0.56);
+  }
+  .map-head {
+    gap: 1px;
+    margin-bottom: 6px;
+    padding-bottom: 5px;
+    font-size: 7.5px;
+    letter-spacing: 0.06em;
+  }
+  .map-head span i,
+  .map-foot,
+  .hole .hit {
+    display: none;
+  }
+  .ball .ring {
+    stroke-width: 1.2;
+  }
+  .hole a {
+    pointer-events: none;
+  }
+  .map-open {
+    display: block;
   }
 }
 
@@ -1571,15 +1700,16 @@ h1 .role {
     font-size: 21px;
   }
   .top-card {
-    min-height: 38px;
-    padding: 0 12px;
+    padding: 0 13px;
     font-size: 10px;
     letter-spacing: 0.1em;
   }
+  .top-link,
   .top-card svg {
     display: none;
   }
   .top-lang {
+    margin-right: -4px;
     padding: 0 4px 0 8px;
     font-size: 10px;
   }
@@ -1660,31 +1790,6 @@ h1 .role {
   .card .credits {
     display: none;
   }
-  /* Contact : l'adresse en un bouton, les liens sur une ligne. */
-  .card .btn-copy {
-    display: none;
-  }
-  .card .links {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0 22px;
-    margin-top: 12px;
-    border: 0;
-  }
-  .card .links a {
-    min-height: 44px;
-    gap: 7px;
-    border: 0;
-    font-size: 14.5px;
-    text-decoration: underline;
-    text-decoration-color: var(--line-strong);
-    text-underline-offset: 5px;
-  }
-  .card .links .mono {
-    font-size: 0;
-    gap: 0;
-    color: var(--ink);
-  }
   .sheet .kicker .extra {
     display: none;
   }
@@ -1714,35 +1819,16 @@ h1 .role {
   .flight {
     bottom: calc(100px + env(safe-area-inset-bottom));
   }
-  /* Le plan du trou, réduit, en haut à gauche sous le nom. */
+  /* Le plan du trou, en haut à gauche sous le nom. */
   .map {
     top: calc(74px + env(safe-area-inset-top));
     right: auto;
     bottom: auto;
     left: var(--gutter);
-    width: 66px;
-    padding: 8px 8px 7px;
-    border-radius: 9px;
-    background: rgb(var(--veil) / 0.56);
   }
-  .map-head {
-    gap: 1px;
-    margin-bottom: 6px;
-    padding-bottom: 5px;
-    font-size: 7.5px;
-    letter-spacing: 0.06em;
-  }
-  .map-head span i {
-    display: none;
-  }
-  .map-foot {
-    display: none;
-  }
-  .ball .ring {
-    stroke-width: 1.2;
-  }
-  .hole .hit {
-    display: none;
+  .head-link {
+    font-size: 10px;
+    letter-spacing: 0.1em;
   }
   /* Panneaux en plein écran */
   .sheet {
@@ -1874,6 +1960,220 @@ h1 .role {
 @media (max-aspect-ratio: 9/10) and (max-height: 690px) {
   .tools {
     display: none;
+  }
+}
+/* Très petits téléphones (320 × 568) : la fiche rapetisse encore pour ne pas monter sur la balle. */
+@media (max-aspect-ratio: 9/10) and (max-height: 600px) {
+  .map {
+    width: 50px;
+    padding: 6px 6px 5px;
+  }
+  .map-head {
+    margin-bottom: 4px;
+    padding-bottom: 4px;
+    font-size: 6.5px;
+  }
+  h1 .name {
+    font-size: 2.5rem;
+  }
+  h1 .role {
+    font-size: 1.2rem;
+  }
+  .card h2 {
+    margin-top: 8px;
+    font-size: 1.9rem;
+  }
+  .concept {
+    font-size: 1.05rem;
+  }
+  .lede {
+    margin-top: 8px;
+    font-size: 13.5px;
+  }
+  .result strong {
+    font-size: 1.3rem;
+  }
+}
+@media (max-width: 380px) {
+  .card .links {
+    gap: 0 14px;
+  }
+  .card .links a {
+    font-size: 14px;
+  }
+  .paper-head {
+    flex-direction: column;
+    gap: 3px;
+  }
+}
+/* Sous 350 px de large, la barre du haut ne tient plus : la carte de score devient un pictogramme. */
+@media (max-width: 350px) {
+  .brand {
+    font-size: 19px;
+  }
+  .top-card {
+    justify-content: center;
+    width: 44px;
+    padding: 0;
+  }
+  .top-card span {
+    display: none;
+  }
+  .top-card svg {
+    display: block;
+  }
+  .card .links {
+    gap: 0 12px;
+  }
+  .card .links a {
+    font-size: 13.5px;
+  }
+  .card .links svg {
+    display: none;
+  }
+  .shot-next {
+    gap: 8px;
+    padding-left: 16px;
+  }
+  .shot-line {
+    font-size: 11.5px;
+  }
+}
+
+/* ---------- téléphone couché (et fenêtres très basses) ----------
+   Très peu de hauteur : tout se resserre. La fiche garde la moitié gauche et toute la hauteur ; la
+   balle reste à droite ; « Coup suivant » passe en bas à droite, sous le pouce ; le plan du trou,
+   réduit, monte sous la barre. */
+@media (max-height: 480px) and (min-aspect-ratio: 9/10) {
+  :root {
+    --gutter: max(24px, env(safe-area-inset-left), env(safe-area-inset-right));
+  }
+  .top {
+    height: 52px;
+  }
+  .brand {
+    font-size: 20px;
+  }
+  .top-card svg {
+    display: none;
+  }
+  .top-card,
+  .top-link {
+    padding: 0 12px;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+  }
+  .card {
+    padding: 52px var(--gutter) 10px;
+  }
+  .copy {
+    width: min(46vw, 440px);
+  }
+  .kicker {
+    font-size: 10px;
+    letter-spacing: 0.12em;
+  }
+  h1 {
+    margin-top: 8px;
+  }
+  h1 .name {
+    font-size: clamp(2.2rem, 6vw, 3rem);
+  }
+  h1 .role {
+    margin-top: 5px;
+    font-size: 1.2rem;
+  }
+  .card h2 {
+    margin-top: 8px;
+    font-size: clamp(1.75rem, 4.4vw, 2.3rem);
+  }
+  .concept {
+    margin-top: 3px;
+    font-size: 1.05rem;
+  }
+  .lede {
+    margin-top: 8px;
+    font-size: 13.5px;
+    line-height: 1.45;
+  }
+  .result {
+    gap: 3px;
+    margin-top: 10px;
+    padding-top: 8px;
+  }
+  .result .mono {
+    font-size: 9px;
+  }
+  .result strong {
+    font-size: 1.3rem;
+  }
+  .row {
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .btn {
+    min-height: 44px;
+    padding: 0 16px;
+    font-size: 14px;
+  }
+  .card .links {
+    gap: 0 14px;
+    margin-top: 4px;
+  }
+  .card .links a {
+    font-size: 14px;
+  }
+  .shots {
+    left: auto;
+    right: var(--gutter);
+    bottom: max(12px, env(safe-area-inset-bottom));
+    gap: 8px;
+  }
+  .shot-prev {
+    width: 46px;
+    height: 46px;
+  }
+  .shot-next {
+    gap: 12px;
+    min-width: 236px;
+    height: 46px;
+    padding: 0 6px 0 18px;
+  }
+  .shot-text {
+    gap: 1px;
+  }
+  .shot-text .mono {
+    font-size: 9px;
+  }
+  .shot-line {
+    font-size: 13px;
+  }
+  .shot-icon {
+    width: 34px;
+    height: 34px;
+  }
+  .flight {
+    bottom: 16px;
+  }
+  .flight-club {
+    margin-top: 6px;
+    font-size: 2.2rem;
+  }
+  .flight-shot {
+    margin-top: 4px;
+    font-size: 14px;
+  }
+  .map {
+    top: calc(58px + env(safe-area-inset-top));
+    bottom: auto;
+    width: 58px;
+    padding: 7px 7px 6px;
+  }
+  .sheet-head {
+    min-height: 56px;
+  }
+  .sheet-body {
+    padding-top: 22px;
   }
 }
 

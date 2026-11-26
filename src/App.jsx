@@ -118,7 +118,9 @@ export default function App() {
     const onHash = () => {
       const i = location.hash.length > 1 ? indexOfId(location.hash.slice(1)) : 0;
       if (i < 0) return;
+      panelRef.current = null;
       setPanel(null);
+      if (history.state?.panel) history.replaceState(null, '');
       go(i);
     };
     window.addEventListener('hashchange', onHash);
@@ -126,16 +128,63 @@ export default function App() {
   }, [go]);
 
   // ---- panneaux
-  const openCase = () => {
-    setCaseStop(current);
-    setPanel('case');
-  };
-  const closePanel = useCallback(() => setPanel(null), []);
-  // Une ligne de la carte de score : on ferme la carte, puis on va à l'arrêt.
+  // Un panneau ouvert ajoute une entrée à l'historique du navigateur : le retour arrière (le geste
+  // « retour » d'un téléphone) ferme le panneau au lieu de quitter le site.
+  const backing = useRef(false); // un history.back() est parti, son « popstate » n'est pas encore arrivé
+  const afterBack = useRef(null);
+  const openPanel = useCallback((name) => {
+    if (panelRef.current === name) return;
+    if (name === 'case') setCaseStop(STOPS[stopRef.current]);
+    panelRef.current = name;
+    setPanel(name);
+    const push = () => history.pushState({ panel: name }, '');
+    if (backing.current) afterBack.current = push;
+    else if (history.state?.panel) history.replaceState({ panel: name }, '');
+    else push();
+  }, []);
+  const closePanel = useCallback(() => {
+    if (!panelRef.current) return;
+    panelRef.current = null;
+    setPanel(null);
+    afterBack.current = null;
+    if (history.state?.panel && !backing.current) {
+      backing.current = true;
+      history.back();
+    }
+  }, []);
+  useEffect(() => {
+    // Page rechargée panneau ouvert : l'entrée est encore là, le panneau non.
+    if (history.state?.panel) history.replaceState(null, '');
+    const onPop = (e) => {
+      if (backing.current) {
+        // Notre propre retour, après une fermeture par la croix ou Échap.
+        backing.current = false;
+        const then = afterBack.current;
+        afterBack.current = null;
+        then?.();
+        return;
+      }
+      // Retour arrière du navigateur : le panneau se ferme. Avancer ne le rouvre pas.
+      if (e.state?.panel) history.replaceState(null, '');
+      panelRef.current = null;
+      setPanel(null);
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+  // Une ligne de la carte de score : on ferme la carte, puis on va à l'arrêt. L'entrée d'historique de
+  // la carte devient celle de l'arrêt choisi : le retour arrière ramène d'où l'on venait.
   const goFromCard = (e, k) => {
     e.preventDefault();
+    panelRef.current = null;
     setPanel(null);
+    afterBack.current = null;
+    if (history.state?.panel) history.replaceState(null, '');
     go(k);
+  };
+  const goHome = (e) => {
+    e.preventDefault();
+    go(0);
   };
 
   // ---- focus : quand la fiche arrive et que le focus n'est plus nulle part (le bouton cliqué a
@@ -183,13 +232,16 @@ export default function App() {
 
       <div className="shell" inert={!!panel}>
         <header className="top">
-          <a className="brand" href="#depart" aria-label={`${SITE.meta.name} · ${t.home}`}>
+          <a className="brand" href="#depart" onClick={goHome} aria-label={`${SITE.meta.name} · ${t.home}`}>
             {SITE.meta.name}
           </a>
           <div className="top-right">
-            <button type="button" className="top-card mono" onClick={() => setPanel('card')} aria-haspopup="dialog">
+            <a className="top-link mono" href={`#${STOPS[LAST].id}`} aria-current={stop === LAST ? 'true' : undefined}>
+              {t.contact}
+            </a>
+            <button type="button" className="top-card mono" onClick={() => openPanel('card')} aria-haspopup="dialog" aria-label={t.scorecard}>
               <CardIcon />
-              {t.scorecard}
+              <span>{t.scorecard}</span>
             </button>
             <button type="button" className="top-lang mono" onClick={() => setLang(lang === 'fr' ? 'en' : 'fr')} aria-label={t.langSwitch} title={t.langSwitch}>
               <span className={lang === 'fr' ? 'on' : ''}>FR</span>
@@ -202,9 +254,9 @@ export default function App() {
         <main id="main">
           {STOPS.map((s, k) => {
             const on = k === stop && settled;
-            if (s.kind === 'intro') return <IntroCard key={s.id} stop={s} on={on} lang={lang} t={t} reduce={reduce} onPlay={() => go(1)} onProjects={() => setPanel('card')} />;
+            if (s.kind === 'intro') return <IntroCard key={s.id} stop={s} on={on} lang={lang} t={t} reduce={reduce} onPlay={() => go(1)} onProjects={() => openPanel('card')} />;
             if (s.kind === 'contact') return <ContactCard key={s.id} stop={s} on={on} lang={lang} t={t} />;
-            return <ProjectCard key={s.id} stop={s} on={on} lang={lang} t={t} onCase={openCase} />;
+            return <ProjectCard key={s.id} stop={s} on={on} lang={lang} t={t} onCase={() => openPanel('case')} />;
           })}
         </main>
 
@@ -219,7 +271,7 @@ export default function App() {
           onReplay={() => go(0)}
           onSkip={() => filmRef.current?.skip()}
         />
-        <HoleMap stop={stop} flight={flight} lang={lang} t={t} />
+        <HoleMap stop={stop} flight={flight} lang={lang} t={t} onCard={() => openPanel('card')} />
         <p className="sr-only" aria-live="polite">
           {settled ? `${pick(current.label, lang)} — ${stopName(current, lang, t)}` : ''}
         </p>

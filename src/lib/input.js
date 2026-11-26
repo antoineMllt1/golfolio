@@ -61,6 +61,11 @@ export function useShotInput(handlers) {
       h.current.step?.(dy > 0 ? 1 : -1);
     };
 
+    // Le navigateur a repris le geste (zoom, défilement d'un panneau) : ce n'est pas un coup.
+    const onTouchCancel = () => {
+      start = null;
+    };
+
     // --- clavier
     const onKey = (e) => {
       if (e.metaKey || e.ctrlKey || e.altKey || h.current.blocked?.() || e.target.closest?.('input, textarea, select')) return;
@@ -77,11 +82,13 @@ export function useShotInput(handlers) {
     window.addEventListener('wheel', onWheel, { passive: false });
     window.addEventListener('touchstart', onTouchStart, { passive: true });
     window.addEventListener('touchend', onTouchEnd, { passive: true });
+    window.addEventListener('touchcancel', onTouchCancel, { passive: true });
     window.addEventListener('keydown', onKey);
     return () => {
       window.removeEventListener('wheel', onWheel);
       window.removeEventListener('touchstart', onTouchStart);
       window.removeEventListener('touchend', onTouchEnd);
+      window.removeEventListener('touchcancel', onTouchCancel);
       window.removeEventListener('keydown', onKey);
     };
   }, []);

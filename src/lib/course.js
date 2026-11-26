@@ -1,6 +1,7 @@
 // Le plan des deux trous, vus du dessus. Repère du dessin : 120 × 280, le départ en bas, le green en
 // haut. « spots » donne la place de la balle à chaque arrêt (numéro de l'arrêt → [x, y]) ; « pin » est
-// le trou, où la balle finit.
+// le trou, où la balle finit. Les distances restent crédibles pour un joueur : sur le par 5 le bois 3
+// va plus loin que le fer long, et le putt de 3 m est plus long que celui de 1,5 m.
 export const VIEW = { w: 120, h: 280 };
 
 export const COURSE = [
@@ -20,7 +21,7 @@ export const COURSE = [
     ],
     tee: { x: 41.5, y: 256, w: 13, h: 7, rot: -6 },
     pin: [91, 46],
-    spots: { 0: [48, 259.5], 1: [50, 166], 2: [72, 68], 3: [84, 53] },
+    spots: { 0: [48, 259.5], 1: [51, 156], 2: [72, 68], 3: [83.5, 53.5] },
   },
   {
     n: 2,
@@ -37,6 +38,6 @@ export const COURSE = [
     waves: ['M30 192q5 -4 10 0t10 0t10 0', 'M54 178q5 -4 10 0t10 0t10 0', 'M60 203q5 -4 10 0t10 0'],
     tee: { x: 49.5, y: 250, w: 13, h: 7, rot: 5 },
     pin: [73, 84],
-    spots: { 4: [56, 253.5], 5: [65, 93], 6: [73, 84] },
+    spots: { 4: [56, 253.5], 5: [68.5, 89.5], 6: [73, 84] },
   },
 ];
