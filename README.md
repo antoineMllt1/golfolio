@@ -18,7 +18,14 @@ Le plan complet est dans [`PLAN.md`](PLAN.md).
     la balle sur téléphone ;
   - `lib/input.js` transforme molette, trackpad, tactile et clavier en « un geste = un coup » ;
   - `components/` : les fiches, l'étude de cas, la carte de score (le sommaire, et la version sans
-    animation), le plan du trou, le bouton « Coup suivant ».
+    animation), le plan du trou, le bouton « Coup suivant » ;
+  - `App.jsx` tient l'état : l'arrêt courant suit l'adresse (`#spendmap`), et un panneau ouvert
+    (étude de cas, carte de score) ajoute une entrée d'historique, pour que le retour arrière du
+    navigateur le ferme au lieu de quitter le site.
+- **Les mises en page** (`src/styles.css`) : ordinateur ; écrans bas ; grands écrans (texte et
+  commandes agrandis à partir de 1800 px de large) ; téléphone debout (film en haut recadré autour
+  de la balle, fiche en bas) ; téléphone couché ou fenêtre de moins de 540 px de haut (fiche à
+  gauche, « Coup suivant » en bas à droite).
 - **Le serveur** (`server/index.js`, Express 5) sert `dist/`, répond à `/api/health` et écrit dans
   la page une version texte du site (projets, parcours, contact), le titre, la description, les
   balises de partage et les données structurées : tout est lisible sans JavaScript.

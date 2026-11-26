@@ -1189,6 +1189,7 @@ h1 .role {
   width: 15px;
   height: 15px;
   align-self: center;
+  justify-self: end;
   opacity: 0.35;
   transition: opacity 0.2s, transform 0.3s var(--ease);
 }
@@ -1535,8 +1536,14 @@ h1 .role {
 @media (max-height: 640px) and (min-aspect-ratio: 9/10) {
   .tools,
   .hint,
-  .credits {
+  .card .credits {
     display: none;
+  }
+  .links {
+    margin-top: 16px;
+  }
+  .card .links a {
+    min-height: 36px;
   }
   .map {
     width: 104px;
@@ -1618,7 +1625,7 @@ h1 .role {
 }
 
 /* ---------- téléphone, debout ou couché : ce qui est commun ---------- */
-@media (max-aspect-ratio: 9/10), (max-height: 480px) {
+@media (max-aspect-ratio: 9/10), (max-height: 540px) {
   /* Contact : l'adresse en un bouton, les liens sur une ligne. */
   .card .btn-copy {
     display: none;
@@ -2044,7 +2051,7 @@ h1 .role {
    Très peu de hauteur : tout se resserre. La fiche garde la moitié gauche et toute la hauteur ; la
    balle reste à droite ; « Coup suivant » passe en bas à droite, sous le pouce ; le plan du trou,
    réduit, monte sous la barre. */
-@media (max-height: 480px) and (min-aspect-ratio: 9/10) {
+@media (max-height: 540px) and (min-aspect-ratio: 9/10) {
   :root {
     --gutter: max(24px, env(safe-area-inset-left), env(safe-area-inset-right));
   }

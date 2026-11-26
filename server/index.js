@@ -21,7 +21,9 @@ const VERSION = (process.env.RAILWAY_GIT_COMMIT_SHA || '').slice(0, 10) || Date.
 const app = express();
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
-app.use((_req, res, next) => {
+app.use((req, res, next) => {
+  // Derrière Railway, tout arrive en HTTPS : le navigateur s'en souvient.
+  if (req.secure) res.setHeader('Strict-Transport-Security', 'max-age=31536000');
   res.setHeader(
     'Content-Security-Policy',
     [

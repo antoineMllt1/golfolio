@@ -259,10 +259,18 @@ export class Film {
     return (k > 0 && this.legs[k - 1] ? this.nearest(k - 1, this.legs[k - 1] - 1) : null) || (this.legs[k] ? this.frames[k][0] : null) || null;
   }
 
+  // La carte de score couvre tout l'écran : inutile de redessiner le film dessous (la dérive
+  // tourne sinon en permanence, et gêne le défilement sur un téléphone modeste).
+  sleep(asleep) {
+    this.asleep = asleep;
+    this.last = '';
+  }
+
   tick() {
     const now = performance.now();
     const dt = Math.min(0.05, (now - this.now) / 1000);
     this.now = now;
+    if (this.asleep && !this.anim && !this.fade) return;
     let focus = this.stops[this.stop].focus;
     let base = null;
     let key = `s${this.stop}`;

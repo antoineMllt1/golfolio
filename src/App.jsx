@@ -172,6 +172,16 @@ export default function App() {
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
   }, []);
+  // Carte de score ouverte : le film, entièrement caché, se repose.
+  useEffect(() => {
+    const film = filmRef.current;
+    if (panel !== 'card' || !film) return undefined;
+    const t = setTimeout(() => film.sleep(true), 600); // une fois la carte montée
+    return () => {
+      clearTimeout(t);
+      film.sleep(false);
+    };
+  }, [panel]);
   // Une ligne de la carte de score : on ferme la carte, puis on va à l'arrêt. L'entrée d'historique de
   // la carte devient celle de l'arrêt choisi : le retour arrière ramène d'où l'on venait.
   const goFromCard = (e, k) => {
