@@ -370,8 +370,8 @@
           "en": "A 100% automated pipeline and a real-time 360° view of reputation, benchmark and customer experience, presented to an executive-level jury of 4\u00a0professionals. The output: top after-sales pain points, share of voice against Boulanger and automated bad-buzz alerts."
         },
         "role": {
-          "fr": "Projet mené dans le cadre du BDD Licter × Fnac Darty\u00a0: pipeline construit en 5\u00a0jours, du scraping au dashboard, puis présenté à un jury COMEX de 4\u00a0professionnels.",
-          "en": "Built for the Licter × Fnac Darty BDD: the pipeline was put together in 5\u00a0days, from scraping to dashboard, then presented to an executive-level jury of 4\u00a0professionals."
+          "fr": "Projet mené dans le cadre du BDD Licter × Fnac Darty\u00a0: pipeline complet construit en 5\u00a0jours, du scraping au dashboard.",
+          "en": "Built for the Licter × Fnac Darty BDD: the full pipeline in 5\u00a0days, from scraping to dashboard."
         }
       }
     },
@@ -534,8 +534,8 @@
           }
         ],
         "outcome": {
-          "fr": "Sur une centaine de personnes repérées, il en reste une dizaine, qualifiées et prêtes à être contactées. L’IA fait le tri pour que les commerciaux ne perdent plus de temps sur les mauvais prospects, et le tout a été construit en une seule journée.",
-          "en": "Out of about a hundred people spotted, around ten remain, qualified and ready to contact. AI does the sorting so sales reps stop wasting time on the wrong prospects, and the whole thing was built in a single day."
+          "fr": "Sur une centaine de personnes repérées, il en reste une dizaine, qualifiées et prêtes à être contactées. L’IA fait le tri pour que les commerciaux ne perdent plus de temps sur les mauvais prospects.",
+          "en": "Out of about a hundred people spotted, around ten remain, qualified and ready to contact. AI does the sorting so sales reps stop wasting time on the wrong prospects."
         },
         "role": {
           "fr": "Hackathon HubSpot × Clay × lemlist × OpenAI, en une journée, avec l’équipe Sage. J’ai construit la méthode Spy Influence\u00a0; mon binôme Sales a construit le scoring des entreprises\u00a0: une note sur 1000 face au profil client idéal, puis un classement en tiers 1, 2 ou 3.",
@@ -637,7 +637,7 @@
       },
       "title": {
         "fr": "Birdie. On joue le prochain ensemble\u00a0?",
-        "en": "Birdie. Shall we play the next one together?"
+        "en": "Birdie. Play the next one together?"
       },
       "body": {
         "fr": "Une opportunité, une question, une tâche à automatiser\u00a0: un e-mail suffit, je réponds rapidement.",
