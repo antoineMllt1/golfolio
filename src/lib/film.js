@@ -113,13 +113,22 @@ export class Film {
       return true;
     });
     this.total = this.queue.length;
-    for (let k = 0; k < 6; k++) this.pump();
+    // L'image de l'arrêt courant part seule : c'est elle qu'on attend, elle a toute la bande passante.
+    // Les cinq autres files démarrent dès qu'elle est arrivée.
+    this.pump();
   }
 
   pump() {
     if (!this.alive) return;
-    // Passent devant : l'image nette qu'on attend, puis le trajet qui part de l'arrêt courant.
-    let idx = this.queue.findIndex((job) => job.hold !== undefined && this.wanted.has(job.hold));
+    // Passent devant : l'image nette de l'arrêt courant ou celle qu'on attend ; pendant un vol parti
+    // avec une image sur trois, celles qui manquent encore devant la balle ; puis le trajet qui part de
+    // l'arrêt courant.
+    let idx = this.queue.findIndex((job) => job.hold !== undefined && (job.hold === this.stop || this.wanted.has(job.hold)));
+    const a = this.anim;
+    if (idx < 0 && a) {
+      const at = ((this.now - a.t0) / 1000) * this.fps + 2; // deux images d'avance : le temps du téléchargement
+      idx = this.queue.findIndex((job) => job.leg === a.leg && job.i >= at);
+    }
     if (idx < 0) idx = this.queue.findIndex((job) => job.leg === this.stop);
     if (idx < 0) idx = 0;
     const job = this.queue.splice(idx, 1)[0];
@@ -131,9 +140,10 @@ export class Film {
       this.loaded += 1;
       this.cb.onProgress?.(this.loaded / this.total);
       // Même si la première image manque, la page doit s'ouvrir.
-      if (!this.ready && isHold && job.hold === this.stop) {
+      if (!this.ready && isHold) {
         this.ready = true;
         this.cb.onReady?.();
+        for (let k = 0; k < 5; k++) this.pump();
       }
       this.pump();
     };
