@@ -14,7 +14,7 @@ import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__))
 CACHE = os.path.join(HERE, 'assets', 'body.npz')
 # Jeune homme mince et grand (réglages Anny entre 0 et 1).
-PHENOTYPE = dict(gender=1.0, age=0.48, muscle=0.42, weight=0.34, height=0.66, proportions=0.62)
+PHENOTYPE = dict(gender=1.0, age=0.48, muscle=0.50, weight=0.40, height=0.66, proportions=0.62)
 HEIGHT = 1.80  # le corps est ensuite mis à cette taille
 
 
@@ -185,7 +185,7 @@ def curl_fingers(body, side, deg=62, thumb=28):
         body.rotate(f'finger1-{j}.{side}', axis_angle(Rw @ axis, sign * thumb))
 
 
-def finish_pose(body):
+def finish_pose(body, trail_ankle=0.235):
     """Le finish d'un droitier vu de dos : poids sur la jambe gauche, pied droit sur la pointe, buste
     tourné au-delà de la cible, mains hautes à gauche de la tête. Renvoie les sommets posés et des
     repères (mains, direction du club, tête), dans le repère du modèle (il regarde −Y)."""
@@ -210,16 +210,12 @@ def finish_pose(body):
     body.R[body.id['foot.L']] = axis_angle(Z, 22)
     # Jambe droite : genou rentré vers la cible, pied dressé sur la pointe, semelle vers l'arrière.
     hip = body.posed_head('upperleg01.R')
-    ball = body.head('foot.R') + [0.045, 0.43, -0.05]
-    ankle = ball + [0.0, 0.05, 0.150]
+    ankle = body.head('foot.R') * [1, 1, 0] + [0.050, 0.30, trail_ankle]
     knee = two_bone(hip, ankle, body.length('upperleg01.R', 'lowerleg01.R'), body.length('lowerleg01.R', 'foot.R'), (0.35, -1, 0))
     body.aim('upperleg01.R', knee, 'lowerleg01.R')
     body.aim('lowerleg01.R', ankle, 'foot.R')
     f = body.id['foot.R']
-    body.R[f] = arc(body.tails[f] - body.heads[f], (0.0, -0.04, -0.15))
-    for b, name in enumerate(body.labels):
-        if name.startswith('toe') and name.endswith('.R') and name.split('-')[1].startswith('1'):
-            body.R[b] = np.eye(3)  # les orteils restent à plat
+    body.R[f] = arc(body.tails[f] - body.heads[f], (0.0, -0.05, -1.0))  # la chaussure est dressée sur sa pointe
 
     # Bras : les deux mains sur le grip, hautes, à gauche et un peu derrière la tête.
     for name, lift in (('clavicle.L', 14), ('clavicle.R', 8)):
@@ -228,7 +224,7 @@ def finish_pose(body):
     head = body.posed_head('head')
     club = np.array([-0.95, 0.24, -0.14])
     club /= np.linalg.norm(club)
-    left = head + [0.175, 0.105, 0.115]
+    left = head + [0.205, 0.115, 0.055]
     right = left + club * 0.085
     for side, wrist, pole in (('L', left, (0.55, -0.35, -1.0)), ('R', right, (-0.2, -0.8, -0.75))):
         sh = body.posed_head(f'upperarm01.{side}')

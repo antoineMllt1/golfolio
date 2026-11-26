@@ -17,7 +17,7 @@ from mathutils import Vector
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import parts as P  # noqa: E402
-import player  # noqa: E402
+import golfer  # noqa: E402
 import human  # noqa: E402
 
 argv = sys.argv[sys.argv.index('--') + 1 :] if '--' in sys.argv else []
@@ -154,20 +154,29 @@ def stop_0():
 
 
 def study_finish():
-    """Étude : le joueur de dos, au finish, à contre-jour dans l'aube (d'après la photo de practice)."""
-    hdr = 'kloppenheim_06_8k'
-    az0, el = sun_azimuth(hdr)
-    # Dans ce ciel le soleil est derrière les nuages : la percée a été repérée à la main.
-    want = math.radians(args.sun if args.sun is not None else 107)
-    P.sky(hdr, rotation=want - az0, strength=1.0, light=0.4)
-    P.sun(azimuth=1.0, elevation=6.0, strength=2.6)
-    scene.view_settings.exposure = args.exposure if args.exposure is not None else -0.9
-    print(f'soleil : hauteur {math.degrees(el):.1f}°')
-    player.golfer_finish()
-    # Caméra basse qui lève les yeux, comme sur la photo : la silhouette se découpe sur le ciel.
-    cam_pos = V((-4.7, -0.55, 0.38))
-    target = V((0.0, 0.42, 1.06))
-    cam = camera(cam_pos, target, lens=40, fstop=2.8, focus=(0, -0.09, 1.2))
+    """Étude : le joueur de dos, au finish, à contre-jour dans l'aube (d'après la photo de practice).
+    Avec --view, le même joueur sous une lumière neutre, pour le contrôler de près."""
+    if args.view:
+        P.sky('lilienstein', rotation=math.radians(args.sun if args.sun is not None else 200), strength=1.0)
+        scene.view_settings.exposure = args.exposure if args.exposure is not None else -0.9
+        golfer.golfer_finish()
+        cams = {'top': ((-2.6, 0.9, 1.25), (0, -0.05, 1.05), 60), 'side': ((0.3, -4.6, 1.0), (0, -0.1, 0.95), 50), 'front': ((-2.2, -0.35, 1.55), (0, -0.05, 1.50), 85)}
+        pos, tgt, lens = cams[args.view]
+        cam_pos, target = V(pos), V(tgt)
+        cam = camera(cam_pos, target, lens=lens, fstop=8, focus=(0, -0.09, 1.2))
+    else:
+        hdr = 'kloppenheim_06_8k'
+        az0, el = sun_azimuth(hdr)
+        # Dans ce ciel le soleil est derrière les nuages : la percée a été repérée à la main.
+        want = math.radians(args.sun if args.sun is not None else 107)
+        P.sky(hdr, rotation=want - az0, strength=1.0, light=0.4)
+        P.sun(azimuth=1.0, elevation=6.0, strength=2.6)
+        scene.view_settings.exposure = args.exposure if args.exposure is not None else -0.9
+        golfer.golfer_finish()
+        # Caméra basse qui lève les yeux, comme sur la photo : la silhouette se découpe sur le ciel.
+        cam_pos = V((-4.7, -0.55, 0.38))
+        target = V((0.0, 0.42, 1.06))
+        cam = camera(cam_pos, target, lens=40, fstop=2.8, focus=(0, -0.09, 1.2))
     view = (target - cam_pos).normalized()
     view.z = 0
     xy = np.concatenate([
