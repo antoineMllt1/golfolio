@@ -2012,12 +2012,15 @@ h1 .role {
   .card .links a {
     font-size: 14px;
   }
+  .sheet .links .mono {
+    font-size: 9.5px;
+  }
+}
+/* L'en-tête de la carte ne tient plus sur une ligne : deux lignes franches plutôt que deux colonnes coupées. */
+@media (max-width: 560px) {
   .paper-head {
     flex-direction: column;
     gap: 3px;
-  }
-  .sheet .links .mono {
-    font-size: 9.5px;
   }
 }
 /* Sous 350 px de large, la barre du haut ne tient plus : la carte de score devient un pictogramme. */
