@@ -114,7 +114,7 @@ export class Film {
     });
     this.total = this.queue.length;
     // L'image de l'arrêt courant part seule : c'est elle qu'on attend, elle a toute la bande passante.
-    // Les cinq autres files démarrent dès qu'elle est arrivée.
+    // Les six files du reste démarrent quand elle est arrivée et que la page a fini de se charger.
     this.pump();
   }
 
@@ -143,7 +143,20 @@ export class Film {
       if (!this.ready && isHold) {
         this.ready = true;
         this.cb.onReady?.();
-        for (let k = 0; k < 5; k++) this.pump();
+        // Le reste du film attend que la page ait fini de se charger (événement « load ») : chaque image
+        // lancée avant le retarde, et l'onglet du navigateur tournerait tant que tout le film n'est pas là.
+        let started = false;
+        const rest = () => {
+          if (started) return;
+          started = true;
+          for (let k = 0; k < 6; k++) this.pump();
+        };
+        if (document.readyState === 'complete') rest();
+        else {
+          window.addEventListener('load', () => setTimeout(rest, 0), { once: true });
+          setTimeout(rest, 2500);
+        }
+        return;
       }
       this.pump();
     };
