@@ -1,0 +1,948 @@
+{
+  "meta": {
+    "name": "Antoine Millot",
+    "title": {
+      "fr": "Antoine Millot · AI Engineer & Data Analyst",
+      "en": "Antoine Millot · AI Engineer & Data Analyst"
+    },
+    "description": {
+      "fr": "AI Engineer & Data Analyst en alternance chez Sage. Cinq projets IA et data à parcourir en six coups de golf : RAG, pipelines de données, agents, automatisation.",
+      "en": "AI Engineer & Data Analyst, apprentice at Sage. Five AI and data projects played in six golf shots: RAG, data pipelines, agents, automation."
+    }
+  },
+  "ui": {
+    "fr": {
+      "skip": "Aller au contenu",
+      "loading": "Chargement",
+      "loadingFilm": "Chargement du parcours",
+      "language": "Changer de langue",
+      "langSwitch": "Switch to English",
+      "langName": "Français",
+      "menu": "Menu",
+      "open": "Ouvrir",
+      "close": "Fermer",
+      "newTab": "nouvel onglet",
+      "home": "Accueil",
+      "nav": "Navigation principale",
+      "about": "À propos",
+      "play": "Jouer",
+      "seeProjects": "Voir les projets",
+      "hint": "Molette, balayage ou flèches\u00a0: un geste joue un coup.",
+      "hintShort": "Défiler pour jouer",
+      "next": "Coup suivant",
+      "prev": "Coup précédent",
+      "replay": "Rejouer le parcours",
+      "backToStart": "Retour au départ",
+      "resume": "Reprendre le parcours",
+      "skipFlight": "Aller à l’arrivée",
+      "inFlight": "Balle en vol",
+      "stops": "Arrêts du parcours",
+      "goTo": "Aller à",
+      "hole": "Trou",
+      "par": "Par",
+      "stroke": "Coup",
+      "strokes": "Coups",
+      "of": "sur",
+      "length": "Longueur",
+      "metres": "m",
+      "club": "Club",
+      "score": "Score",
+      "total": "Total",
+      "birdie": "Birdie",
+      "tee": "Départ",
+      "fairway": "Fairway",
+      "green": "Green",
+      "water": "Eau",
+      "ball": "Balle",
+      "holeMap": "Plan du trou",
+      "scorecard": "Carte de score",
+      "scorecardIntro": "Tout le site sur une page\u00a0: chaque coup et son projet.",
+      "project": "Projet",
+      "projects": "Projets",
+      "journey": "Parcours",
+      "skills": "Savoir-faire",
+      "certifications": "Certifications",
+      "contact": "Contact",
+      "experience": "Expérience",
+      "education": "Formation",
+      "now": "Actuellement",
+      "issuer": "Organisme",
+      "concept": "Concept",
+      "result": "Résultat",
+      "tools": "Outils",
+      "caseStudy": "Étude de cas",
+      "closeCase": "Fermer l’étude de cas",
+      "code": "Code",
+      "demo": "Démo",
+      "viewCode": "Voir le code sur GitHub",
+      "viewDemo": "Ouvrir la démo en ligne",
+      "problem": "Problème",
+      "built": "Ce que j’ai construit",
+      "flow": "Fonctionnement",
+      "outcome": "Résultat",
+      "role": "Mon rôle",
+      "links": "Liens",
+      "noLink": "Pas de lien public pour ce projet.",
+      "email": "E-mail",
+      "writeEmail": "Écrire un e-mail",
+      "copyEmail": "Copier l’adresse",
+      "copied": "Adresse copiée",
+      "fullPortfolio": "Portfolio complet",
+      "reducedMotion": "Animations réduites\u00a0: les coups s’enchaînent en fondu.",
+      "noScript": "Ce site rejoue un film au fil des gestes. Sans JavaScript, tout le contenu reste lisible ci-dessous.",
+      "credits": "Film pré-rendu dans Blender. Ciels et panoramas\u00a0: Poly Haven, CC0."
+    },
+    "en": {
+      "skip": "Skip to content",
+      "loading": "Loading",
+      "loadingFilm": "Loading the course",
+      "language": "Change language",
+      "langSwitch": "Passer en français",
+      "langName": "English",
+      "menu": "Menu",
+      "open": "Open",
+      "close": "Close",
+      "newTab": "new tab",
+      "home": "Home",
+      "nav": "Main navigation",
+      "about": "About",
+      "play": "Play",
+      "seeProjects": "See the projects",
+      "hint": "Scroll, swipe or arrow keys: one gesture plays one shot.",
+      "hintShort": "Scroll to play",
+      "next": "Next shot",
+      "prev": "Previous shot",
+      "replay": "Play again",
+      "backToStart": "Back to the tee",
+      "resume": "Back to the course",
+      "skipFlight": "Skip to landing",
+      "inFlight": "Ball in flight",
+      "stops": "Course stops",
+      "goTo": "Go to",
+      "hole": "Hole",
+      "par": "Par",
+      "stroke": "Shot",
+      "strokes": "Shots",
+      "of": "of",
+      "length": "Length",
+      "metres": "m",
+      "club": "Club",
+      "score": "Score",
+      "total": "Total",
+      "birdie": "Birdie",
+      "tee": "Tee",
+      "fairway": "Fairway",
+      "green": "Green",
+      "water": "Water",
+      "ball": "Ball",
+      "holeMap": "Hole map",
+      "scorecard": "Scorecard",
+      "scorecardIntro": "The whole site on one page: every shot and its project.",
+      "project": "Project",
+      "projects": "Projects",
+      "journey": "Journey",
+      "skills": "Skills",
+      "certifications": "Certifications",
+      "contact": "Contact",
+      "experience": "Experience",
+      "education": "Education",
+      "now": "Now",
+      "issuer": "Issuer",
+      "concept": "Concept",
+      "result": "Result",
+      "tools": "Tools",
+      "caseStudy": "Case study",
+      "closeCase": "Close the case study",
+      "code": "Code",
+      "demo": "Demo",
+      "viewCode": "View the code on GitHub",
+      "viewDemo": "Open the live demo",
+      "problem": "Problem",
+      "built": "What I built",
+      "flow": "How it works",
+      "outcome": "Outcome",
+      "role": "My role",
+      "links": "Links",
+      "noLink": "No public link for this project.",
+      "email": "Email",
+      "writeEmail": "Write an email",
+      "copyEmail": "Copy the address",
+      "copied": "Address copied",
+      "fullPortfolio": "Full portfolio",
+      "reducedMotion": "Reduced motion: shots cross-fade.",
+      "noScript": "This site replays a film as you scroll. Without JavaScript, all the content remains readable below.",
+      "credits": "Film pre-rendered in Blender. Skies and panoramas: Poly Haven, CC0."
+    }
+  },
+  "holes": [
+    {
+      "n": 1,
+      "par": 5,
+      "length": 478
+    },
+    {
+      "n": 2,
+      "par": 3,
+      "length": 152
+    }
+  ],
+  "stops": [
+    {
+      "id": "depart",
+      "kind": "intro",
+      "hole": 1,
+      "stroke": 0,
+      "label": {
+        "fr": "TROU\u00a01\u00a0· PAR\u00a05\u00a0· 478\u00a0M",
+        "en": "HOLE\u00a01\u00a0· PAR\u00a05\u00a0· 478\u00a0M"
+      },
+      "title": {
+        "fr": "AI Engineer & Data Analyst",
+        "en": "AI Engineer & Data Analyst"
+      },
+      "body": {
+        "fr": "Je transforme la donnée en décisions et les tâches répétitives en workflows automatisés. En alternance chez Sage en 2026–2027, côté data et IA pour les équipes Customer Success.",
+        "en": "I turn data into decisions and repetitive tasks into automated workflows. Apprentice at Sage for 2026–2027, working on data and AI for the Customer Success teams."
+      }
+    },
+    {
+      "id": "spendmap",
+      "kind": "project",
+      "slug": "spendmap",
+      "hole": 1,
+      "stroke": 1,
+      "label": {
+        "fr": "TROU\u00a01\u00a0· COUP\u00a02\u00a0· FER LONG",
+        "en": "HOLE\u00a01\u00a0· SHOT\u00a02\u00a0· LONG IRON"
+      },
+      "club": {
+        "fr": "Fer long",
+        "en": "Long iron"
+      },
+      "concept": {
+        "fr": "RAG + graphe",
+        "en": "RAG + graph"
+      },
+      "name": "SpendMap",
+      "sentence": {
+        "fr": "Les factures de toutes les filiales d’un groupe, réunies et interrogeables en langage naturel.",
+        "en": "Invoices from every subsidiary of a group, in one place and queryable in natural language."
+      },
+      "result": {
+        "fr": "Analyse en langage naturel",
+        "en": "Natural language analytics"
+      },
+      "tools": [
+        "n8n",
+        "Neo4j",
+        "Gemini",
+        "RAG",
+        "SQL"
+      ],
+      "links": {
+        "code": null,
+        "demo": null
+      },
+      "case": {
+        "problem": {
+          "fr": "Dans un grand groupe, chaque entité gère ses factures séparément\u00a0: formats différents, outils différents, aucune vue consolidée. Comparer les postes de dépenses entre filiales ou repérer les fournisseurs communs demande un travail manuel considérable.",
+          "en": "In a large group, each entity manages its invoices separately: different formats, different tools, no consolidated view. Comparing expense categories across subsidiaries or spotting shared suppliers takes considerable manual work."
+        },
+        "built": [
+          {
+            "fr": "Ingestion des factures PDF dans n8n\u00a0: extraction par IA et embeddings Gemini.",
+            "en": "PDF invoice ingestion in n8n: AI extraction and Gemini embeddings."
+          },
+          {
+            "fr": "Clustering automatique des dépenses, avec libellés générés par Gemini, puis synchronisation vers un graphe Neo4j pour explorer les relations fournisseurs.",
+            "en": "Automatic expense clustering with Gemini-generated labels, then a sync to a Neo4j graph to explore supplier relationships."
+          },
+          {
+            "fr": "SpendMap Agent, un chatbot RAG qui traduit chaque question en requête SQL.",
+            "en": "SpendMap Agent, a RAG chatbot that turns each question into a SQL query."
+          }
+        ],
+        "flow": [
+          {
+            "fr": "Factures PDF",
+            "en": "PDF invoices"
+          },
+          {
+            "fr": "Extraction et embeddings",
+            "en": "Extraction and embeddings"
+          },
+          {
+            "fr": "Clusters et graphe Neo4j",
+            "en": "Clusters and Neo4j graph"
+          },
+          {
+            "fr": "Réponse sourcée en secondes",
+            "en": "Sourced answer in seconds"
+          }
+        ],
+        "outcome": {
+          "fr": "Toutes les factures du groupe sont centralisées et interrogeables instantanément. Un directeur financier peut demander «\u00a0Quelle filiale dépense le plus en logistique\u00a0?\u00a0» et obtenir une réponse sourcée en quelques secondes.",
+          "en": "All the group’s invoices are centralised and instantly queryable. A CFO can ask “Which subsidiary spends the most on logistics?” and get a sourced answer in seconds."
+        },
+        "role": {
+          "fr": "Conception et construction de l’architecture n8n\u00a0: quatre pipelines, de l’ingestion des factures à l’agent conversationnel.",
+          "en": "Design and build of the n8n architecture: four pipelines, from invoice ingestion to the conversational agent."
+        }
+      }
+    },
+    {
+      "id": "fnac-darty",
+      "kind": "project",
+      "slug": "licter-fnac-darty",
+      "hole": 1,
+      "stroke": 2,
+      "label": {
+        "fr": "TROU\u00a01\u00a0· COUP\u00a03\u00a0· WEDGE",
+        "en": "HOLE\u00a01\u00a0· SHOT\u00a03\u00a0· WEDGE"
+      },
+      "club": {
+        "fr": "Wedge",
+        "en": "Wedge"
+      },
+      "concept": {
+        "fr": "Pipeline de données",
+        "en": "Data pipeline"
+      },
+      "name": "Licter × Fnac Darty",
+      "sentence": {
+        "fr": "Des avis clients et des mentions sociales sur Fnac Darty jusqu’au dashboard COMEX, en 5\u00a0jours.",
+        "en": "From customer reviews and social mentions about Fnac Darty to an executive dashboard, in 5\u00a0days."
+      },
+      "result": {
+        "fr": "Pipeline 100\u00a0% automatisé",
+        "en": "100% automated pipeline"
+      },
+      "tools": [
+        "Python",
+        "Apify",
+        "Make",
+        "GPT-4o",
+        "Supabase"
+      ],
+      "links": {
+        "code": "https://github.com/antoineMllt1/BDD_Licter_V34",
+        "demo": null
+      },
+      "case": {
+        "problem": {
+          "fr": "Fnac Darty génère chaque jour des centaines de signaux\u00a0: avis clients, mentions sociales, comparaisons avec Boulanger. Aucune équipe ne peut tout lire, et la direction n’a pas de vue en temps réel sur sa réputation, sa position face aux concurrents ni les irritants clients.",
+          "en": "Every day Fnac Darty generates hundreds of signals: customer reviews, social mentions, comparisons with Boulanger. No team can read them all, and leadership has no real-time view of its reputation, its competitive position or customer pain points."
+        },
+        "built": [
+          {
+            "fr": "Scraping hybride (Python + Apify) de TikTok, Trustpilot et Google Reviews, orchestré avec Make.",
+            "en": "Hybrid scraping (Python + Apify) of TikTok, Trustpilot and Google Reviews, orchestrated with Make."
+          },
+          {
+            "fr": "Analyse de sentiment par GPT-4o et clustering thématique par machine learning, avec stockage dans Supabase.",
+            "en": "Sentiment analysis with GPT-4o and machine-learning topic clustering, stored in Supabase."
+          },
+          {
+            "fr": "Dashboard interactif «\u00a0Matrice de Bataille\u00a0» sur 3\u00a0piliers\u00a0: réputation et crise, benchmark marché, expérience client.",
+            "en": "Interactive “Battle Matrix” dashboard on 3\u00a0pillars: reputation and crisis, market benchmark, customer experience."
+          }
+        ],
+        "flow": [
+          {
+            "fr": "TikTok, Trustpilot, Google Reviews",
+            "en": "TikTok, Trustpilot, Google Reviews"
+          },
+          {
+            "fr": "Sentiment et clustering",
+            "en": "Sentiment and clustering"
+          },
+          {
+            "fr": "Base Supabase",
+            "en": "Supabase database"
+          },
+          {
+            "fr": "Dashboard COMEX",
+            "en": "Executive dashboard"
+          }
+        ],
+        "outcome": {
+          "fr": "Un pipeline 100\u00a0% automatisé et une vue à 360° en temps réel sur la réputation, le benchmark et l’expérience client, présentée à un jury COMEX de 4\u00a0professionnels. À l’arrivée\u00a0: les principaux irritants SAV, la part de voix face à Boulanger et des alertes bad buzz automatisées.",
+          "en": "A 100% automated pipeline and a real-time 360° view of reputation, benchmark and customer experience, presented to an executive-level jury of 4\u00a0professionals. The output: top after-sales pain points, share of voice against Boulanger and automated bad-buzz alerts."
+        },
+        "role": {
+          "fr": "Projet mené dans le cadre du BDD Licter × Fnac Darty\u00a0: pipeline construit en 5\u00a0jours, du scraping au dashboard, puis présenté à un jury COMEX de 4\u00a0professionnels.",
+          "en": "Built for the Licter × Fnac Darty BDD: the pipeline was put together in 5\u00a0days, from scraping to dashboard, then presented to an executive-level jury of 4\u00a0professionals."
+        }
+      }
+    },
+    {
+      "id": "payfit",
+      "kind": "project",
+      "slug": "hackathon-payfit",
+      "hole": 1,
+      "stroke": 3,
+      "label": {
+        "fr": "TROU\u00a01\u00a0· COUP\u00a04\u00a0· PUTTER",
+        "en": "HOLE\u00a01\u00a0· SHOT\u00a04\u00a0· PUTTER"
+      },
+      "club": {
+        "fr": "Putter",
+        "en": "Putter"
+      },
+      "concept": {
+        "fr": "Second agent évaluateur",
+        "en": "Second-agent evaluation"
+      },
+      "name": "Hackathon PayFit",
+      "sentence": {
+        "fr": "GPT-4o rédige l’article SEO, un second agent IA le note\u00a0: sous 70/100, il est régénéré.",
+        "en": "GPT-4o writes the SEO article, a second AI agent scores it: below 70/100, it is regenerated."
+      },
+      "result": {
+        "fr": "Articles SEO auto-générés",
+        "en": "Auto-generated SEO articles"
+      },
+      "tools": [
+        "n8n",
+        "GPT-4o",
+        "Google Sheets",
+        "Google Docs"
+      ],
+      "links": {
+        "code": null,
+        "demo": null
+      },
+      "case": {
+        "problem": {
+          "fr": "Produire des articles SEO de qualité pour le blog RH de PayFit demandait un effort rédactionnel considérable\u00a0: recherche de mots-clés, rédaction experte, optimisation SEO, validation. Le processus était lent et difficile à passer à l’échelle.",
+          "en": "Producing quality SEO articles for PayFit’s HR blog took considerable editorial effort: keyword research, expert writing, SEO optimisation, validation. The process was slow and hard to scale."
+        },
+        "built": [
+          {
+            "fr": "Collecte automatique des mots-clés RH depuis Google Sheets, puis génération de l’article par GPT-4o.",
+            "en": "Automatic collection of HR keywords from Google Sheets, then article generation with GPT-4o."
+          },
+          {
+            "fr": "Évaluation par un second agent IA\u00a0: score SEO, pertinence PayFit, qualité rédactionnelle. Sous 70/100, l’article repart en génération.",
+            "en": "Evaluation by a second AI agent: SEO score, PayFit relevance, writing quality. Below 70/100, the article goes back to generation."
+          },
+          {
+            "fr": "Double publication\u00a0: Google Docs et HTML prêt pour le CMS.",
+            "en": "Dual publishing: Google Docs and CMS-ready HTML."
+          }
+        ],
+        "flow": [
+          {
+            "fr": "Mots-clés Google Sheets",
+            "en": "Google Sheets keywords"
+          },
+          {
+            "fr": "Rédaction GPT-4o",
+            "en": "GPT-4o draft"
+          },
+          {
+            "fr": "Note du second agent",
+            "en": "Second-agent score"
+          },
+          {
+            "fr": "Google Docs et HTML",
+            "en": "Google Docs and HTML"
+          }
+        ],
+        "outcome": {
+          "fr": "Génération quotidienne automatisée d’articles SEO, avec un contrôle qualité intégré\u00a0: un score minimum de 70/100 avant toute publication.",
+          "en": "Automated daily generation of SEO articles, with built-in quality control: a minimum score of 70/100 before anything is published."
+        },
+        "role": {
+          "fr": "Construction du pipeline n8n complet en 5\u00a0étapes, de la collecte des mots-clés à la publication, pendant le hackathon PayFit.",
+          "en": "Built the complete 5-step n8n pipeline, from keyword collection to publishing, during the PayFit hackathon."
+        }
+      }
+    },
+    {
+      "id": "revenue-engine",
+      "kind": "project",
+      "slug": "revenue-engine-hackathon",
+      "hole": 2,
+      "stroke": 4,
+      "label": {
+        "fr": "TROU\u00a02\u00a0· COUP\u00a05\u00a0· FER\u00a07",
+        "en": "HOLE\u00a02\u00a0· SHOT\u00a05\u00a0· 7\u00a0IRON"
+      },
+      "club": {
+        "fr": "Fer\u00a07",
+        "en": "7\u00a0iron"
+      },
+      "concept": {
+        "fr": "Orchestration d’outils",
+        "en": "Tool orchestration"
+      },
+      "name": "Revenue Engine Hackathon",
+      "sentence": {
+        "fr": "Un moteur de prospection IA pour les ESN, construit en une journée\u00a0: lemlist repère, Clay trie, HubSpot reçoit.",
+        "en": "An AI prospecting engine for IT services firms, built in one day: lemlist spots, Clay filters, HubSpot receives."
+      },
+      "result": {
+        "fr": "100\u00a0profils → 10\u00a0leads qualifiés",
+        "en": "100\u00a0profiles → 10\u00a0qualified leads"
+      },
+      "tools": [
+        "Clay",
+        "lemlist",
+        "HubSpot",
+        "OpenAI"
+      ],
+      "links": {
+        "code": null,
+        "demo": null
+      },
+      "case": {
+        "problem": {
+          "fr": "Les commerciaux perdent du temps sur des prospects qui ne correspondent pas à la cible. Sur une niche précise comme les ESN, trouver les bonnes personnes à contacter demande un tri manuel long et peu fiable.",
+          "en": "Sales reps waste time on prospects who don’t fit the target. On a narrow niche like IT services firms, finding the right people to contact takes long, unreliable manual sorting."
+        },
+        "built": [
+          {
+            "fr": "La méthode Spy Influence\u00a0: partir des influenceurs que la cible suit.",
+            "en": "The Spy Influence method: start from the influencers the target follows."
+          },
+          {
+            "fr": "Avec lemlist, suivi des posts de 16\u00a0influenceurs et récupération des personnes qui les likent. Avec Clay, tri pour ne garder que les bons profils (fondateurs, comptables…).",
+            "en": "With lemlist, tracking the posts of 16\u00a0influencers and collecting the people who like them. With Clay, filtering to keep only the right profiles (founders, accountants…)."
+          },
+          {
+            "fr": "Les prospects retenus arrivent directement dans HubSpot, prêts pour les commerciaux.",
+            "en": "Selected prospects land directly in HubSpot, ready for sales."
+          }
+        ],
+        "flow": [
+          {
+            "fr": "Posts de 16\u00a0influenceurs",
+            "en": "Posts from 16\u00a0influencers"
+          },
+          {
+            "fr": "Collecte lemlist",
+            "en": "lemlist collection"
+          },
+          {
+            "fr": "Tri Clay",
+            "en": "Clay filtering"
+          },
+          {
+            "fr": "Leads dans HubSpot",
+            "en": "Leads in HubSpot"
+          }
+        ],
+        "outcome": {
+          "fr": "Sur une centaine de personnes repérées, il en reste une dizaine, qualifiées et prêtes à être contactées. L’IA fait le tri pour que les commerciaux ne perdent plus de temps sur les mauvais prospects, et le tout a été construit en une seule journée.",
+          "en": "Out of about a hundred people spotted, around ten remain, qualified and ready to contact. AI does the sorting so sales reps stop wasting time on the wrong prospects, and the whole thing was built in a single day."
+        },
+        "role": {
+          "fr": "Hackathon HubSpot × Clay × lemlist × OpenAI, en une journée, avec l’équipe Sage. J’ai construit la méthode Spy Influence\u00a0; mon binôme Sales a construit le scoring des entreprises\u00a0: une note sur 1000 face au profil client idéal, puis un classement en tiers 1, 2 ou 3.",
+          "en": "HubSpot × Clay × lemlist × OpenAI hackathon, in one day, with the Sage team. I built the Spy Influence method; my Sales teammate built the company scoring: a score out of 1,000 against the ideal customer profile, then tiers 1, 2 or 3."
+        }
+      }
+    },
+    {
+      "id": "estimia",
+      "kind": "project",
+      "slug": "estimia",
+      "hole": 2,
+      "stroke": 5,
+      "label": {
+        "fr": "TROU\u00a02\u00a0· COUP\u00a06\u00a0· PUTTER",
+        "en": "HOLE\u00a02\u00a0· SHOT\u00a06\u00a0· PUTTER"
+      },
+      "club": {
+        "fr": "Putter",
+        "en": "Putter"
+      },
+      "concept": {
+        "fr": "Produit data en ligne",
+        "en": "Live data product"
+      },
+      "name": "Estimia",
+      "sentence": {
+        "fr": "Une web app qui estime un bien immobilier en quelques secondes, à partir de plusieurs sources.",
+        "en": "A web app that values a property in seconds, from several sources."
+      },
+      "result": {
+        "fr": "Estimation en quelques secondes",
+        "en": "Valuation in seconds"
+      },
+      "tools": [
+        "Web app",
+        "Data",
+        "Railway"
+      ],
+      "links": {
+        "code": null,
+        "demo": "https://estimia.up.railway.app/"
+      },
+      "case": {
+        "problem": {
+          "fr": "Le prix d’un bien peut beaucoup varier d’une agence à l’autre. Sans méthode claire, avec des comparaisons parfois incomplètes, un acheteur ou un vendeur a du mal à savoir si le prix proposé est vraiment juste.",
+          "en": "A property’s price can vary a lot from one agency to another. Without a clear method, and with comparisons that are sometimes incomplete, buyers and sellers struggle to know whether the proposed price is truly fair."
+        },
+        "built": [
+          {
+            "fr": "Collecte automatique des informations utiles depuis plusieurs sources.",
+            "en": "Automatic collection of useful information from several sources."
+          },
+          {
+            "fr": "Une estimation plus objective\u00a0: prix au m² et niveau de confiance.",
+            "en": "A more objective valuation: price per square metre and a confidence level."
+          },
+          {
+            "fr": "Une vue du quartier et un rapport simple à consulter, dans une web app en ligne.",
+            "en": "A neighbourhood overview and a simple report to review, in a live web app."
+          }
+        ],
+        "flow": [
+          {
+            "fr": "Plusieurs sources",
+            "en": "Several sources"
+          },
+          {
+            "fr": "Collecte automatique",
+            "en": "Automatic collection"
+          },
+          {
+            "fr": "Prix au m², confiance",
+            "en": "Price per m², confidence"
+          },
+          {
+            "fr": "Rapport en ligne",
+            "en": "Online report"
+          }
+        ],
+        "outcome": {
+          "fr": "Une estimation claire en quelques secondes au lieu de longues recherches manuelles. Le résultat est plus lisible et réduit fortement la part d’intuition dans la fixation du prix.",
+          "en": "A clear valuation in seconds instead of long manual research. The result is easier to read and significantly reduces guesswork in setting the price."
+        },
+        "role": {
+          "fr": "Conception et construction de la plateforme, jusqu’à la mise en ligne de la démo.",
+          "en": "Design and build of the platform, through to putting the demo online."
+        }
+      }
+    },
+    {
+      "id": "contact",
+      "kind": "contact",
+      "hole": 2,
+      "stroke": 6,
+      "label": {
+        "fr": "2\u00a0TROUS\u00a0· 6\u00a0COUPS\u00a0· 2\u00a0BIRDIES",
+        "en": "2\u00a0HOLES\u00a0· 6\u00a0SHOTS\u00a0· 2\u00a0BIRDIES"
+      },
+      "title": {
+        "fr": "Birdie. On joue le prochain ensemble\u00a0?",
+        "en": "Birdie. Shall we play the next one together?"
+      },
+      "body": {
+        "fr": "Une opportunité, une question, une tâche à automatiser\u00a0: un e-mail suffit, je réponds rapidement.",
+        "en": "An opportunity, a question, a task to automate: one email is enough, I reply quickly."
+      },
+      "email": "antoine@pro-millot.com",
+      "links": [
+        {
+          "id": "github",
+          "label": "GitHub",
+          "url": "https://github.com/antoineMllt1"
+        },
+        {
+          "id": "linkedin",
+          "label": "LinkedIn",
+          "url": "https://www.linkedin.com/in/antoine-millot1"
+        },
+        {
+          "id": "portfolio",
+          "label": "Portfolio complet",
+          "url": "https://antoine-millot.up.railway.app"
+        }
+      ]
+    }
+  ],
+  "next": [
+    {
+      "club": {
+        "fr": "Bois\u00a03",
+        "en": "3\u00a0wood"
+      },
+      "shot": {
+        "fr": "Mise en jeu",
+        "en": "Tee shot"
+      }
+    },
+    {
+      "club": {
+        "fr": "Fer long",
+        "en": "Long iron"
+      },
+      "shot": {
+        "fr": "Attaque du green",
+        "en": "Going for the green"
+      }
+    },
+    {
+      "club": {
+        "fr": "Wedge",
+        "en": "Wedge"
+      },
+      "shot": {
+        "fr": "Approche roulée",
+        "en": "Chip and run"
+      }
+    },
+    {
+      "club": {
+        "fr": "Putter",
+        "en": "Putter"
+      },
+      "shot": {
+        "fr": "Putt pour birdie",
+        "en": "Putt for birdie"
+      }
+    },
+    {
+      "club": {
+        "fr": "Fer\u00a07",
+        "en": "7\u00a0iron"
+      },
+      "shot": {
+        "fr": "Au-dessus de l’eau",
+        "en": "Over the water"
+      }
+    },
+    {
+      "club": {
+        "fr": "Putter",
+        "en": "Putter"
+      },
+      "shot": {
+        "fr": "Le dernier putt",
+        "en": "The last putt"
+      }
+    }
+  ],
+  "about": {
+    "journey": [
+      {
+        "id": "sage",
+        "kind": "work",
+        "current": true,
+        "org": {
+          "fr": "Sage",
+          "en": "Sage"
+        },
+        "role": {
+          "fr": "Data Analyst CSM / AI Engineer",
+          "en": "Data Analyst CSM / AI Engineer"
+        },
+        "period": {
+          "fr": "Alternance\u00a0· 2026–2027",
+          "en": "Apprenticeship\u00a0· 2026–2027"
+        },
+        "text": {
+          "fr": "Data et IA au service des équipes Customer Success.",
+          "en": "Data and AI for the Customer Success teams."
+        }
+      },
+      {
+        "id": "ikory",
+        "kind": "work",
+        "current": false,
+        "org": {
+          "fr": "IKORY",
+          "en": "IKORY"
+        },
+        "role": {
+          "fr": "Data Analyst\u00a0· Stage",
+          "en": "Data Analyst\u00a0· Internship"
+        },
+        "period": {
+          "fr": "Juin – août 2025",
+          "en": "June – August 2025"
+        },
+        "text": {
+          "fr": "Workflows n8n et agents IA\u00a0: l’analyse d’un actif passe de plusieurs heures à moins de 5\u00a0minutes.",
+          "en": "n8n workflows and AI agents: analysing an asset went from hours to under 5\u00a0minutes."
+        }
+      },
+      {
+        "id": "eugenia",
+        "kind": "school",
+        "current": false,
+        "org": {
+          "fr": "Eugenia School (Groupe Albert School)",
+          "en": "Eugenia School (Albert School Group)"
+        },
+        "role": {
+          "fr": "Bachelor AI Applied to Business",
+          "en": "Bachelor AI Applied to Business"
+        },
+        "period": {
+          "fr": "2024 – aujourd’hui",
+          "en": "2024 – today"
+        },
+        "text": {
+          "fr": "Data, IA, automatisation et stratégie d’entreprise, en alternance.",
+          "en": "Data, AI, automation and business strategy, work-study."
+        }
+      },
+      {
+        "id": "bryanston",
+        "kind": "school",
+        "current": false,
+        "org": {
+          "fr": "Bryanston School, Royaume-Uni",
+          "en": "Bryanston School, United Kingdom"
+        },
+        "role": {
+          "fr": "A-levels",
+          "en": "A-levels"
+        },
+        "period": {
+          "fr": "2018 – 2024",
+          "en": "2018 – 2024"
+        },
+        "text": {
+          "fr": "Economics, Business, Politics. Scolarité en anglais.",
+          "en": "Economics, Business, Politics. Taught in English."
+        }
+      }
+    ],
+    "skills": [
+      {
+        "id": "data",
+        "name": {
+          "fr": "Data",
+          "en": "Data"
+        },
+        "items": [
+          "SQL",
+          "Python",
+          "Power BI",
+          "Looker Studio",
+          "Excel"
+        ],
+        "text": {
+          "fr": "Des tableaux de bord qui servent à décider.",
+          "en": "Dashboards people decide with."
+        }
+      },
+      {
+        "id": "ia",
+        "name": {
+          "fr": "IA",
+          "en": "AI"
+        },
+        "items": [
+          "Agents",
+          "RAG",
+          "LLM",
+          "Claude Code"
+        ],
+        "text": {
+          "fr": "Des outils qui lisent, trient et rédigent.",
+          "en": "Tools that read, sort and write."
+        }
+      },
+      {
+        "id": "automatisation",
+        "name": {
+          "fr": "Automatisation",
+          "en": "Automation"
+        },
+        "items": [
+          "n8n",
+          "Make",
+          "API"
+        ],
+        "text": {
+          "fr": "Les tâches répétitives tournent toutes seules.",
+          "en": "Repetitive tasks run on their own."
+        }
+      }
+    ],
+    "certifications": [
+      {
+        "id": "claude-academy",
+        "title": {
+          "fr": "Claude Academy",
+          "en": "Claude Academy"
+        },
+        "issuer": {
+          "fr": "Anthropic",
+          "en": "Anthropic"
+        }
+      },
+      {
+        "id": "hugging-face",
+        "title": {
+          "fr": "Hugging Face — Agents & LLM",
+          "en": "Hugging Face — Agents & LLMs"
+        },
+        "issuer": {
+          "fr": "Hugging Face",
+          "en": "Hugging Face"
+        }
+      },
+      {
+        "id": "databricks-fundamentals",
+        "title": {
+          "fr": "Databricks Fundamentals",
+          "en": "Databricks Fundamentals"
+        },
+        "issuer": {
+          "fr": "Databricks",
+          "en": "Databricks"
+        }
+      },
+      {
+        "id": "bcg-genai-job-simulation",
+        "title": {
+          "fr": "BCG X — GenAI Job Simulation",
+          "en": "BCG X — GenAI Job Simulation"
+        },
+        "issuer": {
+          "fr": "Forage\u00a0· Boston Consulting Group",
+          "en": "Forage\u00a0· Boston Consulting Group"
+        }
+      },
+      {
+        "id": "deloitte-data-analytics-job-simulation",
+        "title": {
+          "fr": "Deloitte — Data Analytics Job Simulation",
+          "en": "Deloitte — Data Analytics Job Simulation"
+        },
+        "issuer": {
+          "fr": "Forage\u00a0· Deloitte",
+          "en": "Forage\u00a0· Deloitte"
+        }
+      },
+      {
+        "id": "kaggle-intro-to-sql",
+        "title": {
+          "fr": "Kaggle — Intro to SQL",
+          "en": "Kaggle — Intro to SQL"
+        },
+        "issuer": {
+          "fr": "Kaggle",
+          "en": "Kaggle"
+        }
+      },
+      {
+        "id": "sage-facture-electronique",
+        "title": {
+          "fr": "Facture électronique — Je maîtrise le légal",
+          "en": "E-invoicing — Legal framework"
+        },
+        "issuer": {
+          "fr": "Sage",
+          "en": "Sage"
+        }
+      }
+    ]
+  }
+}
