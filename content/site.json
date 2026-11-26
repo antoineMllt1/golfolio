@@ -466,8 +466,8 @@
       "hole": 2,
       "stroke": 4,
       "label": {
-        "fr": "TROU\u00a02\u00a0· COUP\u00a05\u00a0· FER\u00a07",
-        "en": "HOLE\u00a02\u00a0· SHOT\u00a05\u00a0· 7\u00a0IRON"
+        "fr": "TROU\u00a02\u00a0· COUP\u00a01\u00a0· FER\u00a07",
+        "en": "HOLE\u00a02\u00a0· SHOT\u00a01\u00a0· 7\u00a0IRON"
       },
       "club": {
         "fr": "Fer\u00a07",
@@ -550,8 +550,8 @@
       "hole": 2,
       "stroke": 5,
       "label": {
-        "fr": "TROU\u00a02\u00a0· COUP\u00a06\u00a0· PUTTER",
-        "en": "HOLE\u00a02\u00a0· SHOT\u00a06\u00a0· PUTTER"
+        "fr": "TROU\u00a02\u00a0· COUP\u00a02\u00a0· PUTTER",
+        "en": "HOLE\u00a02\u00a0· SHOT\u00a02\u00a0· PUTTER"
       },
       "club": {
         "fr": "Putter",

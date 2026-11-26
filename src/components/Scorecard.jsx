@@ -16,10 +16,11 @@ export default function Scorecard({ open, stop, lang, t, onClose, onGo }) {
   const contact = STOPS[LAST];
   const { journey, skills, certifications } = SITE.about;
   // Une ligne par coup : l'arrêt d'où il part, son club, et le projet qu'on y lit.
+  // Comme sur une vraie carte, les coups se comptent par trou : le par 3 se joue en 1 puis 2.
   const row = (s, k) => (
     <li key={s.id}>
       <a className={`score-row ${k === stop ? 'here' : ''}`} href={`#${s.id}`} onClick={(e) => onGo(e, k)} aria-current={k === stop ? 'true' : undefined}>
-        <span className="c-shot mono">{s.stroke + 1}</span>
+        <span className="c-shot mono">{STOPS.slice(0, k).filter((x) => x.hole === s.hole).length + 1}</span>
         <span className="c-club mono">{pick(NEXT[k].club, lang)}</span>
         <span className="c-name">
           {s.kind === 'project' ? s.name : SITE.meta.name}
