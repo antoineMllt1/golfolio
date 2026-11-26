@@ -99,10 +99,13 @@ const staticHtml = [
 ].join('');
 
 // ---- l'en-tête : titre, description, partage (image en adresse absolue), données structurées
+const SHARE = existsSync(join(dist, 'og.jpg')) ? { path: '/og.jpg', width: 1200, height: 630 } : null;
 function headHtml(origin) {
   const title = fr(site.meta.title);
   const description = fr(site.meta.description);
-  const image = `${origin}/frames/poster.webp?v=${VERSION}`;
+  // L'image de partage : public/og.jpg (1200 × 630, JPEG : LinkedIn et les messageries ne lisent pas
+  // toutes le WebP). À défaut, l'affiche du film.
+  const image = `${origin}${SHARE ? SHARE.path : '/frames/poster.webp'}?v=${VERSION}`;
   const person = {
     '@context': 'https://schema.org',
     '@type': 'Person',
@@ -127,12 +130,21 @@ function headHtml(origin) {
     `<meta property="og:description" content="${esc(description)}" />`,
     `<meta property="og:url" content="${esc(origin)}/" />`,
     `<meta property="og:image" content="${esc(image)}" />`,
+    ...(SHARE
+      ? [
+          `<meta property="og:image:type" content="image/jpeg" />`,
+          `<meta property="og:image:width" content="${SHARE.width}" />`,
+          `<meta property="og:image:height" content="${SHARE.height}" />`,
+          `<meta property="og:image:alt" content="${esc(`${site.meta.name} · ${fr(intro.title)}`)}" />`,
+        ]
+      : []),
     '<meta property="og:locale" content="fr_FR" />',
     '<meta property="og:locale:alternate" content="en_GB" />',
     '<meta name="twitter:card" content="summary_large_image" />',
     `<meta name="twitter:title" content="${esc(title)}" />`,
     `<meta name="twitter:description" content="${esc(description)}" />`,
     `<meta name="twitter:image" content="${esc(image)}" />`,
+    ...(SHARE ? [`<meta name="twitter:image:alt" content="${esc(`${site.meta.name} · ${fr(intro.title)}`)}" />`] : []),
     // « < » est échappé : rien dans le JSON ne peut fermer la balise.
     `<script type="application/ld+json">${JSON.stringify(person).replace(/</g, '\\u003c')}</script>`,
   ].join('\n    ');
@@ -209,9 +221,11 @@ app.get(/^\/assets\/([A-Za-z0-9._-]+\.(?:js|css))$/, (req, res, next) => {
 });
 app.use('/assets', express.static(join(dist, 'assets'), { immutable: true, maxAge: '1y', index: false, fallthrough: false }));
 app.use('/fonts', express.static(join(dist, 'fonts'), { immutable: true, maxAge: '1y', index: false, fallthrough: false }));
+// La page passe avant les fichiers : sinon /index.html renverrait le gabarit brut de dist/, sans le
+// texte ni les balises de partage.
+app.get(['/', '/index.html'], page);
 app.use(express.static(dist, { index: false, maxAge: '1h' }));
 // Une seule page : tout autre chemin est une erreur 404.
-app.get(['/', '/index.html'], page);
 app.use((_req, res) => res.status(404).type('text/plain').send('Not found'));
 
 // Un fichier absent sous /frames, /assets ou /fonts : 404 sans détail.
