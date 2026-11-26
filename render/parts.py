@@ -587,3 +587,298 @@ def bloom(strength=0.3, threshold=1.2, size=0.55):
     out = ng.nodes.new('NodeGroupOutput')
     ng.links.new(rl.outputs['Image'], gl.inputs['Image'])
     ng.links.new(gl.outputs['Image'], out.inputs['Image'])
+
+
+# ================================================================ ajouts pour les arrêts 1 à 6
+# Fairway tondu en bandes, green ras, trou et son godet, drapeau, plan d'eau. Rien de ce qui précède
+# n'est modifié : l'arrêt 0 et le bois 3 rendent la même image qu'avant.
+class _Calc:
+    """Petits calculs enchaînés dans une matière : nœuds Math, les nombres posés sur les entrées."""
+
+    def __init__(self, nt):
+        self.nt = nt
+
+    def __call__(self, op, a, b=None, c=None, clamp=False):
+        n = self.nt.nodes.new('ShaderNodeMath')
+        n.operation = op
+        n.use_clamp = clamp
+        for k, v in enumerate((a, b, c)):
+            if v is None:
+                continue
+            if isinstance(v, (int, float)):
+                n.inputs[k].default_value = v
+            else:
+                self.nt.links.new(v, n.inputs[k])
+        return n.outputs[0]
+
+
+def _sharp(o, degrees=30.0):
+    """Ombrage lissé, sauf sur les arêtes plus vives que `degrees`."""
+    for other in bpy.context.selected_objects:
+        other.select_set(False)
+    bpy.context.view_layer.objects.active = o
+    o.select_set(True)
+    bpy.ops.object.shade_smooth_by_angle(angle=math.radians(degrees))
+    o.select_set(False)
+    return o
+
+
+def blades(xy, height, width, yaw, lean, material=None, name='Herbe'):
+    """Les mêmes brins que grass(), mais chacun reçoit son orientation (yaw, radians) et son
+    inclinaison (lean, part de la hauteur dont la pointe avance) : bandes de tonte, grain d'un green.
+    Renvoie l'objet et les pointes (N,3)."""
+    n = len(xy)
+    cx, cy = np.cos(yaw), np.sin(yaw)
+    seg = 3
+    verts = np.zeros((n, (seg + 1) * 2, 3), dtype=np.float32)
+    for k in range(seg + 1):
+        t = k / seg
+        w = width * (1 - 0.86 * t)
+        fwd = lean * height * t * t
+        z = height * t * (1 - 0.15 * t)
+        for side, sg in enumerate((-1, 1)):
+            verts[:, k * 2 + side, 0] = xy[:, 0] + cx * fwd - cy * w * sg
+            verts[:, k * 2 + side, 1] = xy[:, 1] + cy * fwd + cx * w * sg
+            verts[:, k * 2 + side, 2] = z
+    base = (np.arange(n) * (seg + 1) * 2)[:, None]
+    faces = np.zeros((n, seg, 4), dtype=np.int32)
+    for k in range(seg):
+        faces[:, k, :] = base + np.array([k * 2, k * 2 + 1, k * 2 + 3, k * 2 + 2])
+    o = mesh_obj(name, verts.reshape(-1, 3), faces.reshape(-1, 4))
+    assign(o, material or grass_material())
+    tips = np.stack([xy[:, 0] + cx * lean * height, xy[:, 1] + cy * lean * height, height * 0.85], axis=1)
+    return o, tips
+
+
+def lay(xy, height, yaw, lean, obstacles, margin=0.0006):
+    """Hauteurs des brins de blades(), abaissées là où un brin traverserait un objet posé dans l'herbe.
+    `obstacles` : fonctions points (N,3) → distance signée en mètres (négative dedans)."""
+    h = np.array(height, dtype=np.float64)
+    if not obstacles:
+        return h
+    foot = np.stack([xy[:, 0], xy[:, 1], 0.5 * h], axis=1)
+    near = np.zeros(len(xy), dtype=bool)
+    for f in obstacles:
+        near |= f(foot) < h * (1.0 + lean) + margin
+    idx = np.nonzero(near)[0]
+    for _ in range(10):
+        hit = np.zeros(len(idx), dtype=bool)
+        for t in (0.4, 0.7, 1.0):
+            fwd = lean[idx] * h[idx] * t * t
+            pts = np.stack([xy[idx, 0] + np.cos(yaw[idx]) * fwd, xy[idx, 1] + np.sin(yaw[idx]) * fwd, h[idx] * t * (1 - 0.15 * t)], axis=1)
+            for f in obstacles:
+                hit |= f(pts) < margin
+        idx = idx[hit]
+        if not len(idx):
+            break
+        h[idx] *= 0.7
+    return h
+
+
+def lawn(color_near, color_far, size=900.0, haze=(25, 260), bounds=None, hole=None, stripes=None, disc=None, z=0.0, name='Sol'):
+    """Sol sous les brins, à zones. bounds : (x0, x1, y0, y1) pour un sol qui s'arrête (bord de l'eau) ;
+    hole : (x, y, rayon) d'un trou rond découpé dans le sol ; stripes : (angle, largeur, contraste,
+    décalage) bandes de tonte alternées ; disc : (x, y, rayon, couleur) zone ronde d'une autre teinte
+    (le green). Les couleurs lointaines se fondent dans le ciel photographié, comme ground()."""
+    if hole is not None:
+        hx, hy, hr = hole
+        rings, segs = 72, 128
+        r = hr * (size / 2 / hr) ** (np.arange(rings + 1) / rings)
+        a = np.linspace(0, 2 * math.pi, segs, endpoint=False)
+        verts = np.zeros((rings + 1, segs, 3), dtype=np.float32)
+        verts[:, :, 0] = hx + r[:, None] * np.cos(a)[None]
+        verts[:, :, 1] = hy + r[:, None] * np.sin(a)[None]
+        verts[:, :, 2] = z
+        i = np.arange(rings)[:, None]
+        j = np.arange(segs)[None]
+        j2 = (j + 1) % segs
+        faces = np.stack([i * segs + j, (i + 1) * segs + j, (i + 1) * segs + j2, i * segs + j2], axis=-1)
+        o = mesh_obj(name, verts.reshape(-1, 3), faces.reshape(-1, 4), smooth=False)
+    else:
+        x0, x1, y0, y1 = bounds or (-size / 2, size / 2, -size / 2, size / 2)
+        o = mesh_obj(name, [(x0, y0, z), (x1, y0, z), (x1, y1, z), (x0, y1, z)], [(0, 1, 2, 3)], smooth=False)
+    m = mat(name, color_near, rough=0.9)
+    nt = m.node_tree
+    C = _Calc(nt)
+    tc = nt.nodes.new('ShaderNodeTexCoord')
+    sep = nt.nodes.new('ShaderNodeSeparateXYZ')
+    nt.links.new(tc.outputs['Object'], sep.inputs[0])
+    noise = nt.nodes.new('ShaderNodeTexNoise')
+    noise.inputs['Scale'].default_value = 60
+    noise.inputs['Detail'].default_value = 5
+    nt.links.new(tc.outputs['Object'], noise.inputs['Vector'])
+    gain = C('MULTIPLY_ADD', noise.outputs['Fac'], 0.8, 0.7)  # de 0,7 à 1,5 fois la teinte
+    if stripes is not None:
+        angle, width, contrast, offset = stripes
+        along = C('ADD', C('MULTIPLY_ADD', sep.outputs['X'], math.cos(angle), offset), C('MULTIPLY', sep.outputs['Y'], math.sin(angle)))
+        band = C('GREATER_THAN', C('FRACT', C('DIVIDE', along, 2 * width)), 0.5)
+        gain = C('MULTIPLY', gain, C('MULTIPLY_ADD', band, 2 * contrast, 1 - contrast))
+    base = nt.nodes.new('ShaderNodeRGB')
+    base.outputs[0].default_value = (*color_near, 1)
+    tint = base.outputs[0]
+    if disc is not None:
+        cx, cy, radius, colour = disc
+        dx, dy = C('SUBTRACT', sep.outputs['X'], cx), C('SUBTRACT', sep.outputs['Y'], cy)
+        inside = C('LESS_THAN', C('SQRT', C('ADD', C('MULTIPLY', dx, dx), C('MULTIPLY', dy, dy))), radius)
+        pick = nt.nodes.new('ShaderNodeMix')
+        pick.data_type = 'RGBA'
+        pick.inputs['B'].default_value = (*colour, 1)
+        nt.links.new(inside, pick.inputs['Factor'])
+        nt.links.new(tint, pick.inputs['A'])
+        tint = pick.outputs['Result']
+    var = nt.nodes.new('ShaderNodeVectorMath')
+    var.operation = 'SCALE'
+    nt.links.new(tint, var.inputs[0])
+    nt.links.new(gain, var.inputs['Scale'])
+    ln = nt.nodes.new('ShaderNodeVectorMath')
+    ln.operation = 'LENGTH'
+    nt.links.new(tc.outputs['Object'], ln.inputs[0])
+    far = nt.nodes.new('ShaderNodeMapRange')
+    far.inputs['From Min'].default_value = haze[0]
+    far.inputs['From Max'].default_value = haze[1]
+    nt.links.new(ln.outputs['Value'], far.inputs['Value'])
+    mix = nt.nodes.new('ShaderNodeMix')
+    mix.data_type = 'RGBA'
+    mix.inputs['B'].default_value = (*color_far, 1)
+    nt.links.new(far.outputs[0], mix.inputs['Factor'])
+    nt.links.new(var.outputs[0], mix.inputs['A'])
+    nt.links.new(mix.outputs['Result'], bsdf(m).inputs['Base Color'])
+    assign(o, m)
+    return o
+
+
+CUP_R = 0.054  # le trou : 108 mm de diamètre
+CUP_INNER = 0.0525  # intérieur du godet
+CUP_LIP = 0.025  # le godet est enfoncé de 25 mm sous le bord
+CUP_DEPTH = 0.110  # fond du godet
+
+
+def cup(center=(0.0, 0.0)):
+    """Le trou et son godet : une bande de terre de 25 mm sous le bord du gazon, puis le godet blanc,
+    son fond percé de six lumières et la douille où s'emboîte le drapeau."""
+    d = CUP_DEPTH
+    prof = [(CUP_R, 0.0), (CUP_R + 0.0005, -0.006), (CUP_R, -CUP_LIP), (CUP_INNER, -CUP_LIP), (CUP_INNER, -d), (0.016, -d), (0.0125, -d + 0.010), (0.0090, -d + 0.010), (0.0090, -d - 0.030)]
+    segs = 128
+    o = lathe('Trou', prof, segs)
+    o.location = (center[0], center[1], 0.0)
+    soil = mat('Terre', (0.050, 0.032, 0.018), rough=0.95)
+    nt = soil.node_tree
+    tc = nt.nodes.new('ShaderNodeTexCoord')
+    noise = nt.nodes.new('ShaderNodeTexNoise')
+    noise.inputs['Scale'].default_value = 420
+    noise.inputs['Detail'].default_value = 6
+    nt.links.new(tc.outputs['Object'], noise.inputs['Vector'])
+    ramp = nt.nodes.new('ShaderNodeValToRGB')
+    ramp.color_ramp.elements[0].position = 0.3
+    ramp.color_ramp.elements[0].color = (0.022, 0.014, 0.008, 1)
+    ramp.color_ramp.elements[1].position = 0.75
+    ramp.color_ramp.elements[1].color = (0.105, 0.070, 0.040, 1)
+    nt.links.new(noise.outputs['Fac'], ramp.inputs[0])
+    nt.links.new(ramp.outputs[0], bsdf(soil).inputs['Base Color'])
+    bump = nt.nodes.new('ShaderNodeBump')
+    bump.inputs['Strength'].default_value = 0.9
+    bump.inputs['Distance'].default_value = 0.0012
+    nt.links.new(noise.outputs['Fac'], bump.inputs['Height'])
+    nt.links.new(bump.outputs[0], bsdf(soil).inputs['Normal'])
+    def used(m, slots=False):
+        # Un godet qui a servi : plastique blanc un peu sali de terre, et les lumières du fond en noir.
+        nt = m.node_tree
+        C = _Calc(nt)
+        tc = nt.nodes.new('ShaderNodeTexCoord')
+        dirt = nt.nodes.new('ShaderNodeTexNoise')
+        dirt.inputs['Scale'].default_value = 55
+        dirt.inputs['Detail'].default_value = 5
+        nt.links.new(tc.outputs['Object'], dirt.inputs['Vector'])
+        stain = nt.nodes.new('ShaderNodeMix')
+        stain.data_type = 'RGBA'
+        stain.inputs['A'].default_value = (0.80, 0.80, 0.78, 1)
+        stain.inputs['B'].default_value = (0.42, 0.36, 0.27, 1)
+        nt.links.new(C('MULTIPLY', C('SUBTRACT', dirt.outputs['Fac'], 0.52, clamp=True), 2.2, clamp=True), stain.inputs['Factor'])
+        colour = stain.outputs['Result']
+        if slots:
+            sep = nt.nodes.new('ShaderNodeSeparateXYZ')
+            nt.links.new(tc.outputs['Object'], sep.inputs[0])
+            rad = C('SQRT', C('ADD', C('MULTIPLY', sep.outputs['X'], sep.outputs['X']), C('MULTIPLY', sep.outputs['Y'], sep.outputs['Y'])))
+            turn = C('FRACT', C('ADD', C('DIVIDE', C('ARCTAN2', sep.outputs['Y'], sep.outputs['X']), math.pi / 3), 0.25))
+            slot = C('MULTIPLY', C('LESS_THAN', C('ABSOLUTE', C('SUBTRACT', rad, 0.037)), 0.0038), C('LESS_THAN', C('ABSOLUTE', C('SUBTRACT', turn, 0.5)), 0.22))
+            dark = nt.nodes.new('ShaderNodeMix')
+            dark.data_type = 'RGBA'
+            dark.inputs['B'].default_value = (0.004, 0.004, 0.004, 1)
+            nt.links.new(slot, dark.inputs['Factor'])
+            nt.links.new(colour, dark.inputs['A'])
+            colour = dark.outputs['Result']
+        nt.links.new(colour, bsdf(m).inputs['Base Color'])
+        return m
+
+    liner = used(mat('Godet', (0.80, 0.80, 0.78), rough=0.38, coat_weight=0.2, coat_roughness=0.3))
+    floor = used(mat('FondGodet', (0.80, 0.80, 0.78), rough=0.42), slots=True)
+    assign(o, soil, liner, floor)
+    part = np.array([0, 0, 1, 1, 2, 1, 1, 1], dtype=np.int32)  # une matière par tronçon du profil
+    o.data.polygons.foreach_set('material_index', np.repeat(part, segs))
+    return _sharp(o, 35)
+
+
+def flagstick(center=(0.0, 0.0), height=2.13, heading=0.0, cloth=(0.90, 0.48, 0.04), stick=(0.90, 0.48, 0.04)):
+    """Le drapeau : embout en aluminium emboîté dans le godet, tige fine en fibre jaune d'or, étoffe de
+    la même couleur, sans marque, en haut. `heading` : direction (radians) vers laquelle flotte l'étoffe."""
+    z0 = -CUP_DEPTH + 0.004
+    prof = [(0.0, 0.0), (0.0075, 0.0), (0.0075, 0.046), (0.0095, 0.049), (0.0095, 0.070), (0.0062, 0.082), (0.0060, 0.60), (0.0052, height), (0.0, height)]
+    o = lathe('Drapeau', prof, 32)
+    o.location = (center[0], center[1], z0)
+    alu = mat('Embout', (0.78, 0.78, 0.80), rough=0.28, metal=1.0)
+    fibre = mat('Tige', stick, rough=0.22, coat_weight=0.5, coat_roughness=0.1)
+    assign(o, alu, fibre)
+    part = np.array([0, 0, 0, 0, 0, 1, 1, 1], dtype=np.int32)
+    o.data.polygons.foreach_set('material_index', np.repeat(part, 32))
+    _sharp(o, 35)
+    # L'étoffe : un rectangle de 46 × 33 cm qui ondule, tenu par son bord contre la tige.
+    nu, nv = 24, 14
+    u = np.linspace(0, 1, nu)[:, None]
+    v = np.linspace(0, 1, nv)[None]
+    wave = 0.030 * u * np.sin(u * 7.5 + v * 1.8) + 0.012 * u * np.sin(u * 15 - v * 3.0)
+    along = 0.0065 + 0.46 * u * (1 - 0.04 * np.sin(v * 3.1) * u)
+    verts = np.zeros((nu, nv, 3), dtype=np.float32)
+    verts[:, :, 0] = along * math.cos(heading) - wave * math.sin(heading)
+    verts[:, :, 1] = along * math.sin(heading) + wave * math.cos(heading)
+    verts[:, :, 2] = height - 0.012 - 0.33 * v - 0.05 * u * u * (0.4 + v)
+    i = np.arange(nu - 1)[:, None]
+    j = np.arange(nv - 1)[None]
+    faces = np.stack([i * nv + j, (i + 1) * nv + j, (i + 1) * nv + j + 1, i * nv + j + 1], axis=-1)
+    f = mesh_obj('Etoffe', verts.reshape(-1, 3), faces.reshape(-1, 4))
+    f.parent = o  # l'étoffe suit la tige
+    fab = mat('Etoffe', cloth, rough=0.7, sheen_weight=0.5)
+    nt = fab.node_tree
+    tr = nt.nodes.new('ShaderNodeBsdfTranslucent')
+    tr.inputs['Color'].default_value = (*cloth, 1)
+    mix = nt.nodes.new('ShaderNodeMixShader')
+    mix.inputs[0].default_value = 0.3
+    nt.links.new(bsdf(fab).outputs[0], mix.inputs[1])
+    nt.links.new(tr.outputs[0], mix.inputs[2])
+    nt.links.new(mix.outputs[0], nt.nodes['Material Output'].inputs['Surface'])
+    assign(f, fab)
+    return o
+
+
+def water(bounds, z=0.0, color=(0.010, 0.022, 0.024), ripple=0.35, scale=(0.5, 2.2), rough=0.035):
+    """Plan d'eau calme : il reflète le ciel et la rive d'en face ; de petites rides étirées accrochent le
+    soleil. bounds : (x0, x1, y0, y1) ; scale : taille des rides (mètres) en travers et le long de X."""
+    x0, x1, y0, y1 = bounds
+    o = mesh_obj('Eau', [(x0, y0, z), (x1, y0, z), (x1, y1, z), (x0, y1, z)], [(0, 1, 2, 3)], smooth=False)
+    m = mat('Eau', color, rough=rough, specular_ior_level=0.5, IOR=1.33)
+    nt = m.node_tree
+    tc = nt.nodes.new('ShaderNodeTexCoord')
+    mp = nt.nodes.new('ShaderNodeMapping')
+    mp.inputs['Scale'].default_value = (1 / scale[1], 1 / scale[0], 1.0)
+    nt.links.new(tc.outputs['Object'], mp.inputs['Vector'])
+    noise = nt.nodes.new('ShaderNodeTexNoise')
+    noise.inputs['Scale'].default_value = 1.0
+    noise.inputs['Detail'].default_value = 3.0
+    noise.inputs['Roughness'].default_value = 0.55
+    nt.links.new(mp.outputs['Vector'], noise.inputs['Vector'])
+    bump = nt.nodes.new('ShaderNodeBump')
+    bump.inputs['Strength'].default_value = ripple
+    bump.inputs['Distance'].default_value = 0.05
+    nt.links.new(noise.outputs['Fac'], bump.inputs['Height'])
+    nt.links.new(bump.outputs[0], bsdf(m).inputs['Normal'])
+    assign(o, m)
+    return o
