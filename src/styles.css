@@ -478,6 +478,7 @@ h1 .role {
   align-items: center;
   gap: 8px;
   min-width: 0;
+  overflow: hidden;
   font-size: 11.5px;
   color: var(--muted);
   white-space: nowrap;
@@ -1553,7 +1554,7 @@ h1 .role {
 /* ---------- écrans étroits ---------- */
 @media (max-width: 900px) {
   .about {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr); /* jamais plus large que l'écran, même avec une adresse longue */
     gap: 18px;
   }
   .score-cols {
@@ -1662,8 +1663,8 @@ h1 .role {
     gap: 1px;
     margin-bottom: 6px;
     padding-bottom: 5px;
-    font-size: 7.5px;
-    letter-spacing: 0.06em;
+    font-size: 8.5px;
+    letter-spacing: 0.04em;
   }
   .map-head span i,
   .map-foot,
@@ -1775,7 +1776,7 @@ h1 .role {
     padding-top: 13px;
   }
   .result .mono {
-    font-size: 9.5px;
+    font-size: 10px;
   }
   .result strong {
     font-size: 1.62rem;
@@ -1899,6 +1900,9 @@ h1 .role {
     width: 58px;
     padding: 7px 7px 6px;
   }
+  .map-head {
+    font-size: 7.5px;
+  }
   .card {
     padding-bottom: calc(84px + env(safe-area-inset-bottom));
   }
@@ -2012,6 +2016,9 @@ h1 .role {
     flex-direction: column;
     gap: 3px;
   }
+  .sheet .links .mono {
+    font-size: 9.5px;
+  }
 }
 /* Sous 350 px de large, la barre du haut ne tient plus : la carte de score devient un pictogramme. */
 @media (max-width: 350px) {
@@ -2037,6 +2044,10 @@ h1 .role {
   }
   .card .links svg {
     display: none;
+  }
+  .sheet .links .mono {
+    gap: 0;
+    font-size: 0; /* l'adresse ne tient plus à côté du nom : il reste la flèche */
   }
   .shot-next {
     gap: 8px;
