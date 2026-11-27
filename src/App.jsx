@@ -174,7 +174,7 @@ export default function App() {
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
   }, []);
-  // Carte de score ouverte : le film, entièrement caché, se repose.
+  // Carnet ouvert : le film, entièrement caché, se repose.
   useEffect(() => {
     const film = filmRef.current;
     if (panel !== 'card' || !film) return undefined;
@@ -184,8 +184,8 @@ export default function App() {
       film.sleep(false);
     };
   }, [panel]);
-  // Une ligne de la carte de score : on ferme la carte, puis on va à l'arrêt. L'entrée d'historique de
-  // la carte devient celle de l'arrêt choisi : le retour arrière ramène d'où l'on venait.
+  // Une ligne du carnet ouvert : on ferme le carnet, puis on va à l'arrêt. L'entrée d'historique du
+  // carnet devient celle de l'arrêt choisi : le retour arrière ramène d'où l'on venait.
   const goFromCard = (e, k) => {
     e.preventDefault();
     panelRef.current = null;
@@ -254,9 +254,10 @@ export default function App() {
             <a className="top-link mono" href={`#${STOPS[LAST].id}`} aria-current={stop === LAST ? 'true' : undefined}>
               {t.contact}
             </a>
-            <button type="button" className="top-card mono" onClick={() => openPanel('card')} aria-haspopup="dialog" aria-label={t.scorecard}>
+            <button type="button" className="top-card mono" onClick={() => openPanel('card')} aria-haspopup="dialog" aria-label={t.yardageBook}>
               <Book />
-              <span>{t.scorecard}</span>
+              <span className="long">{t.yardageBook}</span>
+              <span className="short">{t.book}</span>
             </button>
             <button type="button" className="top-lang mono" onClick={() => setLang(lang === 'fr' ? 'en' : 'fr')} aria-label={t.langSwitch} title={t.langSwitch}>
               <span className={lang === 'fr' ? 'on' : ''}>FR</span>

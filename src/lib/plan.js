@@ -476,9 +476,9 @@ export function spreadViews(h, size, mark, ctx) {
     : { ...(wide ? { ruler: { x: 58, ticks: ctx.marks.map((x) => ({ ...x, long: x.m === h.len })) }, wind: { at: [pw - 34, 46], ...ctx.wind } } : {}), north: [pw - 22, ph - 30] };
   const p = plan(h, { ...state, w: pw, h: ph, box: h.box, ...(one ? { arcs: 'green', sprinklers: 'dot', side: { 0: 1, 1: -1 } } : { side: { 0: 1 } }), extras });
   const gw = wide ? 312 : 354;
-  const gh = wide ? 262 : 230;
+  const gh = wide ? 244 : 230;
   const g = green(h, {
-    ...state, w: gw, h: gh, numbers: true, rulerX: wide ? 30 : 34, cx: wide ? 168 : 190, cy: wide ? 128 : 112, scaleBar: [gw - 60, 20, 5],
+    ...state, w: gw, h: gh, numbers: true, rulerX: wide ? 30 : 34, cx: wide ? 168 : 190, cy: wide ? 120 : 112, scaleBar: [gw - 60, 20, 5],
     ...(one
       ? { scale: wide ? 5.5 : 5.4, show: [2, 3], lead: { 3: [22, 5] }, side: { 2: 1, 3: -1 }, lenAt: { 2: 0.42, 3: 0.5 } }
       : { scale: wide ? 6.8 : 6.6, show: [1], lead: { 1: [25, -15] }, side: { 1: -1 }, lenOff: { 1: 12 }, lenShift: { 1: [3, 1] }, dimDy: 11 }),

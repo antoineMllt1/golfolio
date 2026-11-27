@@ -49,6 +49,7 @@
       "score": "Score",
       "total": "Total",
       "birdie": "Birdie",
+      "birdies": "Birdies",
       "tee": "Départ",
       "fairway": "Fairway",
       "green": "Green",
@@ -161,6 +162,7 @@
       "score": "Score",
       "total": "Total",
       "birdie": "Birdie",
+      "birdies": "Birdies",
       "tee": "Tee",
       "fairway": "Fairway",
       "green": "Green",
@@ -1283,8 +1285,8 @@
         "en": "On the green, 3\u00a0m below the hole"
       },
       "lie": {
-        "fr": "Green, à 3\u00a0m",
-        "en": "Green, 3\u00a0m away"
+        "fr": "Green",
+        "en": "Green"
       },
       "leaves": 3,
       "sync": {
@@ -1335,8 +1337,8 @@
         "en": "On the green, 1.5\u00a0m, pin high"
       },
       "lie": {
-        "fr": "Green, à 1,5\u00a0m",
-        "en": "Green, 1.5\u00a0m away"
+        "fr": "Green",
+        "en": "Green"
       },
       "leaves": 1.5,
       "sync": {

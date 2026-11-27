@@ -1858,7 +1858,8 @@ h1 .role {
   margin-top: 52px;
 }
 
-/* La carte de score : plein écran */
+/* Le carnet de parcours ouvert : plein écran. Une double page sur papier (une page par trou), puis
+   le parcours, les savoir-faire, les certifications et le contact. */
 .sheet.card-sheet {
   left: 0;
   width: auto;
@@ -1873,8 +1874,10 @@ h1 .role {
   transform: none;
 }
 .card-sheet .sheet-head {
+  position: relative;
   padding-left: var(--gutter);
   padding-right: var(--gutter);
+  border-bottom: 0;
 }
 .card-sheet .sheet-head .kicker {
   font-family: var(--serif);
@@ -1883,126 +1886,271 @@ h1 .role {
   text-transform: none;
   color: var(--ink);
 }
+/* le titre du panneau : lu par les lecteurs d'écran ; affiché sur téléphone, à la place du nom */
+.sheet h2.book-title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  font-size: 23px;
+  line-height: 1;
+  letter-spacing: -0.005em;
+}
+.book-hint {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--muted);
+}
 .card-sheet .sheet-body {
-  padding-left: var(--gutter);
-  padding-right: var(--gutter);
+  padding: 6px var(--gutter) max(64px, env(safe-area-inset-bottom));
 }
 .wide {
   max-width: 1080px;
   margin: 0 auto;
 }
-.card-sheet h2 {
-  font-size: clamp(3rem, 6vw, 5.2rem);
+.book {
+  --pk: 22 32 27;
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  max-width: 1296px;
+  margin: 0 auto;
+  border-radius: 6px;
+  background: #f0ece2;
+  color: rgb(var(--pk));
+  box-shadow: 0 30px 80px rgb(0 0 0 / 0.45);
 }
-/* La carte elle-même : du carton crème, encre vert sombre. */
-.paper {
-  --ink-d: #0a1410;
-  --rule: rgb(10 20 16 / 0.16);
-  margin-top: clamp(30px, 5vh, 48px);
-  border-radius: 8px;
-  background: var(--ink);
-  color: var(--ink-d);
-  overflow: hidden;
+.book::after {
+  /* la pliure */
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(50% - 28px);
+  width: 56px;
+  pointer-events: none;
+  background: linear-gradient(90deg, rgb(var(--pk) / 0) 0%, rgb(var(--pk) / 0.07) 49.2%, rgb(var(--pk) / 0.2) 50%, rgb(var(--pk) / 0.07) 50.8%, rgb(var(--pk) / 0) 100%);
 }
-.paper-head {
+.book :focus-visible {
+  outline-color: #a8640d;
+}
+.leaf {
+  position: relative;
   display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 18px 28px 16px;
-  border-bottom: 2px solid var(--ink-d);
-  font-size: 10.5px;
+  flex-direction: column;
+  min-width: 0;
+  padding: 22px 36px 22px;
+}
+.leaf-head {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: end;
+  column-gap: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgb(var(--pk));
+}
+.leaf-n {
+  font-family: var(--serif);
+  font-size: 92px;
+  line-height: 0.74;
+  letter-spacing: -0.03em;
+  font-variant-numeric: lining-nums;
+}
+.leaf-t {
+  display: grid;
+  gap: 7px;
+  padding-bottom: 1px;
+}
+.leaf-t b {
+  font-family: var(--mono);
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-}
-.score-cols,
-.score-row {
-  display: grid;
-  align-items: baseline;
-  column-gap: 0;
-}
-.score-cols {
-  grid-template-columns: 72px 72px 72px 150px minmax(0, 1.25fr) minmax(0, 1fr) 28px;
-  padding: 11px 28px 9px;
-  border-bottom: 1px solid var(--rule);
-  font-size: 9.5px;
-  font-weight: 500;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: rgb(10 20 16 / 0.62);
-}
-.score-hole {
-  display: grid;
-  grid-template-columns: 144px minmax(0, 1fr);
-  padding-left: 28px;
-  border-bottom: 1px solid var(--ink-d);
-}
-.score-id {
-  grid-row: 1 / span 2;
-  display: grid;
-  grid-template-columns: 72px 72px;
-  align-content: start;
-  padding-top: 15px;
-  font-family: var(--serif);
-  font-size: 2.9rem;
   line-height: 1;
 }
-.c-par {
-  color: rgb(10 20 16 / 0.5);
+.leaf-t span {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 19px;
+  line-height: 1;
+  color: rgb(var(--pk) / 0.72);
 }
-.c-len {
-  grid-column: 1 / -1;
-  margin-top: 8px;
+.leaf-s {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 1px;
+  font-family: var(--mono);
   font-size: 10px;
-  letter-spacing: 0.1em;
+  font-weight: 500;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: rgb(10 20 16 / 0.62);
+  line-height: 1;
 }
-.score-row {
-  grid-template-columns: 72px 150px minmax(0, 1.25fr) minmax(0, 1fr) 28px;
-  padding: 16px 28px 15px 0;
-  border-bottom: 1px solid var(--rule);
+.leaf-s b {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding-bottom: 1px;
+  border: 1px solid rgb(var(--pk));
+  border-radius: 50%;
+  font-family: var(--serif);
+  font-size: 24px;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1;
+}
+.leaf-body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 236px minmax(0, 1fr);
+  column-gap: 28px;
+  padding-top: 18px;
+}
+.leaf-plan,
+.leaf-side,
+.leaf-list {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.leaf-list {
+  flex: 1;
+}
+.cap-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  height: 12px;
+  margin-bottom: 8px;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  line-height: 1;
+  white-space: nowrap;
+  color: rgb(var(--pk) / 0.62);
+}
+.cap-line b {
+  font-weight: 600;
+  color: rgb(var(--pk));
+}
+.inset {
+  border: 1px solid rgb(var(--pk) / 0.22);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.inset svg {
+  width: 100%;
+  height: auto;
+}
+/* la liste des coups : une ligne = un lien vers son arrêt ; on y lit le projet et son résultat */
+.strokes {
+  margin-top: 16px;
+  border-top: 1px solid rgb(var(--pk));
+}
+.stroke {
+  position: relative;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  align-items: start;
+  column-gap: 12px;
+  padding: 8px 0 9px;
+  border-bottom: 1px solid rgb(var(--pk) / 0.16);
+}
+.stroke::before {
+  content: '';
+  position: absolute;
+  inset: 0 -10px;
+  border-radius: 3px;
   transition: background-color 0.2s;
 }
-.score-rows li:last-child .score-row {
-  border-bottom-color: var(--rule);
+.stroke:hover::before,
+.stroke:focus-visible::before {
+  background: rgb(var(--pk) / 0.06);
 }
-.score-row:hover,
-.score-row:focus-visible {
-  background: rgb(10 20 16 / 0.06);
+.stroke.here::before {
+  background: rgb(242 169 59 / 0.16);
 }
-.c-shot {
-  font-size: 13px;
-  font-weight: 600;
+.stroke > * {
+  position: relative;
 }
-.c-club {
+.stroke .d {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgb(var(--pk));
+  color: #f0ece2;
+  font-family: var(--mono);
   font-size: 10.5px;
-  font-weight: 500;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: rgb(10 20 16 / 0.7);
+  font-weight: 600;
+  line-height: 1;
 }
-.c-name {
-  padding-right: 18px;
+.stroke .d.flagd {
+  background: none;
+  border: 1px dashed rgb(var(--pk) / 0.7);
+  color: rgb(var(--pk));
+}
+.stroke .d.flagd svg {
+  width: 8px;
+  height: 10px;
+  margin-left: 1px;
+}
+.stroke.here .d {
+  background: #f2a93b;
+  border-color: #f2a93b;
+  color: #17120a;
+  box-shadow: 0 0 0 3px rgb(242 169 59 / 0.28);
+}
+.stroke .d {
+  grid-row: 1 / span 3;
+  margin-top: 1px;
+}
+.stroke .name,
+.stroke .dist {
   font-family: var(--serif);
-  font-size: 1.62rem;
-  line-height: 1.08;
+  font-weight: 400;
+  font-size: 21px;
+  line-height: 1.04;
+  letter-spacing: -0.005em;
 }
-.c-name small {
-  display: block;
-  margin-top: 4px;
+.stroke .dist {
+  font-variant-numeric: lining-nums;
+  white-space: nowrap;
+}
+.stroke .dist small {
   font-family: var(--sans);
+  font-size: 12px;
+  letter-spacing: 0;
+  color: rgb(var(--pk) / 0.7);
+}
+.stroke .res,
+.stroke .meta {
+  grid-column: 2 / 4;
+}
+.stroke .res {
+  margin-top: 4px;
   font-size: 12.5px;
-  line-height: 1.3;
-  color: rgb(10 20 16 / 0.66);
-}
-.c-result {
-  padding-right: 12px;
-  font-size: 14px;
   font-weight: 500;
-  line-height: 1.35;
+  line-height: 1.25;
+  color: rgb(var(--pk) / 0.88);
 }
-.c-result .inline-arrow,
+.stroke .res .inline-arrow,
 .case-facts .inline-arrow {
   width: 0.82em;
   height: 0.82em;
@@ -2010,97 +2158,443 @@ h1 .role {
   vertical-align: -0.06em;
   stroke-width: 1.4;
 }
-.c-go {
-  width: 15px;
-  height: 15px;
-  align-self: center;
-  justify-self: end;
-  opacity: 0.35;
-  transition: opacity 0.2s, transform 0.3s var(--ease);
-}
-.score-row:hover .c-go {
-  opacity: 1;
-  transform: translateX(4px);
-}
-.score-row.here .c-shot::after {
-  content: '';
-  display: inline-block;
-  width: 7px;
-  height: 7px;
-  margin-left: 9px;
-  border-radius: 50%;
-  background: var(--amber);
-  box-shadow: 0 0 0 1px var(--ink-d);
-}
-.score-sum {
-  grid-column: 2;
+.stroke .meta {
   display: flex;
-  align-items: center;
+  flex-wrap: wrap;
   justify-content: space-between;
-  gap: 16px;
-  padding: 11px 28px 11px 72px;
-  font-size: 10.5px;
+  gap: 2px 10px;
+  margin-top: 5px;
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  line-height: 1.3;
+  color: rgb(var(--pk) / 0.6);
+}
+.stroke .meta i {
+  margin-left: auto;
+  font-style: normal;
+}
+.stroke.here .meta i {
+  color: #a8640d;
+}
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin-top: auto;
+  padding-top: 11px;
+  font-size: 8.5px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  line-height: 1;
+  color: rgb(var(--pk) / 0.62);
+}
+.legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.legend b {
   font-weight: 600;
+  letter-spacing: 0.02em;
+  color: rgb(var(--pk));
+}
+.legend svg {
+  overflow: visible;
+}
+/* la carte, glissée dans le carnet : deux trous, deux birdies, signée */
+.sc {
+  width: 100%;
+  margin-top: 18px;
+  border-collapse: collapse;
+  border-top: 1px solid rgb(var(--pk));
+  font-size: 9.5px;
+  font-weight: 500;
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
-.score-mark {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
+.sc tr {
+  height: 27px;
+  border-bottom: 1px solid rgb(var(--pk) / 0.16);
 }
-.score-mark b {
-  display: grid;
+.sc th,
+.sc .lab {
+  font-weight: 500;
+  color: rgb(var(--pk) / 0.62);
+}
+.sc th {
+  text-align: left;
+}
+.sc td {
+  width: 44px;
+  padding: 0;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.sc td:last-child {
+  width: 60px;
+}
+.sc td.lab {
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+}
+.sc tr.score {
+  height: 38px;
+  border-bottom-color: rgb(var(--pk));
+}
+.sc .score b {
+  display: inline-grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
+  width: 24px;
+  height: 24px;
+  padding-bottom: 1px;
+  border: 1px solid rgb(var(--pk));
   border-radius: 50%;
+  font-family: var(--serif);
+  font-size: 17px;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1;
+}
+.sc .score .tot {
   font-family: var(--serif);
   font-size: 21px;
   font-weight: 400;
   letter-spacing: 0;
+  white-space: nowrap;
 }
-/* Un birdie se note comme sur une vraie carte : le score entouré. */
-.score-mark b.under {
-  box-shadow: inset 0 0 0 1.5px var(--ink-d);
-}
-.score-total {
-  display: grid;
-  grid-template-columns: 216px minmax(0, 1fr) auto;
-  align-items: center;
-  padding: 18px 28px;
-  background: var(--amber);
-  color: #17120a;
-  transition: background-color 0.2s;
-}
-.score-total:hover {
-  background: #f7bd62;
-}
-.score-total .mono {
-  font-size: 10.5px;
+.sc .score .tot small {
+  margin-left: 6px;
+  font-family: var(--mono);
+  font-size: 10px;
   font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
-.score-big {
+.sign {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 6px 2px;
+  margin-top: 16px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid rgb(var(--pk) / 0.5);
+}
+.sign b {
   font-family: var(--serif);
-  font-size: 1.9rem;
-  line-height: 1;
-}
-.score-big i {
-  margin-left: 12px;
   font-style: italic;
+  font-weight: 400;
+  font-size: 30px;
+  line-height: 0.9;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
 }
-.score-contact {
-  display: inline-flex;
+.sign span {
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  line-height: 1;
+  white-space: nowrap;
+  color: rgb(var(--pk) / 0.6);
+}
+.invite {
+  margin-top: 24px;
+  font-family: var(--serif);
+  font-size: 27px;
+  line-height: 1.08;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+.invite a {
+  display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 15px;
-  font-weight: 600;
+  gap: 8px;
+  width: fit-content;
+  min-height: 32px;
+  margin-top: 6px;
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: rgb(var(--pk) / 0.72);
+  transition: color 0.2s;
 }
-.score-contact svg {
-  width: 15px;
-  height: 15px;
+.invite a:hover {
+  color: rgb(var(--pk));
+}
+.invite svg {
+  width: 13px;
+  height: 13px;
+  transition: transform 0.3s var(--ease);
+}
+.invite a:hover svg {
+  transform: translateX(3px);
+}
+.pager {
+  display: none;
+}
+/* La double page ne tient plus : une page sous l'autre ; l'encart du green et la liste côte à côte
+   tant que la largeur le permet. */
+@media (max-width: 1339px) {
+  .book {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 1080px;
+  }
+  .book::after {
+    display: none;
+  }
+  .leaf + .leaf {
+    border-top: 1px solid rgb(var(--pk) / 0.3);
+  }
+  .book-hint {
+    display: none;
+  }
+}
+@media (min-width: 940px) and (max-width: 1339px) {
+  .leaf-side {
+    display: grid;
+    grid-template-columns: 312px minmax(0, 1fr);
+    column-gap: 28px;
+    align-items: start;
+  }
+  .leaf-list .strokes {
+    margin-top: 20px;
+  }
+  .leaf-list .legend {
+    margin-top: 0;
+  }
+}
+/* Téléphone : une page par trou, on balaie de l'une à l'autre. */
+@media (max-width: 699px) {
+  .card-sheet .sheet-head {
+    min-height: 62px;
+    padding: env(safe-area-inset-top) 14px 0 20px;
+  }
+  .card-sheet .sheet-head .kicker {
+    display: none;
+  }
+  .sheet h2.book-title {
+    position: static;
+    width: auto;
+    height: auto;
+    margin: 0 auto 0 0;
+    overflow: visible;
+    clip-path: none;
+  }
+  .card-sheet .head-link {
+    margin-left: 0;
+  }
+  .card-sheet .close {
+    margin-right: 0;
+  }
+  .card-sheet .sheet-body {
+    padding: 0 0 max(64px, env(safe-area-inset-bottom));
+  }
+  .card-sheet .wide {
+    padding: 0 20px;
+  }
+  .book {
+    display: flex;
+    align-items: stretch;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    border-radius: 14px 14px 0 0;
+    box-shadow: none;
+  }
+  .book::-webkit-scrollbar {
+    display: none;
+  }
+  .leaf {
+    flex: 0 0 100%;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+    padding: 18px 18px 26px;
+  }
+  .leaf + .leaf {
+    border-top: 0;
+    border-left: 1px solid rgb(var(--pk) / 0.16);
+  }
+  .pager {
+    position: absolute;
+    right: 18px;
+    top: 14px;
+    z-index: 1;
+    display: flex;
+    gap: 5px;
+  }
+  .pager button {
+    position: relative;
+    width: 18px;
+    height: 3px;
+    border-radius: 2px;
+    background: rgb(var(--pk) / 0.22);
+  }
+  .pager button::after {
+    content: '';
+    position: absolute;
+    inset: -20px -3px;
+  }
+  .pager button.on {
+    background: rgb(var(--pk));
+  }
+  .leaf-head {
+    column-gap: 12px;
+    padding-bottom: 13px;
+  }
+  .leaf-n {
+    font-size: 70px;
+  }
+  .leaf-t b {
+    font-size: 10.5px;
+  }
+  .leaf-t span {
+    font-size: 16.5px;
+  }
+  .leaf-s b {
+    width: 30px;
+    height: 30px;
+    font-size: 21px;
+  }
+  .leaf-s span {
+    display: none;
+  }
+  .leaf-body {
+    flex: none;
+    grid-template-columns: 150px minmax(0, 1fr);
+    grid-template-areas: 'plan list' 'green green';
+    column-gap: 16px;
+    padding-top: 14px;
+  }
+  .leaf-side {
+    display: contents;
+  }
+  .leaf-plan {
+    grid-area: plan;
+  }
+  .leaf-list {
+    grid-area: list;
+  }
+  .leaf-green {
+    grid-area: green;
+    margin-top: 18px;
+  }
+  .strokes {
+    margin-top: 0;
+    border-top: 0;
+  }
+  /* la ligne d'un coup, en colonne : le nom, le résultat, le club et le concept, puis « 215 m · avant-green » */
+  .stroke {
+    grid-template-columns: 24px auto minmax(0, 1fr);
+    column-gap: 10px;
+    padding: 11px 0 12px;
+  }
+  .stroke::before {
+    inset: 0 -8px;
+  }
+  .stroke .d {
+    grid-row: 1 / span 4;
+  }
+  .stroke .name,
+  .stroke .res {
+    grid-column: 2 / 4;
+  }
+  .stroke .name {
+    font-size: 19.5px;
+    line-height: 1.02;
+  }
+  .stroke .res {
+    margin-top: 5px;
+  }
+  .stroke .meta {
+    display: contents;
+  }
+  .stroke .meta span {
+    grid-column: 2 / 4;
+    margin-top: 6px;
+  }
+  .stroke .dist,
+  .stroke .meta i {
+    order: 5;
+    margin-top: 3px;
+  }
+  .stroke .dist {
+    grid-column: 2;
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    line-height: 1.3;
+    color: rgb(var(--pk));
+  }
+  .stroke .dist small {
+    font: inherit;
+    letter-spacing: inherit;
+    color: inherit;
+  }
+  .stroke .meta i {
+    grid-column: 3;
+    margin-left: 0;
+  }
+  .stroke .meta i::before {
+    content: '· ';
+  }
+  .sc {
+    margin-top: 16px;
+    font-size: 8.5px;
+    letter-spacing: 0.1em;
+  }
+  .sc td {
+    width: 26px;
+  }
+  .sc td:last-child {
+    width: 48px;
+  }
+  .sc td.lab {
+    font-size: 8.5px;
+    letter-spacing: 0.1em;
+  }
+  .sc .score .tot {
+    font-size: 19px;
+  }
+  .sc .score .tot small {
+    margin-left: 4px;
+  }
+  .sign {
+    margin-top: 14px;
+  }
+  .sign b {
+    font-size: 25px;
+  }
+  .invite {
+    margin-top: 16px;
+    font-size: 21px;
+  }
+  .invite a {
+    min-height: 44px;
+    margin-top: 0;
+    font-size: 9.5px;
+    letter-spacing: 0.02em;
+  }
+  .legend {
+    margin-top: 0;
+    padding-top: 8px;
+    gap: 6px 12px;
+    line-height: 1.5;
+  }
+  .legend span {
+    white-space: normal;
+  }
+  .leaf-list > .legend {
+    display: none; /* la légende n'a pas la place à côté du plan */
+  }
 }
 /* Parcours, savoir-faire, certifications, contact : l'étiquette à gauche, le contenu à droite. */
 .about {
@@ -2365,72 +2859,7 @@ h1 .role {
   .about {
     grid-template-columns: minmax(0, 1fr); /* jamais plus large que l'écran, même avec une adresse longue */
     gap: 18px;
-  }
-  .score-cols {
-    display: none;
-  }
-  .score-hole {
-    display: block;
-    padding-left: 0;
-  }
-  .score-id {
-    display: flex;
-    align-items: baseline;
-    gap: 14px;
-    padding: 16px 20px 6px;
-    font-size: 2.4rem;
-  }
-  .c-hole::before {
-    content: '№ ';
-    font-size: 0.5em;
-    vertical-align: 0.5em;
-    opacity: 0.6;
-  }
-  .c-par::before {
-    content: 'par ';
-    font-size: 0.5em;
-    font-style: italic;
-  }
-  .c-len {
-    margin: 0 0 0 auto;
-  }
-  .score-row {
-    grid-template-columns: 34px minmax(0, 1fr) 22px;
-    row-gap: 4px;
-    padding: 14px 20px;
-  }
-  .c-shot {
-    grid-row: 1 / span 3;
-  }
-  .c-club,
-  .c-name,
-  .c-result {
-    grid-column: 2;
-    padding-right: 8px;
-  }
-  .c-result {
-    color: rgb(10 20 16 / 0.78);
-  }
-  .c-go {
-    grid-column: 3;
-    grid-row: 1 / span 3;
-  }
-  .score-sum {
-    padding: 11px 20px;
-  }
-  .paper-head {
-    padding: 16px 20px 14px;
-  }
-  .about {
     margin-top: 44px;
-  }
-  .score-total {
-    grid-template-columns: minmax(0, 1fr) auto;
-    row-gap: 6px;
-    padding: 16px 20px;
-  }
-  .score-total .mono {
-    grid-column: 1 / -1;
   }
 }
 
@@ -2494,8 +2923,12 @@ h1 .role {
     letter-spacing: 0.1em;
   }
   .top-link,
-  .top-card svg {
+  .top-card svg,
+  .top-card .long {
     display: none;
+  }
+  .top-card .short {
+    display: inline;
   }
   .top-lang {
     margin-right: -4px;
@@ -2823,13 +3256,6 @@ h1 .role {
   }
   .sheet .links .mono {
     font-size: 9.5px;
-  }
-}
-/* L'en-tête de la carte ne tient plus sur une ligne : deux lignes franches plutôt que deux colonnes coupées. */
-@media (max-width: 560px) {
-  .paper-head {
-    flex-direction: column;
-    gap: 3px;
   }
 }
 /* Sous 350 px de large, la barre du haut ne tient plus : la carte de score devient un pictogramme. */
