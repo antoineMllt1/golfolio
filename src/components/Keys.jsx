@@ -1,11 +1,15 @@
-// Les raccourcis clavier : un petit « ? » au bout de la ligne du tour ouvre leur légende, posée à
-// côté de la pastille du coup. La touche « ? » fait de même ; Échap la referme.
+// Les raccourcis clavier : un petit « ? » posé au bout de la pastille du coup, dans le prolongement
+// des deux commandes, ouvre leur légende, qui s'écrit à sa droite en colonnes alignées. La touche
+// « ? » fait de même ; Échap la referme.
 import { LAST } from '../lib/content.js';
 import { ArrowDown, ArrowUp } from './Icons.jsx';
 
 export default function Keys({ open, onToggle, t }) {
   return (
     <div className={`keys ${open ? 'open' : ''}`}>
+      <button type="button" className="help mono" onClick={onToggle} aria-expanded={open} aria-controls="keys-legend" aria-label={t.shortcuts} title={t.shortcuts}>
+        ?
+      </button>
       {open && (
         <ul className="keys-legend mono" id="keys-legend" aria-label={t.shortcuts}>
           <li>
@@ -13,7 +17,6 @@ export default function Keys({ open, onToggle, t }) {
               <ArrowDown />
               <span className="sr-only">↓</span>
             </kbd>
-            <kbd>{t.keySpace}</kbd>
             {t.next}
           </li>
           <li>
@@ -43,9 +46,6 @@ export default function Keys({ open, onToggle, t }) {
           </li>
         </ul>
       )}
-      <button type="button" className="help mono" onClick={onToggle} aria-expanded={open} aria-controls="keys-legend" aria-label={t.shortcuts} title={t.shortcuts}>
-        ?
-      </button>
     </div>
   );
 }

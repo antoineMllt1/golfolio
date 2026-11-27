@@ -165,8 +165,9 @@ export default function Tracer({ flight, lang, t }) {
   const apply = (m) => {
     if (drawing && svg.current) drawing.paint(svg.current, m);
     if (!big.current) return;
-    // un coup : les mètres parcourus ; un putt : ce qui reste jusqu'au trou, au décimètre
-    const txt = putt ? num(Math.max(0, STOPS[k].golf.toPin - m).toFixed(1), lang) : String(Math.round(m));
+    // un coup : les mètres parcourus ; un putt : ce qui reste jusqu'au trou, au décimètre supérieur
+    // (il reste « 0,1 » tant que la balle n'est pas tombée)
+    const txt = putt ? num((Math.ceil(Math.max(0, STOPS[k].golf.toPin - m) * 10 - 1e-6) / 10).toFixed(1), lang) : String(Math.round(m));
     if (txt === last.current) return;
     last.current = txt;
     const cells = big.current.children;

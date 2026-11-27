@@ -16,6 +16,7 @@ export function IntroCard({ stop, on, lang, t, reduce, onPlay, onProjects }) {
       <R i={0} as="p" className="kicker mono">
         <span>{tourLine(t)}</span>
         <i className="sep" aria-hidden />
+        <span className="sr-only"> — </span>
         <span className="golf">{pick(stop.label, lang)}</span>
       </R>
       <h1 data-focus tabIndex={-1}>
@@ -52,6 +53,7 @@ export function ProjectCard({ stop, on, lang, t, onCase }) {
       <R i={0} as="p" className="kicker mono">
         <span>{projectOf(stop, t)}</span>
         <i className="sep" aria-hidden />
+        <span className="sr-only"> — </span>
         <span className="golf">{pick(stop.label, lang)}</span>
       </R>
       <R i={1} as="h2" className={stop.name.length > 20 ? 'long' : ''} data-focus tabIndex={-1}>

@@ -1053,6 +1053,27 @@ h1 .role {
   white-space: nowrap;
 }
 
+/* Moins de 900 px de haut : l'aperçu se resserre (le concept d'un projet se lit déjà sur la ligne)
+   pour tenir sous la balle. */
+@media (max-height: 899px) {
+  .pv {
+    bottom: calc(100% + 8px);
+    padding: 12px 17px;
+  }
+  .pv.project .pv-concept {
+    display: none;
+  }
+  .pv-name {
+    margin-top: 6px;
+  }
+  .pv-result {
+    margin-top: 8px;
+  }
+  .pv-foot {
+    margin-top: 7px;
+  }
+}
+
 /* Les touches : de petites capsules au trait. */
 kbd {
   display: inline-grid;
@@ -1073,18 +1094,21 @@ kbd svg {
   height: 9px;
   stroke-width: 1.5;
 }
-/* Le « ? » au bout de la ligne du tour, à hauteur de la pastille ; sa légende s'écrit à sa gauche. */
+/* Le « ? » : au bout de la pastille, dans le prolongement des deux commandes. Sa légende s'écrit à
+   sa droite, en colonnes alignées : deux lignes de trois, ou trois lignes de deux quand la page du
+   carnet laisse moins de place (la zone se mesure elle-même). */
 .keys {
   position: absolute;
-  left: calc(var(--gutter) + var(--shot-h) + 10px + 452px + 26px);
+  left: calc(var(--gutter) + var(--shot-h) + 10px + 452px + 14px);
   right: var(--rail-r);
   bottom: var(--dock);
   z-index: 3;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 16px;
+  gap: 18px;
   height: var(--shot-h);
+  container-type: inline-size;
+  pointer-events: none; /* seule la zone du « ? » se clique : le film reste à portée de geste */
 }
 .help {
   position: relative;
@@ -1100,6 +1124,7 @@ kbd svg {
   font-weight: 500;
   line-height: 1;
   color: var(--muted);
+  pointer-events: auto;
   transition: border-color 0.2s, color 0.2s, background-color 0.2s;
 }
 .help::before {
@@ -1114,18 +1139,24 @@ kbd svg {
   color: var(--ink);
 }
 .keys-legend {
-  display: flex;
-  flex-wrap: wrap;
-  align-content: center;
-  justify-content: flex-end;
-  gap: 8px 18px;
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(2, 19px);
+  gap: 8px 22px;
+  justify-content: start;
   min-width: 0;
   font-size: 10px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--soft);
   white-space: nowrap;
-  animation: pv 0.2s var(--ease) both;
+  animation: keys 0.2s var(--ease) both;
+}
+@keyframes keys {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
 }
 .keys-legend li {
   display: inline-flex;
@@ -1136,6 +1167,18 @@ kbd svg {
   margin: 0 -3px;
   font-style: normal;
   color: var(--muted);
+}
+@container (max-width: 450px) {
+  .keys-legend {
+    grid-template-rows: repeat(3, 19px);
+    gap: 6px 18px;
+  }
+}
+@container (max-width: 300px) {
+  .keys-legend {
+    column-gap: 14px;
+    letter-spacing: 0.05em;
+  }
 }
 
 /* La ligne du tour en petit : une bande au-dessus de la pastille (téléphone, petite fenêtre). */
@@ -4752,7 +4795,7 @@ kbd svg {
     height: 34px;
   }
   .trace {
-    right: calc(var(--gutter) + 290px);
+    right: calc(var(--gutter) + 290px + 16px); /* la pastille, et un peu d'air avant elle */
     bottom: 16px;
   }
   .trace-hero {

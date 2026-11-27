@@ -241,6 +241,7 @@ export default function Rail({ stop, flight, lang, t, onSub }) {
   const [fonts, setFonts] = useState(0);
   const [lay, setLay] = useState(null);
   const [tip, setTip] = useState(null);
+  const [slot, setSlot] = useState(0); // où commence la place libre à droite de la pastille du coup
 
   // Les noms sont mesurés une fois les polices arrivées.
   useEffect(() => {
@@ -284,6 +285,13 @@ export default function Rail({ stop, flight, lang, t, onSub }) {
     onSub?.(sub !== 'none');
   }, [sub, onSub]);
   useEffect(() => setTip(null), [stop, flying]);
+  // L'aperçu ne recouvre jamais la pastille du coup, posée juste au-dessus de la ligne et partant de
+  // la même marge : sa place commence 16 px après elle.
+  useLayoutEffect(() => {
+    if (tip == null || !nav.current) return;
+    const shot = parseFloat(getComputedStyle(nav.current).getPropertyValue('--shot-h')) || 58;
+    setSlot(shot + 10 + 452 + 16);
+  }, [tip, W]);
 
   const x = lay?.W === W ? lay.x : STOPS.map((_, i) => Math.round((i * W) / STOPS.length));
   const c = x.map((v) => v + 4.5);
@@ -291,6 +299,15 @@ export default function Rail({ stop, flight, lang, t, onSub }) {
   usePaint(art, W ? c : null, cup);
 
   const show = tip != null && !(flying == null && tip === stop) ? tip : null;
+  // L'aperçu s'écrit au-dessus de son arrêt quand il y tient ; sinon à la place libre la plus proche,
+  // entre la pastille et le bout de la ligne (une ligne trop courte pour cela : il se cale au bout).
+  const place = (k) => {
+    const own = x[k] - 19;
+    const max = Math.max(-19, W - PV);
+    const min = slot ? Math.min(slot, max) : -19;
+    const left = clamp(own, min, max);
+    return { left, shifted: left !== own };
+  };
   return (
     <nav className={`rail sub-${sub}`} ref={nav} aria-label={fill(t.tourStops, { n: STOPS.length })}>
       <div className={`rail-art ${flying != null ? 'flying' : ''}`} ref={art} aria-hidden>
@@ -320,7 +337,7 @@ export default function Rail({ stop, flight, lang, t, onSub }) {
           );
         })}
       </ol>
-      {show != null && <Preview k={show} x={{ left: Math.max(-19, Math.min(x[show] - 19, W - PV)), shifted: x[show] - 19 > W - PV }} lang={lang} t={t} />}
+      {show != null && <Preview k={show} x={place(show)} lang={lang} t={t} />}
     </nav>
   );
 }

@@ -20,6 +20,9 @@ import Tracer from './components/Tracer.jsx';
 
 const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
 const startIndex = () => Math.max(0, indexOfId(location.hash.slice(1)));
+// Une étiquette en capitales (« TROU 1 · COUP 2 · FER LONG »), telle qu'un lecteur d'écran doit la dire :
+// en minuscules, sinon certains l'épellent.
+const spoken = (label) => label.charAt(0) + label.slice(1).toLowerCase();
 
 export default function App() {
   const [lang, setLangState] = useState(initialLang);
@@ -311,12 +314,12 @@ export default function App() {
           onReplay={() => go(0)}
           onSkip={() => filmRef.current?.skip()}
         />
+        <Keys open={legend} onToggle={() => setLegend((on) => !on)} t={t} />
         <Rail stop={stop} flight={flight} lang={lang} t={t} onSub={setRailSub} />
         <Strip stop={stop} flight={flight} lang={lang} t={t} onOpen={() => openPanel('tour')} />
-        <Keys open={legend} onToggle={() => setLegend((on) => !on)} t={t} />
         <Carnet stop={stop} flight={flight} lang={lang} t={t} reduce={reduce} onOpen={() => openPanel('card')} />
         <p className="sr-only" aria-live="polite">
-          {settled ? `${pick(current.label, lang)} — ${stopName(current, lang, t)}${landed ? `. ${landed}` : ''}` : ''}
+          {settled ? `${spoken(pick(current.label, lang))} — ${stopName(current, lang, t)}${landed ? `. ${landed}` : ''}` : ''}
         </p>
       </div>
 
