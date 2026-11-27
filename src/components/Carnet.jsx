@@ -338,7 +338,7 @@ function Tag({ at, flying, turned, lang, t, onClick, label }) {
   );
 }
 
-export default function Carnet({ stop, flight, lang, t, reduce, onOpen }) {
+export default function Carnet({ stop, flight, lang, t, reduce, onOpen, onPage }) {
   const flying = flight?.shot ?? null; // le coup en vol (0 à 5), sinon null
   const at = flying ?? stop; // l'arrêt où repose la balle, ou d'où elle vient de partir
   const [roomy, setRoomy] = useState(hasRoom);
@@ -383,6 +383,10 @@ export default function Carnet({ stop, flight, lang, t, reduce, onOpen }) {
   const holed = flying != null && cue.holed;
   const turned = flying != null && cue.turned;
   const page = roomy && !folded;
+  // La page sait si le carnet est déplié : la ligne du tour s'arrête avant lui.
+  useLayoutEffect(() => {
+    onPage?.(page);
+  }, [page, onPage]);
   // La zone de dessin prend la hauteur que la fenêtre laisse à la page.
   useLayoutEffect(() => {
     const el = planBox.current;

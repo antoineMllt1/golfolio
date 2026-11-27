@@ -199,7 +199,7 @@ svg {
   opacity: 1;
 }
 /* le carton de trou se lit comme une fiche : la gauche revient */
-.app:has(.carton.on) .scrim::before {
+.app.with-carton .scrim::before {
   opacity: 1;
 }
 .progress {
@@ -557,7 +557,7 @@ h1 .role {
 .app.rail-sub {
   --rail-h: 81px;
 }
-.app:has(.carnet) {
+.app.with-carnet {
   --rail-r: calc(var(--gutter) + 284px + 24px);
 }
 
@@ -920,7 +920,6 @@ h1 .role {
 }
 .flying > .g-ball {
   transition: none;
-  will-change: transform;
 }
 .g-ball::after {
   content: '';
@@ -1759,7 +1758,7 @@ kbd svg {
   overflow: hidden;
 }
 /* Sous la page, le film s'assombrit un peu : les cotes restent lisibles sur une image claire. */
-.app:has(.carnet) .scrim {
+.app.with-carnet .scrim {
   --scrim-right: linear-gradient(270deg, rgb(var(--veil) / 0.5) 0%, rgb(var(--veil) / 0.28) 16%, rgb(var(--veil) / 0) 30%);
 }
 /* Replier : une poignée sur le bord de la page. */
@@ -2266,7 +2265,6 @@ kbd svg {
   background: var(--amber);
   transform: scaleX(var(--p));
   transform-origin: 0 50%;
-  will-change: transform;
 }
 .gauge .dot {
   position: absolute;
@@ -2275,7 +2273,6 @@ kbd svg {
   width: 100%;
   height: 7px;
   transform: translateX(calc((var(--p) - 1) * 100%)); /* le point est au bout droit : rien ne dépasse à droite */
-  will-change: transform;
   pointer-events: none;
 }
 .gauge .dot::before {

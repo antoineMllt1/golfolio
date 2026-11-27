@@ -136,7 +136,7 @@ function useSize(ref) {
   return size;
 }
 
-export default function Tracer({ flight, lang, t }) {
+export default function Tracer({ flight, lang, t, onCarton }) {
   const flying = flight?.shot ?? null;
   const cue = useCue();
   const [kept, setKept] = useState(flying); // le dernier coup joué : il reste dessiné le temps que le traceur s'efface
@@ -159,6 +159,10 @@ export default function Tracer({ flight, lang, t }) {
   const crossing = k != null && STOPS[k + 1].hole !== STOPS[k].hole; // ce coup finit un trou, le film passe au suivant
   const carton = flying != null && crossing && cue.turned && !cue.ending;
   const on = flying != null && !(crossing && cue.turned);
+  // La page sait que le carton est affiché (le voile de l'image se renforce derrière lui).
+  useLayoutEffect(() => {
+    onCarton?.(carton);
+  }, [carton, onCarton]);
 
   // Le compteur et le profil quand la balle a parcouru m mètres.
   const mem = useRef({ k: null, m: 0 });
@@ -173,7 +177,10 @@ export default function Tracer({ flight, lang, t }) {
     const cells = big.current.children;
     for (let i = 0; i < cells.length - 1; i++) {
       const ch = txt[i] ?? '';
-      if (cells[i].textContent !== ch) cells[i].textContent = ch;
+      // le nœud de texte est gardé et sa valeur change : pas de nœud ôté ni ajouté à chaque image
+      const node = cells[i].firstChild;
+      if (!node) cells[i].appendChild(document.createTextNode(ch));
+      else if (node.nodeValue !== ch) node.nodeValue = ch;
       // Les deux derniers chiffres changent à chaque image : des cases de même largeur, pour que la
       // ligne ne tremble pas. Devant, un « 1 » reprend sa largeur.
       cells[i].className = ch === '' ? 'off' : ch === ',' || ch === '.' ? 'sep' : ch === '1' && i < txt.length - 2 ? 'd one' : 'd';

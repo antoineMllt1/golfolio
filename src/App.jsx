@@ -37,6 +37,8 @@ export default function App() {
   const [came, setCame] = useState(null); // l'arrêt qu'on vient de quitter
   const [railSub, setRailSub] = useState(false); // la ligne du tour a la place d'écrire les concepts : elle est plus haute
   const [legend, setLegend] = useState(false); // la légende des raccourcis clavier
+  const [bookPage, setBookPage] = useState(false); // la page du carnet est dépliée à droite
+  const [carton, setCarton] = useState(false); // le carton du trou suivant est affiché
 
   const canvasRef = useRef(null);
   const filmRef = useRef(null);
@@ -251,7 +253,7 @@ export default function App() {
 
   const loading = progress < 0.999;
   return (
-    <div className={`app at-${current.kind} ${ready ? 'ready' : ''} ${flight ? 'moving' : ''} ${flight?.shot != null ? 'flying' : ''} ${railSub ? 'rail-sub' : ''}`}>
+    <div className={`app at-${current.kind} ${ready ? 'ready' : ''} ${flight ? 'moving' : ''} ${flight?.shot != null ? 'flying' : ''} ${railSub ? 'rail-sub' : ''} ${bookPage ? 'with-carnet' : ''} ${carton ? 'with-carton' : ''}`}>
       <a href="#main" className="skip" onClick={skipToContent}>
         {t.skip}
       </a>
@@ -303,7 +305,7 @@ export default function App() {
           })}
         </main>
 
-        <Tracer flight={flight} lang={lang} t={t} />
+        <Tracer flight={flight} lang={lang} t={t} onCarton={setCarton} />
         <NextShot
           stop={stop}
           flight={flight}
@@ -317,7 +319,7 @@ export default function App() {
         <Keys open={legend} onToggle={() => setLegend((on) => !on)} t={t} />
         <Rail stop={stop} flight={flight} lang={lang} t={t} onSub={setRailSub} />
         <Strip stop={stop} flight={flight} lang={lang} t={t} onOpen={() => openPanel('tour')} />
-        <Carnet stop={stop} flight={flight} lang={lang} t={t} reduce={reduce} onOpen={() => openPanel('card')} />
+        <Carnet stop={stop} flight={flight} lang={lang} t={t} reduce={reduce} onOpen={() => openPanel('card')} onPage={setBookPage} />
         <p className="sr-only" aria-live="polite">
           {settled ? `${spoken(pick(current.label, lang))} — ${stopName(current, lang, t)}${landed ? `. ${landed}` : ''}` : ''}
         </p>
