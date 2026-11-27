@@ -553,8 +553,10 @@ def _putter_fields(loft, lie):
         slope = np.minimum(top - 2.0, top - 2.0 + (x + G['blade']) * 0.60)
         mass = _rmax((z - slope) * 0.86, (G['cavity'] + 0.14 * (z - floor)) - ay, 1.0)
         body = _rmin(_rmin(blade, z - floor, 1.6), mass, 1.2)
-        # Contour vu de dessus (coins arrière arrondis), face plane, semelle relevée aux deux bouts.
-        body = _rmax(body, _rmax(-G['depth'] - x, ay - half, 7.0), 0.9)
+        # Contour vu de dessus (coins arrière arrondis, bouts de pointe et de talon légèrement bombés),
+        # face plane, semelle relevée aux deux bouts.
+        end = ay - half + (x + 0.5 * G['depth']) ** 2 / 110.0 + np.maximum(z - 0.6 * top, 0.0) ** 2 / 90.0
+        body = _rmax(body, _rmax(-G['depth'] - x, end, 7.0), 1.3)
         body = _rmax(body, p, 0.6)
         sole = (x + 13.0) ** 2 / 300.0 + np.maximum(ay - 34.0, 0.0) ** 2 / 110.0 - z
         body = _rmax(body, sole, 1.4)
@@ -578,7 +580,7 @@ def _putter_fields(loft, lie):
 
 def _putter_steel():
     """Acier satiné du putter : face fraisée de fines passes horizontales, cavité microbillée."""
-    m = P.mat('AcierPutter', (0.62, 0.63, 0.64), rough=0.27, metal=1.0)
+    m = P.mat('AcierPutter', (0.62, 0.63, 0.64), rough=0.16, metal=1.0)
     N = _Net(m)
     vec, p, q, r = N.field()
     face = N.calc('LESS_THAN', N.calc('ABSOLUTE', p), 0.03)
@@ -586,15 +588,16 @@ def _putter_steel():
     G = PUTTER
     pocket = N.calc('MULTIPLY', N.calc('LESS_THAN', p, -G['blade'] - 0.8), N.calc('MULTIPLY', N.calc('LESS_THAN', N.calc('ABSOLUTE', q), G['cavity'] - 0.5), N.calc('LESS_THAN', r, G['height'] - 4.0)))
     grain = N.calc('SUBTRACT', N.streaks(vec, (4.0, 0.10, 4.0)), 0.5)
-    rough = N.calc('MULTIPLY_ADD', grain, 0.06, 0.27)
+    # Le corps est satiné fin : il renvoie l'horizon, c'est ce qui fait lire du métal sur des pans plats.
+    rough = N.calc('MULTIPLY_ADD', grain, 0.05, 0.16)
     rough = N.mix(pocket, rough, 0.46)
-    N.put(N.bsdf.inputs['Roughness'], N.calc('ADD', rough, N.calc('MULTIPLY', face, 0.05)))
+    N.put(N.bsdf.inputs['Roughness'], N.calc('ADD', rough, N.calc('MULTIPLY', face, 0.14)))
     tone = N.calc('MULTIPLY_ADD', grain, 0.04, 1.0)
     col = N.node('ShaderNodeCombineColor')
     for k, c in enumerate((0.62, 0.63, 0.64)):
         N.put(col.inputs[k], N.calc('MULTIPLY', tone, c))
     N.nt.links.new(col.outputs[0], N.bsdf.inputs['Base Color'])
-    N.bump(N.calc('MULTIPLY', mill, 0.012))
+    N.bump(N.calc('MULTIPLY', mill, 0.020))
     N.brushed(N.calc('MULTIPLY', N.calc('SUBTRACT', 1.0, pocket), 0.2))
     return m
 
