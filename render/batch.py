@@ -15,7 +15,8 @@
 # Pour refaire une image, l'effacer ; pour tout refaire à d'autres réglages, changer de dossier (--out).
 #
 # Journal : render/out/hd/journal.txt, une ligne par image (heure, image, durée, reste estimé). Le reste
-# estimé part des durées mesurées (DUREES, plus bas) et se corrige avec celles du journal.
+# estimé part des durées mesurées (DUREES, plus bas) et se corrige avec celles du journal. Ce que dit
+# scene.py pendant la tâche en cours est dans render/out/hd/rendu_en_cours.log.
 #
 # Ordre (--order) : « h3 » un arrêt, « l2 » un trajet entier, « l2:9 » une image, « l2:9-20 » une suite.
 import argparse
@@ -35,7 +36,7 @@ ORDER = 'h0,h1,h2,h3,h4,h5,h6,l0,l1,l2,l3,l4,l5'
 # Durées de départ, en secondes par image, mesurées sur cette machine (4 cœurs, pas de carte
 # graphique) aux réglages par défaut ci-dessous : un arrêt (construction comprise) ; une image de
 # chaque trajet. Le journal les remplace dès qu'il a des mesures.
-DUREES = {'h': 2400.0, 'l0': 200.0, 'l1': 200.0, 'l2': 200.0, 'l3': 200.0, 'l4': 200.0, 'l5': 200.0}
+DUREES = {'h': 1980.0, 'l0': 200.0, 'l1': 200.0, 'l2': 200.0, 'l3': 200.0, 'l4': 200.0, 'l5': 200.0}
 
 ap = argparse.ArgumentParser(description='Rend le film en haute définition, en sautant ce qui existe déjà.')
 ap.add_argument('--order', default=ORDER, help='quoi rendre et dans quel ordre (voir en tête du fichier)')
@@ -58,6 +59,7 @@ args = ap.parse_args()
 OUT = os.path.abspath(args.out)
 JOURNAL = os.path.join(OUT, 'journal.txt')
 VERROU = os.path.join(OUT, 'lot.pid')
+SORTIE = os.path.join(OUT, 'rendu_en_cours.log')
 child = None
 
 
@@ -160,7 +162,7 @@ def log(text):
 
 def command(job, todo):
     kind, k, _ = job
-    cmd = [args.python, SCENE, '--', '--out', OUT]
+    cmd = [args.python, '-u', SCENE, '--', '--out', OUT]  # -u : ses lignes arrivent au fil des images, pas à la fin
     sets = ','.join(s for s in (f'density={args.density:g}' if args.density != 1.0 else '', args.set) if s)
     if sets:
         cmd += ['--set', sets]
@@ -183,7 +185,11 @@ def run(job, todo, jobs):
     started = last = time.time()
     child = subprocess.Popen(command(job, todo), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors='replace')
     tail = []
+    trace = open(SORTIE, 'w', encoding='utf8')  # tout ce que dit scene.py pendant la tâche en cours
+    trace.write(' '.join(child.args) + '\n')
     for line in child.stdout:
+        trace.write(line)
+        trace.flush()
         tail = (tail + [line.rstrip()])[-12:]
         if line.startswith('PLAN '):
             last = time.time()  # la construction d'un plan n'est pas comptée dans sa première image
@@ -200,6 +206,7 @@ def run(job, todo, jobs):
                 log(f'{os.path.basename(path)}  ÉCHEC : fichier absent ou incomplet')
     code = child.wait()
     child = None
+    trace.close()
     if code:
         log(f'ÉCHEC {"arrêt" if kind == "h" else "trajet"} {k} : scene.py sort avec le code {code}')
         for line in tail:
