@@ -53,6 +53,7 @@ ap.add_argument('--sun', type=float, default=None, help="azimut du soleil en deg
 ap.add_argument('--sky', default='', help='un autre ciel de render/assets, pour les essais')
 ap.add_argument('--exposure', type=float, default=None)
 ap.add_argument('--view', default='', choices=['', 'top', 'side', 'front', 'wide'], help='vue de contrôle')
+ap.add_argument('--crop', default='', help='ne calcule qu\'un recadrage : « x0,y0,x1,y1 » de 0 à 1, y vers le bas (pour juger une matière à l\'échelle 200)')
 ap.add_argument('--force', action='store_true', help='recalcule les images de trajet déjà présentes')
 ap.add_argument('--set', default='', help='réglages d\'essai, « nom=valeur,nom=valeur » (voir opt dans les arrêts)')
 args = ap.parse_args(argv)
@@ -91,7 +92,7 @@ def reset(samples):
     scene.cycles.transmission_bounces = 6
     scene.cycles.caustics_reflective = False
     scene.cycles.caustics_refractive = False
-    scene.cycles.sample_clamp_indirect = 8
+    scene.cycles.sample_clamp_indirect = opt('clamp', 8)
     scene.render.resolution_x, scene.render.resolution_y = args.width, args.height
     scene.render.resolution_percentage = args.scale
     scene.render.image_settings.file_format = 'PNG'
@@ -103,6 +104,11 @@ def reset(samples):
             break
         except TypeError:
             pass
+    if args.crop:
+        x0, y0, x1, y1 = (float(v) for v in args.crop.split(','))
+        r = scene.render
+        r.use_border = r.use_crop_to_border = True
+        r.border_min_x, r.border_max_x, r.border_min_y, r.border_max_y = x0, x1, 1 - y1, 1 - y0
     return scene
 
 
@@ -164,33 +170,80 @@ def sun_azimuth(hdr):
     return math.pi - 2 * math.pi * (u - 0.5), (v - 0.5) * math.pi
 
 
-def sky_at(hdr, sun, strength=1.0, tint=None, backdrop=1.0, mirror=False):
+SUN = {'dir': (0.0, 0.0, 1.0), 'az': 0.0, 'el': 90.0}  # le soleil du lieu en cours : la rosée et les trajets s'en servent
+MIST = ((0.05, 0.06, 0.08), 0.42, 7.0)  # brume du matin : voile ajouté, part, hauteur (degrés) où elle s'efface
+MORNING, EVENING = 5900.0, 7300.0  # balance des blancs : matin froid, soir chaud (6500 : neutre)
+LAWN = (0.022, 0.075, 0.022)  # le sol sous les brins
+FAR_MIST = (0.13, 0.19, 0.14)  # le sol lointain du matin, pris dans la brume
+
+
+def sky_at(hdr, sun, strength=1.0, tint=None, backdrop=1.0, mirror=False, mist=None, gloss=0.5):
     """Ciel photographié, tourné pour que son soleil soit à l'azimut `sun` (degrés, 0 = +X, sens
     trigonométrique vu de dessus). Blender place la colonne u dans la direction 2π·(0,5 − u), et la
     rotation tourne le regard : le soleil se retrouve à (azimut d'origine − rotation).
     `tint` : teinte multipliée au ciel (pour réchauffer une fin d'après-midi) ; `backdrop` : le fond vu
     par la caméra, plus clair ou plus sombre que la lumière qu'il donne (on pose pour le ciel, comme un
     photographe à contre-jour) ; `mirror` : le panorama est retourné gauche-droite (ce qui était à
-    droite du soleil passe à sa gauche), pour choisir ce qui entre dans le cadre."""
+    droite du soleil passe à sa gauche), pour choisir ce qui entre dans le cadre ; `mist` : (voile,
+    part, hauteur) une brume qui pâlit et désature le bas du ciel, jusqu'à `hauteur` degrés ; `gloss` :
+    saturation du ciel dans les reflets (un manche chromé sous un ciel pur vire au bleu vif)."""
     hdr = args.sky or hdr
     sun = args.sun if args.sun is not None else sun
     u, el = SUN_U[hdr]
     rotation = 2 * math.pi * (0.5 - u) + (1 if mirror else -1) * math.radians(sun)
     world = P.sky(hdr, rotation=rotation, strength=strength * backdrop, light=strength if backdrop != 1.0 else None)
+    nt = world.node_tree
     if mirror:
-        next(n for n in world.node_tree.nodes if n.type == 'MAPPING').inputs['Scale'].default_value = (1, -1, 1)
+        next(n for n in nt.nodes if n.type == 'MAPPING').inputs['Scale'].default_value = (1, -1, 1)
+    colour = next(n for n in nt.nodes if n.type == 'TEX_ENVIRONMENT').outputs['Color']
+
+    def blend(kind, factor, a, b):
+        n = nt.nodes.new('ShaderNodeMix')
+        n.data_type = 'RGBA'
+        n.blend_type = kind
+        for socket, v in ((n.inputs['Factor'], factor), (n.inputs['A'], a), (n.inputs['B'], b)):
+            if hasattr(v, 'is_linked'):
+                nt.links.new(v, socket)
+            else:
+                socket.default_value = (*v, 1) if isinstance(v, tuple) else v
+        return n.outputs['Result']
+
+    def grey(c):
+        n = nt.nodes.new('ShaderNodeRGBToBW')
+        nt.links.new(c, n.inputs[0])
+        return n.outputs[0]
+
     if tint is not None:
-        nt = world.node_tree
-        env = next(n for n in nt.nodes if n.type == 'TEX_ENVIRONMENT')
-        mul = nt.nodes.new('ShaderNodeMix')
-        mul.data_type = 'RGBA'
-        mul.blend_type = 'MULTIPLY'
-        mul.inputs['Factor'].default_value = 1.0
-        mul.inputs['B'].default_value = (*tint, 1)
-        nt.links.new(env.outputs['Color'], mul.inputs['A'])
-        nt.links.new(mul.outputs['Result'], nt.nodes['Background'].inputs['Color'])
+        colour = blend('MULTIPLY', 1.0, colour, tuple(tint))
+    if mist is not None:
+        veil, amount, top = mist
+        sep = nt.nodes.new('ShaderNodeSeparateXYZ')
+        nt.links.new(next(n for n in nt.nodes if n.type == 'TEX_COORD').outputs['Generated'], sep.inputs[0])
+        low = nt.nodes.new('ShaderNodeMapRange')
+        low.interpolation_type = 'SMOOTHSTEP'
+        for name, v in (('From Min', math.sin(math.radians(top))), ('From Max', 0.0), ('To Min', 0.0), ('To Max', amount)):
+            low.inputs[name].default_value = v
+        nt.links.new(sep.outputs['Z'], low.inputs['Value'])
+        pale = blend('ADD', 1.0, blend('MULTIPLY', 1.0, grey(colour), (0.93, 0.98, 1.09)), tuple(veil))
+        colour = blend('MIX', low.outputs[0], colour, pale)
+    if gloss < 1.0:
+        path = nt.nodes.new('ShaderNodeLightPath')
+        colour = blend('MIX', path.outputs['Is Glossy Ray'], colour, blend('MIX', 1.0 - gloss, colour, grey(colour)))
+    nt.links.new(colour, nt.nodes['Background'].inputs['Color'])
+    a, e = math.radians(sun), math.radians(el)
+    SUN.update(dir=(math.cos(e) * math.cos(a), math.cos(e) * math.sin(a), math.sin(e)), az=sun, el=el)
     print(f'ciel {hdr}{" (miroir)" if mirror else ""} : soleil à {sun:.0f}°, hauteur {el:.1f}°')
     return world
+
+
+def look(exposure, warmth=6500.0):
+    """Le développement de l'image d'un lieu : exposition, et balance des blancs (kelvins ; plus haut :
+    image plus chaude)."""
+    vs = scene.view_settings
+    vs.exposure = args.exposure if args.exposure is not None else opt('ev', exposure)
+    warmth = opt('wb', warmth)
+    vs.use_white_balance = abs(warmth - 6500.0) > 1.0
+    vs.white_balance_temperature = warmth
 
 
 # ---------------------------------------------------------------- caméra
@@ -242,29 +295,34 @@ def focus_of(cam, point):
     return [round(p.x, 4), round(1 - p.y, 4)]
 
 
-def face_stamp(ball, toward, up=(0, 0, 1), turn=0.0, roll=0.0):
+def face_stamp(ball, toward, up=(0, 0, 1), turn=0.0, roll=0.0, at=None):
     """Tourne la balle pour que son tampon « AM » regarde le point `toward`. turn : écart en degrés
-    autour de la verticale (un tampon pile de face fait posé) ; roll : inclinaison du texte."""
-    n = (V(toward) - ball.location).normalized()
+    autour de la verticale (un tampon pile de face fait posé) ; roll : inclinaison du texte. Renvoie
+    l'orientation (quaternion) ; `at` : centre de la balle si elle n'y est pas encore (un trajet l'y
+    amène), et `ball` peut alors valoir None."""
+    n = (V(toward) - V(at if at is not None else ball.location)).normalized()
     n = Matrix.Rotation(math.radians(turn), 3, 'Z') @ n
     z = V(up) - V(up).dot(n) * n
     z = Matrix.Rotation(math.radians(roll), 3, n) @ z.normalized()
     y = -n
     x = y.cross(z)
-    ball.rotation_euler = Matrix((x, y, z)).transposed().to_euler()
+    rot = Matrix((x, y, z)).transposed()
+    if ball is not None:
+        ball.rotation_euler = rot.to_euler()
+    return rot.to_quaternion()
 
 
 # ---------------------------------------------------------------- gazons
 class Kind:
     """Une herbe : hauteurs h et demi-largeurs w des brins (mètres), inclinaison, touffes, part de
-    brins qui dépassent, sens de tonte (radians, None : en tous sens), teintes, et part de brins secs
-    (straw ; None : le gazon doré du départ, où presque tous les brins tirent vers la paille)."""
+    brins qui dépassent, sens de tonte (radians, None : en tous sens), teintes (un vert qui garde du
+    bleu), part de brins secs, largeur du bout coupé (part de la base : un gazon tondu n'a pas de
+    pointes), variation du ton par grandes taches, et brillant du brin (rugosité, velouté, reflet)."""
 
-    def __init__(self, name, h, w, lean=(0.1, 0.9), clump=0.22, tall=0.05, mow=None, spread=0.7, dark=(0.030, 0.105, 0.012), light=(0.105, 0.25, 0.03), glow=(0.27, 0.55, 0.06), translucency=0.38, tone=1.0, straw=None):
+    def __init__(self, name, h, w, lean=(0.1, 0.9), clump=0.22, tall=0.015, mow=None, spread=0.7, dark=(0.020, 0.090, 0.022), light=(0.070, 0.225, 0.052), glow=(0.19, 0.50, 0.10), translucency=0.38, tone=1.0, straw=0.05, tip=0.55, mottle=0.10, shine=(0.42, 0.25, 0.5)):
         self.name, self.h, self.w, self.lean, self.clump, self.tall, self.mow, self.spread = name, h, w, lean, clump, tall, mow, spread
         self.colours = [tuple(c * tone for c in col) for col in (dark, light, glow)]
-        self.translucency = translucency
-        self.straw = straw
+        self.translucency, self.straw, self.tip, self.mottle, self.shine = translucency, straw, tip, mottle, shine
 
     def but(self, name, **kw):
         """La même herbe, à quelques réglages près (une bande de tonte dans l'autre sens)."""
@@ -278,15 +336,13 @@ class Kind:
         return other
 
     def material(self):
-        if self.straw is None:
-            return P.grass_material('Brin' + self.name, *self.colours, translucency=self.translucency)
-        return P.turf_material('Brin' + self.name, *self.colours, translucency=self.translucency, straw=self.straw)
+        return P.turf_material('Brin' + self.name, *self.colours, translucency=self.translucency, straw=self.straw, straw_colour=(0.30, 0.29, 0.11), patches=0.6, mottle=self.mottle, rough=self.shine[0], sheen=self.shine[1], specular=self.shine[2])
 
 
 TEE = Kind('Depart', h=(0.0085, 0.0125), w=(0.00060, 0.00110), clump=0.18)
-FAIRWAY = Kind('Fairway', h=(0.010, 0.014), w=(0.00062, 0.00115), lean=(0.25, 0.95), clump=0.14, tall=0.03)
-COLLAR = Kind('Avantgreen', h=(0.010, 0.0155), w=(0.00070, 0.00130), clump=0.22, tall=0.06, dark=(0.026, 0.095, 0.011), light=(0.095, 0.235, 0.028), straw=0.14)
-GREEN = Kind('Green', h=(0.0032, 0.0046), w=(0.00042, 0.00072), lean=(0.05, 0.50), clump=0.05, tall=0.0, dark=(0.030, 0.105, 0.018), light=(0.085, 0.235, 0.045), glow=(0.20, 0.48, 0.09), translucency=0.32, straw=0.07)
+FAIRWAY = Kind('Fairway', h=(0.010, 0.014), w=(0.00062, 0.00115), lean=(0.25, 0.95), clump=0.14, tall=0.012, straw=0.04)
+COLLAR = Kind('Avantgreen', h=(0.010, 0.0155), w=(0.00070, 0.00130), clump=0.22, tall=0.03, straw=0.07)
+GREEN = Kind('Green', h=(0.0032, 0.0046), w=(0.00042, 0.00072), lean=(0.05, 0.50), clump=0.05, tall=0.0, dark=(0.030, 0.120, 0.038), light=(0.056, 0.205, 0.066), glow=(0.15, 0.44, 0.13), translucency=0.32, straw=0.0, mottle=0.14, shine=(0.62, 0.05, 0.15))
 
 
 class Turf:
@@ -319,24 +375,39 @@ class Turf:
             lean = K.lean[0] + (K.lean[1] - K.lean[0]) * rng.random(m)
             yaw = rng.random(m) * 2 * math.pi if K.mow is None else K.mow + rng.normal(0.0, K.spread, m)
             h = P.lay(p, h, yaw, lean, list(obstacles))
-            P.blades(p, h, w, yaw, lean, material=K.material(), name='Herbe' + K.name)
+            P.blades(p, h, w, yaw, lean, material=K.material(), name='Herbe' + K.name, tip=K.tip)
             self.sown.append((k, p, h, yaw, lean))
         return self
 
-    def dew(self, centre, radius, share, size=(0.00035, 0.0009), seed=3, only=None):
-        """Rosée : des gouttes posées le long des brins, autour de `centre` (x, y). only : indices des
-        herbes qui en portent (toutes par défaut)."""
+    def dew(self, centre, radius, share, size=(0.0006, 0.0015), seed=3, only=None, focus=None, camera=None):
+        """Rosée : des gouttes perlées en haut des brins, autour de `centre` (x, y) ; share : part des
+        brins qui en portent ; size : rayons. only : indices des herbes qui en portent (toutes par
+        défaut) ; focus : le point net, autour duquel les gouttes sont maillées finement ; camera : sa
+        position, pour éclaircir la rosée du premier plan (très floue, elle voilerait l'image de blanc)."""
         rng = np.random.default_rng(seed)
-        drops = []
+        pts, rad = [], []
         for k, p, h, yaw, lean in self.sown:
             if only is not None and k not in only:
                 continue
-            pick = (np.hypot(p[:, 0] - centre[0], p[:, 1] - centre[1]) < radius) & (rng.random(len(p)) < share) & (h > 0.002)
-            t = 0.5 + 0.5 * rng.random(pick.sum())
+            chance = np.full(len(p), share)
+            if camera is not None and focus is not None:
+                reach = math.hypot(focus[0] - camera[0], focus[1] - camera[1])
+                chance[np.hypot(p[:, 0] - camera[0], p[:, 1] - camera[1]) < reach - 0.22] *= 0.15
+            pick = (np.hypot(p[:, 0] - centre[0], p[:, 1] - centre[1]) < radius) & (rng.random(len(p)) < chance) & (h > 0.002)
+            n = int(pick.sum())
+            t = 1.0 - 0.45 * rng.random(n) ** 2
+            r = size[0] + (size[1] - size[0]) * rng.random(n) ** 2
             fwd = lean[pick] * h[pick] * t * t
-            drops.append(np.stack([p[pick, 0] + np.cos(yaw[pick]) * fwd, p[pick, 1] + np.sin(yaw[pick]) * fwd, h[pick] * t * (1 - 0.15 * t) + 0.0003], axis=1))
-        if drops:
-            P.dew(np.concatenate(drops), radius=size, seed=seed)
+            pts.append(np.stack([p[pick, 0] + np.cos(yaw[pick]) * fwd, p[pick, 1] + np.sin(yaw[pick]) * fwd, h[pick] * t * (1 - 0.15 * t) + 0.6 * r], axis=1))
+            rad.append(r)
+        if pts and sum(len(r) for r in rad):
+            pts, rad = np.concatenate(pts), np.concatenate(rad)
+            fine = np.linalg.norm(pts - np.array(focus), axis=1) < 0.22 if focus is not None else None
+            P.drops(pts, rad, SUN['dir'], fine=fine, glint=(opt('glint', 500.0), opt('glint1', 40.0), opt('glint2', 200.0)))
+            print(f'rosée : {len(pts)} gouttes')
+
+
+DENSITY = opt('density', 1.0)  # part des brins plantés : moins pour une animatique, où tout bouge
 
 
 def spread(cam_pos, target, cone, spots=(), back=0.25, seed=1):
@@ -348,9 +419,9 @@ def spread(cam_pos, target, cone, spots=(), back=0.25, seed=1):
     view.normalize()
     origin = V(cam_pos) - view * back
     n, near, far, half, falloff = cone
-    sets = [P.scatter_cone(n, origin, view, near, far, math.radians(half), seed=seed, falloff=falloff)]
+    sets = [P.scatter_cone(int(n * DENSITY), origin, view, near, far, math.radians(half), seed=seed, falloff=falloff)]
     for k, (centre, radius, count) in enumerate(spots):
-        sets.append(P.scatter_cone(count, centre, view, 0.0, radius, math.pi, seed=seed + 1 + k, falloff=0.0))
+        sets.append(P.scatter_cone(int(count * DENSITY), centre, view, 0.0, radius, math.pi, seed=seed + 1 + k, falloff=0.0))
     return np.concatenate(sets)
 
 
@@ -368,6 +439,24 @@ def club_obstacle(root):
     return lambda pts: C.distance(root, pts)
 
 
+def wood_obstacle(root):
+    """Le dessous de la tête du bois 3 (distance approchée, négative dedans) : son contour vu de
+    dessus et sa semelle bombée, d'après les cotes de parts.wood3."""
+    ox, oy, oz = root.location
+    a, b, xc, zmid, h_bot = 0.056, 0.051, -0.042, 0.0145, 0.0145
+
+    def f(pts):
+        dx, dy = (pts[:, 0] - ox - xc) / a, (pts[:, 1] - oy) / b
+        r = np.maximum(np.hypot(dx, dy), 1e-9)
+        c, s = dx / r, dy / r
+        ex = np.where(c > 0, 3.6, 2.15)
+        rho = r * (np.abs(c) ** ex + np.abs(s) ** ex) ** (1 / ex)
+        sole = oz + zmid - h_bot * np.maximum(1 - np.minimum(rho, 1.0) ** 3.6, 0.0) ** (1 / 2.6)
+        return np.maximum((rho - 1.0) * 0.05, sole - pts[:, 2])
+
+    return f
+
+
 def socket_floor(hole):
     """Le fond de la douille où s'emboîte le drapeau : sans lui, on verrait le panorama à travers le godet."""
     x, y, z, r = hole[0], hole[1], -P.CUP_DEPTH - 0.028, 0.012
@@ -381,66 +470,48 @@ def outside(xy, centre, radius):
     return xy[np.hypot(xy[:, 0] - centre[0], xy[:, 1] - centre[1]) > radius]
 
 
-# ---------------------------------------------------------------- arrêt 0
-def stop_0():
-    """Trou 1, le départ, à l'aube : la balle sur un tee bas, la face du bois 3 derrière elle.
-    Vue de devant (côté cible), au ras du sol."""
-    hdr = 'spruit_sunrise'
-    az0, el = sun_azimuth(hdr)
-    want = math.radians(args.sun if args.sun is not None else 153)
-    P.sky(hdr, rotation=want - az0, strength=1.0)
-    scene.view_settings.exposure = args.exposure if args.exposure is not None else -0.6
-    print(f'soleil : azimut d’origine {math.degrees(az0):.0f}°, hauteur {math.degrees(el):.1f}°, placé à {math.degrees(want):.0f}°')
+# ---------------------------------------------------------------- arrêt 0 : le départ du 1
+B0 = V((0, 0, 0.016 + P.BALL_R))  # sur un tee bas
+T1_SUN = 200.0  # à contre-jour pour la vue de la frappe ; l'ombre du joueur tombe loin de la balle
 
-    lift = 0.016  # bas de la balle au-dessus du sol
-    b = P.ball((0, 0, lift + P.BALL_R), stamp=STAMP)
-    b.rotation_euler = (math.radians(-4), math.radians(6), math.radians(62))
-    P.tee(top=(0, 0, lift + 0.0015))
+
+def view_0():
+    """De devant (côté cible), au ras du sol."""
+    pos = V((0.96, -0.56, 0.092))
+    return View(pos, V((-0.131, 0.012, 0.044)), 115, opt('fstop', 2.8), B0)
+
+
+def stop_0():
+    """Trou 1, le départ, à l'aube : la balle sur un tee bas, la face du bois 3 derrière elle. Vue de
+    devant (côté cible), au ras du sol, à contre-jour : le soleil, derrière le départ et hors du cadre,
+    ourle la balle et la couronne du bois, traverse l'herbe et allume la rosée ; au fond, la bande des
+    arbres dans la brume."""
+    sky_at('spruit_sunrise', sun=opt('sun', T1_SUN), mist=MIST)
+    look(-0.35, MORNING)
+    centre = B0
+    b = P.ball(centre, stamp=STAMP)
+    tee = P.tee(top=(0, 0, centre.z - P.BALL_R + 0.0015))
     club = P.wood3()
     club.location = (-(P.BALL_R + 0.007), 0.0, 0.003)
 
-    cam_pos = V((0.96, -0.56, 0.092))
-    target = V((-0.131, 0.012, 0.044))
-    lens, fstop = 115, 2.8
-    if args.view == 'top':  # contrôle du club, vu du joueur
-        cam_pos, target = V((0.16, 0.34, 0.50)), V((-0.035, 0.0, 0.02))
-        cam = camera(cam_pos, target, lens=85, fstop=8, focus=(-0.03, 0, 0.03))
-    else:
-        cam = camera(cam_pos, target, lens=lens, fstop=fstop, focus=(0, 0, lift + P.BALL_R))
+    view = view_0()
+    cam = shoot(view)
+    face_stamp(b, view.pos, turn=-6, roll=5)
 
-    # L'herbe du départ : dense devant la caméra, plus rare au loin, là où tout est flou.
-    view = (target - cam_pos).normalized()
-    origin = cam_pos - view * 0.25
-    xy = np.concatenate(
-        [
-            P.scatter_cone(1_000_000, origin, view, 0.1, 10.0, math.radians(21), seed=1),
-            P.scatter_cone(160_000, (0.3, -0.15), view, 0.0, 0.9, math.pi, seed=2, falloff=0.0),
-        ]
-    )
-    rng = np.random.default_rng(5)
-    n = len(xy)
-    # Touffes : la hauteur ondule doucement, avec quelques brins qui dépassent.
-    clump = 1 + 0.22 * np.sin(xy[:, 0] * 9.1 + 1.3) * np.cos(xy[:, 1] * 7.3 + 0.4) + 0.12 * np.sin(xy[:, 0] * 23 + xy[:, 1] * 17)
-    h = (0.010 + 0.006 * rng.random(n) ** 1.4) * clump
-    tall = rng.random(n) < 0.05
-    h[tall] *= 1.35 + 0.5 * rng.random(tall.sum())
-    w = 0.00065 + 0.00055 * rng.random(n)
-    # Les brins ne traversent ni le tee ni la semelle du club.
-    keep = np.hypot(xy[:, 0], xy[:, 1]) > 0.004
-    xy, h, w = xy[keep], h[keep], w[keep]
-    _, tips = P.grass(xy, h, w, seed=11, lean=(0.1, 0.9))
-    near = np.hypot(tips[:, 0] - 0.2, tips[:, 1] + 0.1) < 2.2
-    pick = near & (rng.random(len(tips)) < 0.11)
-    drops = tips[pick].copy()
-    drops[:, 2] *= 0.55 + 0.45 * rng.random(len(drops))
-    P.dew(drops)
-    P.ground(color_near=(0.030, 0.085, 0.012), color_far=(0.23, 0.21, 0.10))
-    P.bloom()
-    return Stage(View(cam_pos, target, lens, fstop, b.location), id=IDS[0], cam=cam, ball=b, ball_pos=V(b.location), club=club, turf=Turf([TEE]))
+    turf = Turf([TEE])
+    obstacles = [ball_obstacle(centre), post_obstacle((0, 0), 0.004), wood_obstacle(club)]
+    xy = spread(view.pos, view.target, (1_000_000, 0.1, 10.0, 21, 1.0), [((0.3, -0.15), 0.9, 240_000)])
+    turf.grow(outside(xy, (0, 0), 0.004), obstacles)
+    turf.dew((0.2, -0.1), 1.2, opt('dew', 0.03), focus=centre, camera=view.pos)
+    turf.dew((0.0, 0.0), 3.5, opt('dew', 0.03) * 0.3, size=(0.0008, 0.0018), seed=4, focus=centre, camera=view.pos)
+    P.lawn(LAWN, FAR_MIST, haze=(20, 200))
+    P.bloom(threshold=2.0)
+    return Stage(view, id=IDS[0], cam=cam, ball=b, ball_pos=centre, club=club, tee=tee, turf=turf, obstacles=obstacles)
 
 
 # ---------------------------------------------------------------- arrêt 1 : le fairway
 B1 = V((0, 0, 0.0045 + P.BALL_R))  # la balle repose sur les brins
+F1_SUN = 165.0  # derrière la balle, à peine du côté du joueur : contre-jour, et son ombre passe loin devant elle
 
 
 def view_1():
@@ -453,10 +524,10 @@ def view_1():
 def stop_1():
     """Fairway du 1, dans la rosée du matin : la balle sur l'herbe tondue ras, le fer long derrière.
     Vue trois quarts avant, au ras du sol, à contre-jour : la rosée accroche le soleil. Le soleil est
-    hors du cadre, à droite ; l'horizon est haut dans l'image, pour ne garder du ciel que la bande des
-    arbres dans la brume."""
-    sky_at('spruit_sunrise', sun=opt('sun', 116), backdrop=opt('backdrop', 1.0))
-    scene.view_settings.exposure = args.exposure if args.exposure is not None else -0.9
+    hors du cadre, au-dessus à gauche ; l'horizon est haut dans l'image, pour ne garder du ciel que la
+    bande des arbres dans la brume."""
+    sky_at('spruit_sunrise', sun=opt('sun', F1_SUN), backdrop=opt('backdrop', 1.0), mist=MIST)
+    look(-0.7, MORNING)
     centre = B1
     b = P.ball(centre, stamp=STAMP)
     club = C.iron(kind='long')
@@ -475,11 +546,11 @@ def stop_1():
 
     turf = Turf([FAIRWAY.but('FairwayA', mow=angle, tone=1.10), FAIRWAY.but('FairwayB', mow=angle + math.pi, tone=0.80)], which)
     obstacles = [ball_obstacle(centre), club_obstacle(club)]
-    xy = spread(cam_pos, target, (1_000_000, 0.1, 11.0, 21, 1.0), [((0.25, -0.15), 0.9, 200_000)])
+    xy = spread(cam_pos, target, (1_000_000, 0.1, 11.0, 21, 1.0), [((0.25, -0.15), 0.9, 300_000)])
     turf.grow(xy, obstacles)
-    turf.dew((0.1, -0.1), 1.0, 0.45, size=(0.0005, 0.0014))
-    turf.dew((0.0, 0.0), 3.5, 0.10, size=(0.0006, 0.0015), seed=4)
-    P.lawn((0.030, 0.085, 0.012), (0.23, 0.22, 0.11), stripes=(angle, width, 0.22, offset))
+    turf.dew((0.1, -0.1), 1.0, opt('dew', 0.025), focus=centre, camera=cam_pos)
+    turf.dew((0.0, 0.0), 3.5, opt('dew', 0.025) * 0.3, size=(0.0008, 0.0018), seed=4, focus=centre, camera=cam_pos)
+    P.lawn(LAWN, FAR_MIST, haze=(20, 200), stripes=(angle, width, 0.22, offset))
     P.bloom()
     return Stage(view, id=IDS[1], cam=cam, ball=b, ball_pos=centre, club=club, turf=turf, obstacles=obstacles)
 
@@ -490,7 +561,7 @@ G1_R = 12.0
 G1_C = (G1_EDGE + G1_R, 0.0)  # centre du green
 G1_HOLE = (19.0, 0.0)  # le trou, dans l'axe du coup, à 19 m de la balle de l'arrêt 2
 G1_BALL3 = (16.0, 0.0)  # où la balle s'arrête : à 3 m du trou
-G1_SUN = 98.0  # le soleil du matin : à contre-jour pour l'arrêt 2, de côté pour l'arrêt 3
+G1_SUN = 160.0  # le soleil du matin, derrière la balle : à contre-jour pour les deux vues, et l'ombre du joueur loin de la balle
 
 
 def green_turf(centre, radius, angle=math.radians(35), width=0.56, soft=0.035, green=None):
@@ -518,15 +589,15 @@ def green_turf(centre, radius, angle=math.radians(35), width=0.56, soft=0.035, g
         return np.where(beyond(xy) < 0, 1.0, 0.36 + 0.64 * t * t * (3 - 2 * t))
 
     green = green or GREEN
-    return Turf([COLLAR, green.but('GreenA', mow=angle, spread=1.25, tone=1.03), green.but('GreenB', mow=angle + math.pi, spread=1.25, tone=0.97)], which, scale)
+    return Turf([COLLAR, green.but('GreenA', mow=angle, spread=1.25, tone=1.06), green.but('GreenB', mow=angle + math.pi, spread=1.25, tone=0.94)], which, scale)
 
 
 def place_green1(pin=False):
     """Le green du 1, la même matinée que le départ et le fairway : ciel, sol, trou, drapeau si `pin`
     (il est retiré pour l'approche roulée et le putt). Renvoie le gazon à planter et le drapeau."""
-    sky_at('spruit_sunrise', sun=opt('sun', G1_SUN), backdrop=opt('backdrop', 1.0))
-    scene.view_settings.exposure = args.exposure if args.exposure is not None else -0.9
-    P.lawn((0.028, 0.080, 0.011), (0.20, 0.22, 0.10), hole=(*G1_HOLE, P.CUP_R), disc=(*G1_C, G1_R, (0.034, 0.095, 0.014)), specular=0.12)
+    sky_at('spruit_sunrise', sun=opt('sun', G1_SUN), backdrop=opt('backdrop', 1.0), mist=MIST)
+    look(-0.7, MORNING)
+    P.lawn(LAWN, FAR_MIST, haze=(40, 240), hole=(*G1_HOLE, P.CUP_R), disc=(*G1_C, G1_R, (0.045, 0.165, 0.050)), specular=0.0)
     P.cup(G1_HOLE)
     socket_floor(G1_HOLE)
     flag = P.flagstick(G1_HOLE, heading=math.radians(200)) if pin else None
@@ -545,20 +616,20 @@ def view_2():
 
 
 def view_3():
-    """Très longue focale, à 6 m derrière le trou, à hauteur de genou, à peine décalée de la ligne du
-    putt : le trou passe juste à gauche de l'aplomb de la balle."""
-    pos = V((G1_HOLE[0] + opt('back', 6.0), opt('side', 0.07), opt('height', 0.34)))
-    lens = opt('lens', 540)
-    # Diaphragme très fermé : à cette focale, c'est ce qui garde au trou, trois mètres devant la balle,
-    # un contour lisible.
-    return View(pos, aim(pos, B3, lens, 0.62, opt('fy', 0.30)), lens, opt('fstop', 36.0), B3)
+    """Derrière le trou, bas, à peine décalée de la ligne du putt : le trou en amorce au premier plan,
+    juste à gauche de l'aplomb de la balle, la balle nette trois mètres plus loin, et au-dessus du
+    green la bande des arbres dans la brume. Le diaphragme reste fermé : vu si bas, le trou n'est
+    qu'une ellipse très plate, qu'un flou plus fort effacerait."""
+    pos = V((G1_HOLE[0] + opt('back', 3.0), opt('side', 0.07), opt('height', 0.17)))
+    lens = opt('lens', 250)
+    return View(pos, aim(pos, B3, lens, 0.62, opt('fy', 0.45)), lens, opt('fstop', 20.0), B3)
 
 
-def stop_2(pin=False):
+def stop_2(pin=False, place=None):
     """Bord du green du 1 : la balle dans l'herbe de l'avant-green, à deux doigts du green, la face du
     wedge derrière elle. Vue trois quarts avant, depuis le green, au ras de l'herbe : le tapis ras au
     premier plan, la lisière nette juste devant la balle, puis l'herbe plus haute où elle repose."""
-    turf, flag = place_green1(pin)
+    turf, flag = place or place_green1(pin)
     centre = B2
     b = P.ball(centre, stamp=STAMP)
     club = C.iron(kind='wedge')
@@ -570,45 +641,47 @@ def stop_2(pin=False):
     face_stamp(b, cam_pos, turn=8, roll=-6)
 
     obstacles = [ball_obstacle(centre), club_obstacle(club)]
-    xy = spread(cam_pos, target, (1_100_000, 0.1, 10.0, 22, 1.0), [((0.12, -0.12), 0.8, 320_000)])
+    xy = spread(cam_pos, target, (1_100_000, 0.1, 10.0, 22, 1.0), [((0.12, -0.12), 0.8, 400_000)])
     turf.grow(outside(xy, G1_HOLE, P.CUP_R + 0.001), obstacles)
     # La rosée tient sur l'herbe haute ; sur le green, rasé du matin, il n'en reste presque rien.
-    turf.dew((0.1, -0.1), 0.9, opt('dew', 0.30), size=(0.0004, 0.0012), only=(0,))
-    turf.dew((0.0, 0.0), 3.5, opt('dew', 0.30) * 0.25, size=(0.0005, 0.0014), seed=4, only=(0,))
-    if opt('greendew', 0.03):
-        turf.dew((0.3, -0.3), 1.2, opt('greendew', 0.03), size=(0.0003, 0.0007), seed=6, only=(1, 2))
+    turf.dew((0.1, -0.1), 0.9, opt('dew', 0.03), focus=centre, only=(0,), camera=cam_pos)
+    turf.dew((0.0, 0.0), 3.5, opt('dew', 0.03) * 0.3, size=(0.0008, 0.0018), seed=4, only=(0,), focus=centre, camera=cam_pos)
+    if opt('greendew', 0.004):
+        turf.dew((0.3, -0.3), 1.2, opt('greendew', 0.004), size=(0.0004, 0.0008), seed=6, only=(1, 2))
     P.bloom()
     return Stage(view, id=IDS[2], cam=cam, ball=b, ball_pos=centre, club=club, hole=G1_HOLE, flag=flag, turf=turf, obstacles=obstacles)
 
 
-def stop_3(pin=False):
-    """Sur le green du 1, à 3 m du trou. Très longue focale, de derrière le trou, comme la caméra d'un
-    tournoi : le trou en amorce au premier plan, la balle nette trois mètres plus loin, la face du
-    putter derrière elle. Tout le cadre est du green : la lumière de côté y allonge les ombres."""
-    turf, flag = place_green1(pin)
+def stop_3(pin=False, place=None, ball=None):
+    """Sur le green du 1, à 3 m du trou. De derrière le trou, bas, au téléobjectif : le trou en amorce
+    au premier plan, la balle nette trois mètres plus loin, la face du putter derrière elle, et la
+    lumière du matin qui vient de face : elle fait briller le green et allonge les ombres vers nous.
+    `place` : le lieu s'il est déjà posé ; `ball` : la balle si elle existe déjà (un trajet l'amène)."""
+    turf, flag = place or place_green1(pin)
     centre = B3
-    b = P.ball(centre, stamp=STAMP)
-    club = C.putter()
-    C.address(club, centre, gap=0.004, lift=0.0012)
-
     view = view_3()
     cam = shoot(view)
     cam_pos, target = view.pos, view.target
-    face_stamp(b, cam_pos, turn=6, roll=4)
+    b = ball or P.ball(centre, stamp=STAMP)
+    turn = face_stamp(None if ball else b, cam_pos, turn=6, roll=4, at=centre)
+    club = C.putter()
+    C.address(club, centre, gap=0.004, lift=0.0012)
 
     obstacles = [ball_obstacle(centre), club_obstacle(club)]
-    xy = spread(cam_pos, target, (int(opt('blades', 1_500_000)), 4.6, 14.5, 3.0, 0.0), [(G1_BALL3, 0.5, 260_000), (G1_HOLE, 0.35, 160_000)], back=0.0)
-    turf.grow(outside(xy, G1_HOLE, P.CUP_R + 0.001), obstacles)
-    if opt('dew', 0.0):
-        turf.dew(G1_BALL3, 1.2, opt('dew', 0.0), size=(0.0003, 0.0008))
+    xy = spread(cam_pos, target, (int(opt('blades', 1_800_000)), 2.2, 16.0, 6.0, 0.6), [(G1_BALL3, 0.5, 300_000), (G1_HOLE, 0.4, 200_000)], back=0.0)
+    turf.grow(outside(xy, G1_HOLE, P.CUP_R + 0.001), obstacles, seed=7)
+    # Au-delà, jusqu'à la brume : peu de brins suffisent, vus si rasants, pour que le sol nu ne se voie pas.
+    turf.grow(spread(cam_pos, target, (int(opt('far', 800_000)), 9.0, 75.0, 5.0, 0.0), back=0.0, seed=21), seed=8)
+    if opt('dew3', 0.0):
+        turf.dew(G1_BALL3, 1.2, opt('dew3', 0.0), size=(0.0003, 0.0008), only=(1, 2))
     P.bloom()
-    return Stage(view, id=IDS[3], cam=cam, ball=b, ball_pos=centre, club=club, hole=G1_HOLE, flag=flag, turf=turf, obstacles=obstacles)
+    return Stage(view, id=IDS[3], cam=cam, ball=b, ball_pos=centre, ball_turn=turn, club=club, hole=G1_HOLE, flag=flag, turf=turf, obstacles=obstacles)
 
 
 # ---------------------------------------------------------------- arrêt 4 : le départ du 2, au bord de l'eau
 # L'eau n'est pas modélisée : c'est le lac photographié du panorama, que le sol du départ laisse voir
 # au-delà de sa rive. Le coup part vers +X et survole l'eau en biais.
-T2_VIEW = 68.0  # azimut du regard (degrés) : la rive du départ est perpendiculaire à lui
+T2_VIEW = 50.0  # azimut du regard (degrés) : de derrière la balle, côté pointe ; le joueur reste hors du cadre, à gauche ; la rive est perpendiculaire au regard
 T2_EDGE = 1.7  # distance de la balle à la rive, le long du regard
 T2_SUN = T2_VIEW - 4.8  # le soleil est au-dessus du cadre, à droite : son reflet descend dans l'eau
 
@@ -617,11 +690,11 @@ B4 = V((0, 0, 0.019 + P.BALL_R))  # sur un tee bas, comme pour un fer : la coupe
 
 
 def view_4():
-    """Trois quarts arrière, caméra basse : la rive passe juste au-dessus de la balle, le lac occupe le
-    tiers de l'image au-dessus d'elle (c'est ce qu'un téléphone garde du cadre)."""
-    pos = around(B4, opt('view', T2_VIEW) + 180, opt('dist', 1.29), opt('height', 0.105))
-    lens = opt('lens', 135)
-    return View(pos, aim(pos, B4, lens, 0.63, opt('fy', 0.62)), lens, opt('fstop', 8.0), B4)
+    """Trois quarts arrière, côté pointe, un peu au-dessus du fer : son dos, la balle qui dépasse à sa
+    droite, puis la rive, le lac et l'autre rive (c'est ce qu'un téléphone garde du cadre)."""
+    pos = around(B4, opt('view', T2_VIEW) + 180, opt('dist', 1.2), opt('height', 0.19))
+    lens = opt('lens', 105)
+    return View(pos, aim(pos, B4, lens, 0.63, opt('fy', 0.62)), lens, opt('fstop', 5.6), B4)
 
 
 def stop_4():
@@ -631,8 +704,8 @@ def stop_4():
     phi = math.radians(view)
     # Le panorama est en miroir : entre deux arbres morts plantés dans l'eau, le cadre ne garde que le
     # lac, la colline d'en face et le reflet du soleil. On pose pour le ciel : il est assombri à l'image.
-    sky_at('lakeside_sunrise', sun=view - opt('sun', T2_VIEW - T2_SUN), backdrop=opt('backdrop', 0.38), mirror=True)
-    scene.view_settings.exposure = args.exposure if args.exposure is not None else -1.3
+    sky_at('lakeside_sunrise', sun=view - opt('sun', T2_VIEW - T2_SUN), backdrop=opt('backdrop', 0.45), mirror=True)
+    look(-1.1, EVENING)
     centre = B4
     b = P.ball(centre, stamp=STAMP)
     tee = P.tee(top=(0, 0, centre.z - P.BALL_R + 0.0015))
@@ -646,9 +719,9 @@ def stop_4():
     face_stamp(b, cam_pos, turn=-10, roll=4)
 
     # Le sol du départ s'arrête à la rive : au-delà, le lac du panorama.
-    P.lawn((0.030, 0.085, 0.012), (0.20, 0.21, 0.10), bounds=(-450, edge, -450, 450)).rotation_euler = (0, 0, phi)
+    P.lawn(LAWN, (0.20, 0.21, 0.10), bounds=(-450, edge, -450, 450)).rotation_euler = (0, 0, phi)
 
-    turf = Turf([TEE.but('Depart2', straw=opt('straw', 0.16))])
+    turf = Turf([TEE.but('Depart2', straw=opt('straw', 0.02), tall=0.008)])
     obstacles = [ball_obstacle(centre), club_obstacle(club), post_obstacle((0, 0), 0.004)]
     xy = spread(cam_pos, target, (900_000, 0.1, 6.0, 22, 1.0), [((0.0, -0.1), 0.8, 200_000)])
     xy = xy[xy[:, 0] * math.cos(phi) + xy[:, 1] * math.sin(phi) < edge - 0.01]
@@ -670,8 +743,8 @@ def place_green2(pin=False):
     """Le green du 2, à l'heure dorée, sous le même ciel que le départ au bord de l'eau. Le drapeau
     n'y est que si `pin` : il est retiré pour le putt."""
     sky_at('lakeside_sunrise', sun=G2_SUN, backdrop=opt('backdrop', 0.8), mirror=True)
-    scene.view_settings.exposure = args.exposure if args.exposure is not None else -1.5
-    P.lawn((0.028, 0.080, 0.011), (0.22, 0.20, 0.09), hole=(*G2_HOLE, P.CUP_R), disc=(*G2_C, G2_R, (0.034, 0.095, 0.014)), specular=0.2)
+    look(-0.7, EVENING)
+    P.lawn(LAWN, (0.22, 0.20, 0.09), hole=(*G2_HOLE, P.CUP_R), disc=(*G2_C, G2_R, (0.024, 0.085, 0.026)), specular=0.2)
     P.cup(G2_HOLE)
     socket_floor(G2_HOLE)
     flag = P.flagstick(G2_HOLE, heading=math.radians(215)) if pin else None
@@ -693,10 +766,10 @@ def view_5():
 
 
 def view_6():
-    """Plongée sur le trou, d'un peu plus d'un mètre, penchée de 28° : on voit la paroi du fond, sa bande
-    de terre au soleil, et le gazon se floute en haut et en bas. Le godet entier tient dans la bande
-    que garde un téléphone."""
-    tilt, dist = math.radians(opt('tilt', 28)), opt('dist', 1.22)
+    """Plongée sur le trou, d'un mètre, penchée de 40° : on voit la paroi du fond, sa bande de terre au
+    soleil, la balle contre elle, et le gazon se floute franchement devant et derrière. Le godet entier
+    tient dans la bande que garde un téléphone."""
+    tilt, dist = math.radians(opt('tilt', 40)), opt('dist', 1.0)
     pos = V((G2_HOLE[0] - dist * math.sin(tilt) * math.cos(G2_UP), G2_HOLE[1] - dist * math.sin(tilt) * math.sin(G2_UP), dist * math.cos(tilt)))
     return View(pos, aim(pos, B6, 85, 0.62, opt('fy', 0.47)), 85, opt('fstop', 2.8), B6 + V((0, 0, P.BALL_R)))
 
@@ -733,10 +806,7 @@ def stop_6(pin=False):
     b = P.ball(centre, stamp=STAMP)
     # Le soleil rasant n'entre pas dans le trou : le godet n'est éclairé que par le ciel, bleu. On pose
     # pour lui, et on réchauffe la balance des blancs, comme le ferait un photographe à l'ombre.
-    scene.view_settings.exposure = args.exposure if args.exposure is not None else 1.1
-    if opt('wb', 8500):
-        scene.view_settings.use_white_balance = True
-        scene.view_settings.white_balance_temperature = opt('wb', 8500)
+    look(1.4, 8500.0)
 
     view = view_6()
     cam = shoot(view)
@@ -782,7 +852,7 @@ def save_anchor(k, stage):
 def render_stop(k):
     reset(args.samples or 32)
     stage = STOPS[k]()
-    if args.view and k != 0:
+    if args.view:
         control_camera(stage, args.view)
     elif not args.view and not args.name:  # un essai nommé ne touche pas aux ancres
         print('balle à', save_anchor(k, stage))

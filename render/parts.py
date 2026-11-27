@@ -475,9 +475,10 @@ def grass_material(name='Brin', dark=(0.030, 0.105, 0.012), light=(0.105, 0.25, 
     return m
 
 
-def grass(xy, height, width, seed=1, lean=(0.15, 0.6), material=None, name='Herbe'):
+def grass(xy, height, width, seed=1, lean=(0.15, 0.6), material=None, name='Herbe', tip=0.14):
     """Vrais brins : un ruban de trois quadrilatères par brin, courbé et effilé.
-    xy (N,2) positions, height et width (N,) en mètres. Renvoie l'objet et les pointes (N,3)."""
+    xy (N,2) positions, height et width (N,) en mètres ; tip : largeur du bout, en part de la base
+    (0,14 : brin en pointe ; 0,55 : brin tondu, au bout coupé). Renvoie l'objet et les pointes (N,3)."""
     rng = np.random.default_rng(seed)
     n = len(xy)
     yaw = rng.random(n) * 2 * math.pi
@@ -487,7 +488,7 @@ def grass(xy, height, width, seed=1, lean=(0.15, 0.6), material=None, name='Herb
     verts = np.zeros((n, (seg + 1) * 2, 3), dtype=np.float32)
     for k in range(seg + 1):
         t = k / seg
-        w = width * (1 - 0.86 * t)
+        w = width * (1 - (1 - tip) * t)
         fwd = ln * height * t * t
         z = height * t * (1 - 0.15 * t)
         for side, sg in enumerate((-1, 1)):
@@ -623,7 +624,7 @@ def _sharp(o, degrees=30.0):
     return o
 
 
-def blades(xy, height, width, yaw, lean, material=None, name='Herbe'):
+def blades(xy, height, width, yaw, lean, material=None, name='Herbe', tip=0.14):
     """Les mêmes brins que grass(), mais chacun reçoit son orientation (yaw, radians) et son
     inclinaison (lean, part de la hauteur dont la pointe avance) : bandes de tonte, grain d'un green.
     Renvoie l'objet et les pointes (N,3)."""
@@ -633,7 +634,7 @@ def blades(xy, height, width, yaw, lean, material=None, name='Herbe'):
     verts = np.zeros((n, (seg + 1) * 2, 3), dtype=np.float32)
     for k in range(seg + 1):
         t = k / seg
-        w = width * (1 - 0.86 * t)
+        w = width * (1 - (1 - tip) * t)
         fwd = lean * height * t * t
         z = height * t * (1 - 0.15 * t)
         for side, sg in enumerate((-1, 1)):
@@ -885,13 +886,18 @@ def water(bounds, z=0.0, color=(0.010, 0.022, 0.024), ripple=0.35, scale=(0.5, 2
     return o
 
 
-def turf_material(name='Gazon', dark=(0.030, 0.105, 0.012), light=(0.105, 0.25, 0.03), glow=(0.27, 0.55, 0.06), translucency=0.38, straw=0.06, straw_colour=(0.30, 0.30, 0.07)):
+def turf_material(name='Gazon', dark=(0.030, 0.105, 0.012), light=(0.105, 0.25, 0.03), glow=(0.27, 0.55, 0.06), translucency=0.38, straw=0.06, straw_colour=(0.30, 0.30, 0.07), patches=0.0, mottle=0.0, rough=0.42, sheen=0.25, specular=0.5):
     """Matière d'herbe, comme grass_material, mais dont on choisit la part de brins secs : la teinte de
     chaque brin va de `dark` à `light`, et la part `straw` des brins tire vers la paille. (Dans
-    grass_material, presque tous les brins tirent vers la paille : c'est le gazon doré du départ.)"""
-    m = mat(name, light, rough=0.42, sheen_weight=0.25)
+    grass_material, presque tous les brins tirent vers la paille : c'est le gazon doré du départ.)
+    patches : de 0 à 1, les brins secs se regroupent en plaques d'une dizaine de centimètres au lieu
+    d'être semés également ; mottle : le ton du gazon varie d'autant, par grandes taches douces ;
+    rough, sheen, specular : le brillant du brin (un green ras, à contre-jour, ne doit pas scintiller
+    brin par brin)."""
+    m = mat(name, light, rough=rough, sheen_weight=sheen, specular_ior_level=specular)
     nt = m.node_tree
     b = bsdf(m)
+    C = _Calc(nt)
     geo = nt.nodes.new('ShaderNodeNewGeometry')
     ramp = nt.nodes.new('ShaderNodeValToRGB')
     first, last = ramp.color_ramp.elements[0], ramp.color_ramp.elements[1]
@@ -900,8 +906,26 @@ def turf_material(name='Gazon', dark=(0.030, 0.105, 0.012), light=(0.105, 0.25, 
     last.color = (*straw_colour, 1)
     green = ramp.color_ramp.elements.new(max(0.3, 1.0 - 1.6 * straw))
     green.color = (*light, 1)
-    nt.links.new(geo.outputs['Random Per Island'], ramp.inputs[0])
-    nt.links.new(ramp.outputs[0], b.inputs['Base Color'])
+    pick = geo.outputs['Random Per Island']
+
+    def noise(scale, detail=2.0):
+        n = nt.nodes.new('ShaderNodeTexNoise')
+        n.inputs['Scale'].default_value = scale
+        n.inputs['Detail'].default_value = detail
+        nt.links.new(geo.outputs['Position'], n.inputs['Vector'])
+        return n.outputs['Fac']
+
+    if patches:
+        pick = C('MULTIPLY', pick, C('MULTIPLY_ADD', noise(11.0), 2 * patches, 1 - patches), clamp=True)
+    nt.links.new(pick, ramp.inputs[0])
+    colour = ramp.outputs[0]
+    if mottle:
+        tone = nt.nodes.new('ShaderNodeVectorMath')
+        tone.operation = 'SCALE'
+        nt.links.new(colour, tone.inputs[0])
+        nt.links.new(C('MULTIPLY_ADD', noise(2.3, 3.0), 2 * mottle, 1 - mottle), tone.inputs['Scale'])
+        colour = tone.outputs[0]
+    nt.links.new(colour, b.inputs['Base Color'])
     tr = nt.nodes.new('ShaderNodeBsdfTranslucent')  # la lumière traverse le brin à contre-jour
     tr.inputs['Color'].default_value = (*glow, 1)
     mix = nt.nodes.new('ShaderNodeMixShader')
@@ -910,3 +934,87 @@ def turf_material(name='Gazon', dark=(0.030, 0.105, 0.012), light=(0.105, 0.25, 
     nt.links.new(tr.outputs[0], mix.inputs[2])
     nt.links.new(mix.outputs[0], nt.nodes['Material Output'].inputs['Surface'])
     return m
+
+
+# ---------------------------------------------------------------- rosée qui brille
+def icosphere(level=1):
+    """Sommets (N,3) et triangles (M,3) d'une sphère de rayon 1 : un icosaèdre subdivisé `level` fois."""
+    t = (1 + 5**0.5) / 2
+    v = [(-1, t, 0), (1, t, 0), (-1, -t, 0), (1, -t, 0), (0, -1, t), (0, 1, t), (0, -1, -t), (0, 1, -t), (t, 0, -1), (t, 0, 1), (-t, 0, -1), (-t, 0, 1)]
+    f = [(0, 11, 5), (0, 5, 1), (0, 1, 7), (0, 7, 10), (0, 10, 11), (1, 5, 9), (5, 11, 4), (11, 10, 2), (10, 7, 6), (7, 1, 8), (3, 9, 4), (3, 4, 2), (3, 2, 6), (3, 6, 8), (3, 8, 9), (4, 9, 5), (2, 4, 11), (6, 2, 10), (8, 6, 7), (9, 8, 1)]
+    v = [np.array(p, dtype=np.float64) / (1 + t * t) ** 0.5 for p in v]
+    for _ in range(level):
+        mid, out = {}, []
+
+        def middle(a, b):
+            key = (min(a, b), max(a, b))
+            if key not in mid:
+                p = v[a] + v[b]
+                v.append(p / np.linalg.norm(p))
+                mid[key] = len(v) - 1
+            return mid[key]
+
+        for a, b, c in f:
+            ab, bc, ca = middle(a, b), middle(b, c), middle(c, a)
+            out += [(a, ab, ca), (b, bc, ab), (c, ca, bc), (ab, bc, ca)]
+        f = out
+    return np.array(v, dtype=np.float32), np.array(f, dtype=np.int32)
+
+
+def drop_material(sun, glint=(700.0, 25.0, 90.0), colour=(1.0, 0.88, 0.68)):
+    """Eau d'une goutte de rosée. Le soleil vu dans une goutte (son reflet, et son image à travers elle)
+    est un point mille fois plus petit qu'un pixel : le calcul des chemins ne le trouve pas, et la rosée
+    reste mate. On le pose donc dans la matière : un éclat là où le rayon réfléchi, ou le rayon qui a
+    traversé la goutte, pointe vers le soleil `sun` (vecteur unitaire). glint : finesse de l'éclat,
+    force du reflet, force de l'éclat réfracté (c'est lui qui domine à contre-jour)."""
+    power, reflected, refracted = glint
+    m = mat('Goutte', (1, 1, 1), rough=0.0, transmission_weight=1.0, IOR=1.33)
+    nt = m.node_tree
+    C = _Calc(nt)
+    geo = nt.nodes.new('ShaderNodeNewGeometry')
+    sun = tuple(float(c) for c in sun)
+
+    def dot(a, b):
+        n = nt.nodes.new('ShaderNodeVectorMath')
+        n.operation = 'DOT_PRODUCT'
+        for k, v in enumerate((a, b)):
+            if isinstance(v, tuple):
+                n.inputs[k].default_value = v
+            else:
+                nt.links.new(v, n.inputs[k])
+        return n.outputs['Value']
+
+    ni = C('MAXIMUM', dot(geo.outputs['Normal'], geo.outputs['Incoming']), 0.0, clamp=True)
+    il, nl = dot(geo.outputs['Incoming'], sun), dot(geo.outputs['Normal'], sun)
+    # Le reflet : R·L = 2 (N·I)(N·L) − I·L.
+    lobe1 = C('POWER', C('MAXIMUM', C('SUBTRACT', C('MULTIPLY', C('MULTIPLY', ni, nl), 2.0), il), 0.0), power)
+    # À travers la goutte : le rayon ressort dévié de D = 2 (i − r) vers l'axe de la goutte.
+    s = C('SQRT', C('MAXIMUM', C('SUBTRACT', 1.0, C('MULTIPLY', ni, ni)), 0.0))
+    turn = C('MULTIPLY', C('SUBTRACT', C('ARCCOSINE', ni), C('ARCSINE', C('DIVIDE', s, 1.33))), 2.0)
+    tl = C('DIVIDE', C('SUBTRACT', nl, C('MULTIPLY', ni, il)), C('MAXIMUM', s, 1e-4))
+    through = C('MULTIPLY', C('ADD', C('MULTIPLY', C('COSINE', turn), il), C('MULTIPLY', C('SINE', turn), tl)), -1.0)
+    lobe2 = C('POWER', C('MAXIMUM', through, 0.0), power * 0.5)
+    path = nt.nodes.new('ShaderNodeLightPath')
+    strength = C('MULTIPLY', path.outputs['Is Camera Ray'], C('ADD', C('MULTIPLY', lobe1, reflected), C('MULTIPLY', lobe2, refracted)))
+    bsdf(m).inputs['Emission Color'].default_value = (*colour, 1)
+    nt.links.new(strength, bsdf(m).inputs['Emission Strength'])
+    return m
+
+
+def drops(points, radii, sun, fine=None, glint=(700.0, 25.0, 90.0), name='Rosee'):
+    """Rosée : une vraie petite sphère d'eau par point (N,3), de rayon radii (N,). fine : masque des
+    gouttes proches du point net, maillées plus fin (leur contour se voit). Voir drop_material."""
+    points = np.asarray(points, dtype=np.float32)
+    radii = np.asarray(radii, dtype=np.float32)
+    m = drop_material(sun, glint)
+    fine = np.zeros(len(points), dtype=bool) if fine is None else fine
+    made = []
+    for level, pick in ((2, fine), (1, ~fine)):
+        if not pick.any():
+            continue
+        v, f = icosphere(level)
+        p, r = points[pick], radii[pick]
+        verts = p[:, None, :] + v[None] * r[:, None, None]
+        faces = f[None] + (np.arange(len(p), dtype=np.int32) * len(v))[:, None, None]
+        made.append(assign(mesh_obj(name, verts.reshape(-1, 3), faces.reshape(-1, 3)), m))
+    return made

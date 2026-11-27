@@ -164,14 +164,15 @@ def _field_obj(name, f, lo, hi, h, to_world, attribute=None, offset=(0.0, 0.0, 0
 # ---------------------------------------------------------------- fers
 # Cotes en millimètres et en degrés. H : hauteur de la face en son centre, mesurée le long de la face.
 IRONS = {
-    'long': dict(loft=21.0, lie=60.5, H=39.5, tau=12.5, t_top=6.3, sole=19.5, x_low=-10.0, camber=50.0, offset=3.3, r_b=15.0, pitch=2.6, groove=0.62, s_top=57.0, lead=2.0, rough=0.30, brushing=0.05, tone=1.0, length=978.0, first_step=265.0),
-    'fer7': dict(loft=33.0, lie=62.5, H=42.0, tau=14.0, t_top=5.6, sole=17.5, x_low=-9.0, camber=45.0, offset=2.6, r_b=16.5, pitch=2.6, groove=0.62, s_top=56.0, lead=2.0, rough=0.30, brushing=0.05, tone=1.0, length=940.0, first_step=240.0),
-    'wedge': dict(loft=56.0, lie=64.0, H=47.5, tau=15.5, t_top=5.2, sole=21.5, x_low=-14.0, camber=40.0, offset=1.3, r_b=20.0, pitch=2.5, groove=0.60, s_top=60.0, lead=2.2, rough=0.42, brushing=0.14, tone=0.86, length=895.0, first_step=215.0),
+    'long': dict(loft=21.0, lie=60.5, H=39.5, tau=12.5, t_top=6.3, sole=19.5, x_low=-10.0, camber=50.0, offset=3.3, r_b=15.0, pitch=2.35, groove=0.62, s_top=57.0, lead=2.0, rough=0.30, brushing=0.05, tone=1.0, length=978.0, first_step=265.0),
+    'fer7': dict(loft=33.0, lie=62.5, H=42.0, tau=14.0, t_top=5.6, sole=17.5, x_low=-9.0, camber=45.0, offset=2.6, r_b=16.5, pitch=2.5, groove=0.66, s_top=56.0, lead=2.0, rough=0.30, brushing=0.05, tone=1.0, length=940.0, first_step=240.0),
+    'wedge': dict(loft=56.0, lie=64.0, H=47.5, tau=15.5, t_top=5.2, sole=21.5, x_low=-14.0, camber=40.0, offset=1.3, r_b=20.0, pitch=2.5, groove=0.80, s_top=60.0, lead=2.2, rough=0.42, brushing=0.14, tone=0.74, mill=1.0, length=895.0, first_step=215.0),
 }
 HOSEL_R = 6.6  # rayon extérieur du hosel
 HOSEL_Y = 36.5  # où l'axe du manche perce le sol, côté talon
 TOE_Q, TOE_R = -39.5, 42.0  # pointe : abscisse du point le plus éloigné, rayon du contour
 SCORE = 25.5  # demi-longueur des stries
+SCORE_Q = -2.5  # leur milieu : un peu vers la pointe, comme sur un vrai fer
 T_FLOOR, T_INSERT = 2.9, 1.5  # épaisseur de la paroi derrière la face, épaisseur de l'insert
 DRAFT = math.tan(math.radians(12))  # dépouille des parois de la cavité
 
@@ -357,14 +358,17 @@ def _iron_steel(S, F, rows, r0):
     m = P.mat('Acier', (0.60, 0.61, 0.62), rough=S['rough'], metal=1.0)
     N = _Net(m)
     vec, p, q, r = N.field()
-    aq = N.calc('ABSOLUTE', q)
+    aq = N.calc('ABSOLUTE', N.calc('SUBTRACT', q, SCORE_Q))
     face = N.calc('LESS_THAN', N.calc('ABSOLUTE', p), 0.03)
     zone = N.calc('MULTIPLY', face, N.ramp(aq, SCORE + 1.6, SCORE + 1.3, 0.0, 1.0))
     # Distance à la strie la plus proche : des traits horizontaux aux bouts arrondis.
     half = S['groove'] / 2
     row = N.calc('MINIMUM', N.calc('MAXIMUM', N.calc('ROUND', N.calc('DIVIDE', N.calc('SUBTRACT', r, r0), S['pitch'])), 0.0), rows - 1.0)
-    dr = N.calc('SUBTRACT', r, N.calc('MULTIPLY_ADD', row, S['pitch'], r0))
-    dq = N.calc('MAXIMUM', N.calc('SUBTRACT', aq, SCORE - half), 0.0)
+    height = N.calc('MULTIPLY_ADD', row, S['pitch'], r0)
+    dr = N.calc('SUBTRACT', r, height)
+    # Côté talon, les stries du haut s'arrêtent sous le bord supérieur, qui descend vers le hosel.
+    stop = N.calc('MINIMUM', N.calc('SUBTRACT', N.calc('DIVIDE', N.calc('SUBTRACT', S['H'] - 3.4, height), math.tan(math.radians(S['tau']))), 1.5), SCORE_Q + SCORE - half)
+    dq = N.calc('MAXIMUM', N.calc('MAXIMUM', N.calc('SUBTRACT', q, stop), N.calc('SUBTRACT', SCORE_Q - SCORE + half, q)), 0.0)
     dist = N.calc('SQRT', N.calc('ADD', N.calc('MULTIPLY', dr, dr), N.calc('MULTIPLY', dq, dq)))
     groove = N.calc('MULTIPLY', face, N.ramp(dist, half + 0.10, half - 0.10))
     # Le brossage suit la longueur de la lame ; il s'efface sur le hosel, poli en rond.
@@ -379,15 +383,19 @@ def _iron_steel(S, F, rows, r0):
     grain = N.calc('SUBTRACT', N.streaks(vec, (4.0, 0.10, 4.0)), 0.5)
     wide = N.calc('SUBTRACT', N.streaks(vec, (0.5, 0.05, 0.5), detail=1.0), 0.5)
     rough = N.calc('ADD', N.calc('MULTIPLY_ADD', grain, brushing, S['rough']), N.calc('MULTIPLY', wide, 0.06))
-    rough = N.mix(zone, rough, N.calc('MULTIPLY_ADD', grain, 0.05, 0.44))
+    # Le fraisage de la zone de frappe : de fins arcs entre les stries, qui accrochent la lumière.
+    rise = N.calc('ADD', r, 70.0)
+    arcs = N.calc('SINE', N.calc('MULTIPLY', N.calc('SQRT', N.calc('ADD', N.calc('MULTIPLY', q, q), N.calc('MULTIPLY', rise, rise))), 2 * math.pi / 0.55))
+    mill = N.calc('MULTIPLY', N.calc('MULTIPLY', zone, arcs), S.get('mill', 0.5))
+    rough = N.mix(zone, rough, N.calc('ADD', N.calc('MULTIPLY_ADD', grain, 0.05, 0.40), N.calc('MULTIPLY', mill, 0.05)))
     N.put(N.bsdf.inputs['Roughness'], N.mix(groove, rough, 0.62))
     tone = N.calc('MULTIPLY', N.calc('MULTIPLY_ADD', N.calc('MULTIPLY', grain, brushing), 0.6, 1.0), N.mix(zone, S['tone'], S['tone'] * 0.84))
-    shade = N.calc('MULTIPLY', tone, N.mix(groove, 1.0, 0.22))
+    shade = N.calc('MULTIPLY', tone, N.mix(groove, 1.0, 0.13))
     col = N.node('ShaderNodeCombineColor')
     for k, c in enumerate((0.60, 0.61, 0.62)):
         N.put(col.inputs[k], N.calc('MULTIPLY', shade, c))
     N.nt.links.new(col.outputs[0], N.bsdf.inputs['Base Color'])
-    N.bump(N.calc('MULTIPLY', groove, -0.30))
+    N.bump(N.calc('ADD', N.calc('MULTIPLY', groove, -0.34), N.calc('MULTIPLY', mill, 0.008)))
     N.brushed(N.calc('MULTIPLY', brushing, 3.0))
     return m
 
@@ -468,7 +476,7 @@ def _shaft(prefix, s_top, length, first_step, lie, foot, ferrule=True, steps=9, 
     grip0 = length - 268.0
     prof += [(butt, grip0 + 5.0), (0.0, grip0 + 5.0)]
     parts = [P.lathe(prefix + 'Manche', [(r * 0.001, s * 0.001) for r, s in prof], 48)]
-    P.assign(parts[0], P.mat('Chrome', (0.86, 0.86, 0.88), rough=0.07, metal=1.0))
+    P.assign(parts[0], P.mat('Chrome', (0.80, 0.79, 0.77), rough=0.13, metal=1.0))  # acier chromé : neutre, un rien chaud
     grip = [(butt + 0.2, grip0), (butt + 1.9, grip0 + 0.6), (butt + 2.6, grip0 + 3.0), (butt + 3.0, grip0 + 40.0), (butt + 5.2, length - 6.0), (butt + 5.0, length - 2.0), (butt + 3.6, length), (0.0, length)]
     parts.append(P.lathe(prefix + 'Grip', [(r * 0.001, s * 0.001) for r, s in grip], 48))
     P.assign(parts[1], P.mat('Grip', (0.012, 0.012, 0.013), rough=0.75))
@@ -504,9 +512,10 @@ def iron(loft=None, kind='fer7', detail=0.25, monogram=True):
     lo = [-S['sole'] - 6.0, TOE_Q - 2.0, -8.0]
     hi = [max(4.0, top[0] + HOSEL_R + 2.0), top[1] + HOSEL_R + 2.0, max(F['toe_h'], top[2] + HOSEL_R) + 2.0]
     head = _field_obj('Fer', F['head'], lo, hi, detail, W, attribute='pqr')
-    # Les stries : de 6,5 mm au-dessus du bord d'attaque jusque sous le bord supérieur, côté talon.
-    r0 = 6.5
-    rows = int((S['H'] - SCORE * math.tan(math.radians(S['tau'])) - 4.0 - r0) / S['pitch']) + 1
+    # Les stries : de 5 mm au-dessus du bord d'attaque jusque sous le bord supérieur ; celles du haut
+    # sont raccourcies côté talon, où le bord descend (voir _iron_steel).
+    r0 = 5.0
+    rows = int((S['H'] - 4.2 - r0) / S['pitch']) + 1
     P.assign(head, _iron_steel(S, F, rows, r0))
     parts = [head]
     back = -(T_FLOOR + T_INSERT)  # le dessus de l'insert, dans le repère de la face
