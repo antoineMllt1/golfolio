@@ -323,6 +323,19 @@ svg {
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--amber);
+  white-space: nowrap;
+}
+/* « Projet 1 sur 5 — Trou 1 · Coup 2 · Fer long » : le rang en ambre, un filet, le golf en gris. */
+.kicker .golf {
+  color: var(--muted);
+}
+.kicker .sep {
+  display: inline-block;
+  width: 18px;
+  height: 1px;
+  margin: 0 12px 0 10px;
+  background: var(--line-strong);
+  vertical-align: 0.34em;
 }
 h1 {
   margin-top: 22px;
@@ -538,7 +551,7 @@ h1 .role {
   align-items: center;
   justify-content: space-between;
   gap: 22px;
-  min-width: 292px;
+  width: 452px;
   height: 58px;
   padding: 0 8px 0 24px;
   border-radius: 999px;
@@ -551,23 +564,57 @@ h1 .role {
 }
 .shot-text {
   display: grid;
-  gap: 3px;
+  gap: 4px;
   min-width: 0;
 }
+/* ligne du haut : le club et la distance du coup à jouer */
 .shot-text .mono {
   font-size: 10px;
   font-weight: 500;
+  line-height: 1.2;
   letter-spacing: 0.15em;
   text-transform: uppercase;
   color: var(--muted);
+  white-space: nowrap;
 }
-.shot-line {
-  font-size: 14.5px;
+.shot-text .mono b {
   font-weight: 500;
+  color: var(--ink);
+}
+.shot-text .mono i {
+  font-style: normal;
+}
+.shot-text .mono.live .lead {
+  color: var(--amber);
+}
+.shot-text .mono.live .lead i {
+  color: var(--muted);
+}
+/* ligne du bas : le projet où le coup mène, son concept en plus clair */
+.shot-line {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+  font-size: 15px;
   line-height: 1.2;
   white-space: nowrap;
+}
+.shot-line b {
+  flex: none;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+.shot-line i {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-style: normal;
+  font-size: 13.5px;
+  color: var(--muted);
+}
+.shot-line .brief {
+  display: none; /* le nom court, quand la pastille est étroite */
 }
 .shot-icon {
   display: grid;

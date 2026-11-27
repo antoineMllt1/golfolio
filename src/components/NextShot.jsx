@@ -1,38 +1,82 @@
-// Le bouton « Coup suivant », toujours visible : il annonce le coup à venir (club et intention),
-// avec à côté de quoi revenir d'un coup en arrière. Pendant un vol, il sert à sauter à l'arrivée.
-import { LAST, NEXT, STOPS, TOTAL_STROKES, pick } from '../lib/content.js';
-import { ArrowDown, ArrowUp, Replay } from './Icons.jsx';
+// La pastille du coup, toujours visible en bas à gauche. Ligne du haut : le club et ce que la balle a
+// devant elle (« Coup suivant · Fer long · 234 m » ; au putter « Putter · 3 m pour birdie »). Ligne du
+// bas : le nom du projet où le coup mène, puis son concept en plus clair. Pendant un vol elle sert à
+// sauter à l'arrivée ; au contact, à rejouer le parcours. À côté, de quoi revenir d'un coup en arrière.
+import { LAST, NEXT, STOPS, facing, isPutt, pick, shortName, stopName, toParAfter } from '../lib/content.js';
+import { ArrowDown, ArrowUp, Replay, Skip } from './Icons.jsx';
 
 export default function NextShot({ stop, flight, lang, t, onNext, onPrev, onReplay, onSkip }) {
   const flying = flight?.shot != null;
   const last = stop === LAST;
-  const next = NEXT[stop];
-  let kicker;
-  let line;
+  let lead = ''; // le début de l'étiquette, en gris
+  let fact; // la suite, en clair
+  let name; // le projet où le coup mène
+  let brief = ''; // le même en court, quand la place manque
+  let aside = ''; // son concept
   let action = onNext;
+  let icon = <ArrowDown />;
+  let say; // le libellé lu par les lecteurs d'écran
   if (flying) {
-    kicker = t.inFlight;
-    line = t.skipFlight;
+    lead = t.inFlight;
+    fact = pick(NEXT[flight.shot].club, lang);
+    name = t.skipFlight;
     action = onSkip;
+    icon = <Skip />;
+    say = `${t.inFlight}. ${t.skipFlight}`;
   } else if (last) {
-    kicker = t.backToStart;
-    line = t.replay;
+    const card = STOPS[LAST].golf.card;
+    lead = t.roundOver;
+    fact = `${card.strokes} ${t.strokes}, ${toParAfter(STOPS[LAST].hole)}`;
+    name = t.replay;
     action = onReplay;
+    icon = <Replay />;
+    say = `${t.roundOver}. ${t.replay}`;
   } else {
-    kicker = `${t.next} · ${STOPS[stop].stroke + 1}/${TOTAL_STROKES}`;
-    line = `${pick(next.club, lang)} — ${pick(next.shot, lang)}`;
+    const shot = NEXT[stop];
+    const to = STOPS[stop + 1];
+    const club = pick(shot.club, lang);
+    const ahead = facing(stop, lang, t);
+    lead = isPutt(shot) ? '' : t.next;
+    fact = `${club} · ${ahead}`;
+    name = stopName(to, lang, t);
+    brief = shortName(to, lang, t);
+    aside = to.kind === 'project' ? pick(to.concept, lang) : pick(shot.shot, lang);
+    say = `${t.next}${lang === 'fr' ? ' :' : ':'} ${club}, ${ahead}. ${name} — ${aside}`;
   }
+  const long = lead.length + fact.length > 28; // sur téléphone, « Coup suivant » cède alors la place
+  const before = stop > 0 && !flight ? stopName(STOPS[stop - 1], lang, t) : '';
+  const prev = before ? `${t.prev}${lang === 'fr' ? ' :' : ':'} ${before}` : t.prev;
   return (
     <div className={`shots ${flying ? 'flying' : ''}`}>
-      <button type="button" className="shot-prev" onClick={onPrev} disabled={stop === 0 || !!flight} aria-label={t.prev} title={t.prev}>
+      <button type="button" className="shot-prev" onClick={onPrev} disabled={stop === 0 || !!flight} aria-label={prev} title={prev}>
         <ArrowUp />
       </button>
-      <button type="button" className="shot-next" onClick={action}>
+      <button type="button" className="shot-next" onClick={action} aria-label={say}>
         <span className="shot-text">
-          <span className="mono">{kicker}</span>
-          <span className="shot-line">{line}</span>
+          <span className={`mono ${long ? 'long' : ''} ${flying ? 'live' : ''}`}>
+            {lead && (
+              <span className="lead">
+                {lead}
+                <i> · </i>
+              </span>
+            )}
+            <b>{fact}</b>
+          </span>
+          <span className="shot-line">
+            <b>
+              {brief && brief !== name ? (
+                <>
+                  <span className="full">{name}</span>
+                  <span className="brief">{brief}</span>
+                </>
+              ) : (
+                name
+              )}
+            </b>
+            {aside && <i>{aside}</i>}
+          </span>
         </span>
-        <span className="shot-icon">{last && !flying ? <Replay /> : <ArrowDown />}</span>
+        <span className="shot-icon">{icon}</span>
       </button>
     </div>
   );
@@ -47,7 +91,7 @@ export function Flight({ flight, lang, t }) {
       {shot && (
         <>
           <p className="mono">
-            {t.stroke}&nbsp;{k + 1}/{TOTAL_STROKES}
+            {t.stroke}&nbsp;{k + 1}
           </p>
           <p className="flight-club">{pick(shot.club, lang)}</p>
           <p className="flight-shot">{pick(shot.shot, lang)}</p>

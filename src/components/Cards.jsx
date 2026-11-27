@@ -1,7 +1,7 @@
 // Les fiches posées sur le film : l'accueil, un projet par arrêt, le contact. Une seule est visible à
 // la fois ; elle monte bloc après bloc une fois l'image posée.
 import { useState } from 'react';
-import { SITE, pick } from '../lib/content.js';
+import { SITE, pick, projectOf, tourLine } from '../lib/content.js';
 import { ArrowDown, ArrowOut, R, Txt } from './Icons.jsx';
 
 const Card = ({ stop, on, kind, children }) => (
@@ -14,7 +14,9 @@ export function IntroCard({ stop, on, lang, t, reduce, onPlay, onProjects }) {
   return (
     <Card stop={stop} on={on} kind="intro">
       <R i={0} as="p" className="kicker mono">
-        {pick(stop.label, lang)}
+        <span>{tourLine(t)}</span>
+        <i className="sep" aria-hidden />
+        <span className="golf">{pick(stop.label, lang)}</span>
       </R>
       <h1 data-focus tabIndex={-1}>
         <R i={1} as="span" className="name">
@@ -48,7 +50,9 @@ export function ProjectCard({ stop, on, lang, t, onCase }) {
   return (
     <Card stop={stop} on={on} kind="project">
       <R i={0} as="p" className="kicker mono">
-        {pick(stop.label, lang)}
+        <span>{projectOf(stop, t)}</span>
+        <i className="sep" aria-hidden />
+        <span className="golf">{pick(stop.label, lang)}</span>
       </R>
       <R i={1} as="h2" data-focus tabIndex={-1}>
         {stop.name}

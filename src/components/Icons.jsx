@@ -31,6 +31,12 @@ export const Replay = (p) => (
     <path d="M3 8a5 5 0 1 0 1.6-3.7M3 2.5v2.6h2.6" />
   </svg>
 );
+// Deux chevrons : sauter à l'arrivée pendant un vol.
+export const Skip = (p) => (
+  <svg {...base} {...p}>
+    <path d="M3 3.5 7.5 8 3 12.5M8.5 3.5 13 8l-4.5 4.5" />
+  </svg>
+);
 // Un carnet ouvert : le bouton du carnet de parcours, le sommaire du site.
 export const Book = (p) => (
   <svg {...base} strokeWidth={1.2} {...p}>
