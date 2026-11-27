@@ -1058,14 +1058,14 @@ h1 .role {
   white-space: nowrap;
 }
 
-/* Moins de 900 px de haut : l'aperçu se resserre (le concept d'un projet se lit déjà sur la ligne)
-   pour tenir sous la balle. */
-@media (max-height: 899px) {
+/* Moins de 960 px de haut : l'aperçu se resserre pour tenir sous la balle (le concept d'un projet
+   s'efface quand il se lit déjà sur la ligne, sous le nom). */
+@media (max-height: 959px) {
   .pv {
     bottom: calc(100% + 8px);
     padding: 12px 17px;
   }
-  .pv.project .pv-concept {
+  .rail:not(.sub-none) .pv.project .pv-concept {
     display: none;
   }
   .pv-name {
