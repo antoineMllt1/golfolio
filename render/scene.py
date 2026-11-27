@@ -58,6 +58,14 @@ ap.add_argument('--view', default='', choices=['', 'top', 'side', 'front', 'wide
 ap.add_argument('--crop', default='', help='ne calcule qu\'un recadrage : « x0,y0,x1,y1 » de 0 à 1, y vers le bas (pour juger une matière à l\'échelle 200)')
 ap.add_argument('--force', action='store_true', help='recalcule les images de trajet déjà présentes')
 ap.add_argument('--set', default='', help='réglages d\'essai, « nom=valeur,nom=valeur » (voir opt dans les arrêts)')
+# Réglages de qualité, pour le rendu en haute définition (render/batch.py) : sans eux, rien ne change.
+ap.add_argument('--noise', type=float, default=None, help="seuil de bruit de l'échantillonnage adaptatif (0,02 par défaut ; 0 : tous les échantillons partout)")
+ap.add_argument('--min-samples', type=int, default=None, help="échantillons au moins par pixel avant que l'adaptatif ne s'arrête (choisi par Cycles par défaut)")
+ap.add_argument('--denoise', default='', choices=['', 'oidn', 'non'], help='débruitage : oidn (par défaut) ou non')
+ap.add_argument('--shutter', type=float, default=None, help="obturateur du flou de mouvement d'un trajet, en images (0,5 par défaut ; 0 : pas de flou)")
+ap.add_argument('--blur-steps', type=int, default=None, help='étapes du flou de mouvement de chaque objet (1 par défaut : trois positions par image)')
+ap.add_argument('--no-persistent', action='store_true', help="trajet : reconstruit tout à chaque image (pour mesurer ce que rapportent les données gardées d'une image à l'autre)")
+ap.add_argument('--threads', type=int, default=None, help='nombre de fils de calcul (tous les cœurs par défaut)')
 args = ap.parse_args(argv)
 OPT = {k: float(v) for k, v in (kv.split('=') for kv in args.set.split(',') if kv)}
 
@@ -85,10 +93,15 @@ def reset(samples):
     scene.render.engine = 'CYCLES'
     scene.cycles.device = 'CPU'
     scene.cycles.samples = samples
-    scene.cycles.use_adaptive_sampling = True
-    scene.cycles.adaptive_threshold = 0.02
-    scene.cycles.use_denoising = True
+    scene.cycles.use_adaptive_sampling = args.noise is None or args.noise > 0
+    scene.cycles.adaptive_threshold = args.noise or 0.02
+    if args.min_samples is not None:
+        scene.cycles.adaptive_min_samples = args.min_samples
+    scene.cycles.use_denoising = args.denoise != 'non'
     scene.cycles.denoiser = 'OPENIMAGEDENOISE'
+    if args.threads:
+        scene.render.threads_mode = 'FIXED'
+        scene.render.threads = args.threads
     scene.cycles.max_bounces = 8
     scene.cycles.transparent_max_bounces = 8
     scene.cycles.transmission_bounces = 6
@@ -1357,12 +1370,17 @@ def render_leg(k):
         todo = [n for n in range(max(first, start), min(last, end) + 1) if args.force or not os.path.exists(os.path.join(OUT, f'l{k}_{n:04d}.png'))]
         if not todo:
             continue
+        t0 = time.time()
         reset(args.samples or 16)
-        scene.render.use_persistent_data = True  # l'herbe ne bouge pas : son arbre de tri se garde d'une image à l'autre
-        scene.render.use_motion_blur = True
-        scene.render.motion_blur_shutter = 0.5
+        scene.render.use_persistent_data = not args.no_persistent  # l'herbe ne bouge pas : son arbre de tri se garde d'une image à l'autre
+        scene.render.use_motion_blur = args.shutter is None or args.shutter > 0
+        scene.render.motion_blur_shutter = args.shutter or 0.5
         scene.frame_start, scene.frame_end = 1, LEG_FRAMES
         build(start, end)
+        if args.blur_steps:
+            for o in scene.objects:
+                o.cycles.motion_steps = args.blur_steps
+        print(f'PLAN {k} images {start}-{end} construction {time.time() - t0:.1f}s')
         for n in todo:
             t1 = time.time()
             scene.frame_set(n)
