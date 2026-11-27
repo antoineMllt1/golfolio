@@ -3,7 +3,14 @@
 # versionnée), posée debout dans la scène comme une figurine plate, face à la caméra et dos au soleil.
 # Le décor est un vrai panorama photographié ; seule l'herbe proche est calculée.
 #
-#   python render/finish.py -- --scale 50 --samples 32 --out render/out/test --name finish
+#   python render/finish.py -- --rot 324 --scale 100 --samples 32 --out render/out/test --name finish
+#
+# --rot 324 est le ciel de l'image validée par Antoine (render/out/test/finish.png) : la colline dans la
+# brume à gauche, le soleil derrière lui. Sans --rot, le soleil est placé par --sun : un autre décor.
+#
+# Le trajet 0 → 1 du film reprend ce plan en mouvement (render/scene.py, plan « wide_finish ») :
+# build(options(), shot=(première image, dernière image)) pose alors la trace qui se dessine et la
+# caméra qui monte vers le ciel. Sans `shot`, l'image fixe validée est inchangée.
 #
 # Repère : la balle part vers +X, le joueur (droitier) est côté +Y, la caméra est derrière lui (−X).
 import argparse
@@ -20,8 +27,10 @@ from PIL import Image, ImageFilter
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import parts as P  # noqa: E402
+import strike as K  # noqa: E402
 
 V = Vector
+ARGS = None  # les réglages du plan : options() par défaut, ou la ligne de commande
 CUT = os.path.join(P.ASSETS, 'joueur', 'finish.png')
 PX = 1.76 / 1271  # mètres par pixel : la silhouette fait 1271 px de haut pour 1,76 m
 
@@ -160,7 +169,11 @@ def patch_ground(radius=7.5, color=(0.030, 0.085, 0.012)):
     return o
 
 
-def build(args):
+def build(args, shot=None):
+    """Construit le plan. shot : (première image, dernière image) pour le plan en mouvement du film ;
+    renvoie alors la caméra, pour les clés d'exposition du trajet."""
+    global ARGS
+    ARGS = args
     scene = bpy.context.scene
     hdr = args.sky
     img = bpy.data.images.load(os.path.join(P.ASSETS, hdr + '.hdr'))
@@ -193,13 +206,16 @@ def build(args):
     scene.camera = cam
 
     player()
-    flight(args.t, cam_pos)
+    if shot is None:
+        flight(args.t, cam_pos)
+    else:
+        animate(cam, cam_pos, target, *shot)
     patch_ground()
     view = (target - cam_pos).normalized()
     view.z = 0
     if args.nograss:
         P.bloom(strength=0.35, threshold=1.0)
-        return
+        return cam
     xy = np.concatenate(
         [
             P.scatter_cone(1_300_000, cam_pos - view * 0.4, view, 0.2, 9.5, math.radians(31), seed=1, falloff=0.7),
@@ -216,10 +232,33 @@ def build(args):
     wid = 0.0008 + 0.0006 * rng.random(n)
     P.grass(xy, hgt, wid, seed=11, lean=(0.1, 0.9))
     P.bloom(strength=0.18, threshold=1.6)
+    return cam
 
 
-if __name__ == '__main__':
-    argv = sys.argv[sys.argv.index('--') + 1 :] if '--' in sys.argv else []
+def animate(cam, cam_pos, target, first, last):
+    """Le plan en mouvement : la trace ambre se dessine dans le ciel (même vol que l'image fixe), la
+    caméra la suit d'un léger mouvement vers le haut, puis monte franchement et finit dans le ciel,
+    où le film change de lieu. La silhouette et la trace restent entre x = 0,30 et x = 0,74."""
+    K.setup()
+    fly = K.Flight((0.0, 0.0, 0.04), 66.0, 11.5, g=5.2, drag=0.055)
+    trace = K.Trace(fly, cam_pos, lens=cam.data.lens, span=(0.02, 4.4), strength=ARGS.trace, tail=1.0)
+    aim = target - cam_pos
+    az, pitch, reach = math.atan2(aim.y, aim.x), math.atan2(aim.z, math.hypot(aim.x, aim.y)), aim.length
+    frames = K.half_frames(first, last)
+    pos, look, focus = [], [], []
+    for f in frames:
+        u = (f - first) / (last - first)
+        trace.key(f, 0.30 + 3.0 * u ** 1.3)
+        # D'abord deux degrés, à peine sensibles ; puis la caméra décroche vers le ciel.
+        tilt = pitch + math.radians(2.0 * K.smooth(u / 0.55) + 30.0 * max(0.0, (u - 0.42) / 0.58) ** 2.6)
+        pos.append(cam_pos + V((0.10 * u, 0, 0.0)))
+        look.append(pos[-1] + reach * V((math.cos(tilt) * math.cos(az), math.cos(tilt) * math.sin(az), math.sin(tilt))))
+        focus.append(6.0 - 4.6 * K.smooth((u - 0.55) / 0.45))  # le point revient vers nous : le ciel se floute
+    K.track(cam, frames, pos, look, focus=focus)
+
+
+def options(argv=()):
+    """Les réglages du plan (ceux de l'image validée par défaut)."""
     ap = argparse.ArgumentParser()
     ap.add_argument('--sky', default='golf_course_sunrise')
     ap.add_argument('--sun', type=float, default=8.0, help='azimut du soleil en degrés (0 = droit devant le joueur)')
@@ -237,7 +276,11 @@ if __name__ == '__main__':
     ap.add_argument('--scale', type=int, default=50)
     ap.add_argument('--out', default='render/out/test')
     ap.add_argument('--name', default='finish')
-    ARGS = ap.parse_args(argv)
+    return ap.parse_args(list(argv))
+
+
+if __name__ == '__main__':
+    ARGS = options(sys.argv[sys.argv.index('--') + 1 :] if '--' in sys.argv else [])
     T0 = time.time()
     bpy.ops.wm.read_factory_settings(use_empty=True)
     sc = bpy.context.scene

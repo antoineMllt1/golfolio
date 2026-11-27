@@ -7,8 +7,10 @@
 # Sources (écrites par render/scene.py) :
 #   <holds>/h_00.png … h_06.png        images nettes des arrêts, 3840 × 2160 (--stop N --scale 200)
 #   <legs>/l<k>_<nnnn>.png             images des trajets, 1920 × 1080 (--leg N --scale 100), n de 1 à 44
-#   render/out/anchors.json            où tombe la balle à chaque arrêt ("focus"), écrit par scene.py
-#   render/out/legs.json (facultatif)  calage d'un trajet : {"0": {"impact": 9, "land": 37}}
+#   render/out/anchors.json            où tombe la balle à chaque arrêt ("focus") et, sous "legs", le calage
+#                                      de chaque trajet : {"0": {"impact": 10, "land": 35}} (image de
+#                                      l'impact, image où la balle touche le sol), écrits par scene.py
+#   render/out/legs.json (facultatif)  un calage posé à la main, qui l'emporte sur celui d'anchors.json
 #
 # Règles :
 #   - les sept arrêts doivent être là, à la bonne taille : sinon rien n'est écrit (le site en ligne se
@@ -107,11 +109,11 @@ def main():
         return 1
 
     # Les trajets : seulement ceux dont les 44 images sont là.
-    cues = {}
+    cues = dict(anchors.get('legs') or {})
     cue_path = os.path.join(os.path.dirname(args.anchors), 'legs.json')
     if os.path.isfile(cue_path):
         with open(cue_path, encoding='utf8') as fh:
-            cues = json.load(fh)
+            cues.update(json.load(fh))
     legs, motion_width = [], None
     for k in range(len(IDS) - 1):
         files = [os.path.join(args.legs, f'l{k}_{n:04d}.png') for n in range(1, LEG_FRAMES + 1)]
