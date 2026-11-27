@@ -776,11 +776,11 @@ def view_6():
     return View(pos, aim(pos, B6, 85, 0.62, opt('fy', 0.47)), 85, opt('fstop', 2.8), B6 + V((0, 0, P.BALL_R)))
 
 
-def stop_5(pin=False):
+def stop_5(pin=False, place=None):
     """Green du 2, à 1,5 m du trou, à l'heure dorée : la balle, la face fraisée du putter derrière elle.
     Vue trois quarts avant, au ras du green ; le soleil bas vient de la droite et allonge les ombres.
-    Le trou est à droite, hors du cadre : c'est le trajet qui y mène."""
-    turf, flag = place_green2(pin)
+    Le trou est à droite, hors du cadre : c'est le trajet qui y mène. `place` : le lieu s'il est déjà posé."""
+    turf, flag = place or place_green2(pin)
     centre = B5
     b = P.ball(centre, stamp=STAMP)
     club = C.putter()
@@ -798,14 +798,16 @@ def stop_5(pin=False):
     return Stage(view, id=IDS[5], cam=cam, ball=b, ball_pos=centre, club=club, hole=G2_HOLE, flag=flag, turf=turf, obstacles=obstacles)
 
 
-def stop_6(pin=False):
+def stop_6(pin=False, place=None, ball=None, clear=None):
     """Le contact : la balle au fond du trou du 2. Vue plongeante : le godet blanc, la bande de terre
-    au soleil, le bord de gazon ras dans la lumière dorée."""
-    turf, flag = place_green2(pin)
+    au soleil, le bord de gazon ras dans la lumière dorée. `place` : le lieu s'il est déjà posé ;
+    `ball` : la balle si elle existe déjà (le dernier putt l'amène) ; `clear` : le cadrage d'un autre
+    arrêt du même lieu, dont le champ est laissé tel qu'il l'a planté."""
+    turf, flag = place or place_green2(pin)
     up = G2_UP
     hx, hy = G2_HOLE
     centre = B6
-    b = P.ball(centre, stamp=STAMP)
+    b = ball or P.ball(centre, stamp=STAMP)
     # Le soleil rasant n'entre pas dans le trou : le godet n'est éclairé que par le ciel, bleu. On pose
     # pour lui, et on réchauffe la balance des blancs, comme le ferait un photographe à l'ombre.
     look(1.4, 8500.0)
@@ -813,13 +815,15 @@ def stop_6(pin=False):
     view = view_6()
     cam = shoot(view)
     cam_pos = view.pos
-    face_stamp(b, cam_pos, up=(math.cos(up), math.sin(up), 0), turn=0, roll=-9)
+    turn = face_stamp(None if ball else b, cam_pos, up=(math.cos(up), math.sin(up), 0), turn=0, roll=-9, at=centre)
 
     obstacles = []
     xy = spread(cam_pos, V((hx, hy, 0)) + V((math.cos(up), math.sin(up), 0)), (160_000, 0.1, 2.6, 180, 1.0), [(G2_HOLE, 0.65, 1_700_000)], back=0.0)
+    if clear is not None:
+        xy = beside(xy, clear, 21)
     turf.grow(outside(xy, G2_HOLE, P.CUP_R + 0.0008), obstacles)
     P.bloom()
-    return Stage(view, id=IDS[6], cam=cam, ball=b, ball_pos=centre, hole=G2_HOLE, flag=flag, turf=turf, obstacles=obstacles)
+    return Stage(view, id=IDS[6], cam=cam, ball=b, ball_pos=centre, ball_turn=turn, hole=G2_HOLE, flag=flag, turf=turf, obstacles=obstacles)
 
 
 STOPS = [stop_0, stop_1, stop_2, stop_3, stop_4, stop_5, stop_6]
@@ -870,8 +874,8 @@ def render_stop(k):
 # Un trajet est une suite de plans : (première image, dernière image, fonction). Un plan = un lieu, une
 # prise sans coupe ; un raccord entre deux lieux = deux plans (dans le blanc du ciel, ou dans le noir du
 # trou). La fonction d'un plan reçoit ses deux numéros d'image, construit sa scène à partir d'un arrêt
-# (stop_N) et pose ses clés avec render/strike.py (K) : voir tee_shot, fairway_shot, arrive et
-# chip_and_run plus bas, qui servent de modèles aux trajets 3 → 4, 4 → 5 et 5 → 6.
+# (stop_N) et pose ses clés avec render/strike.py (K) : voir tee_shot, fairway_shot, arrive,
+# chip_and_run, birdie_putt et last_putt plus bas.
 #
 # Règles communes :
 #   - la première image d'un trajet est la vue de son arrêt de départ, la dernière celle de l'arrêt
@@ -882,11 +886,19 @@ def render_stop(k):
 #     (K.settle), une fois qu'elle est arrêtée ;
 #   - l'herbe d'un arrêt n'est plantée que dans son cadre : on replante là où la caméra regarde
 #     pendant le mouvement, hors du secteur de l'arrêt (beside), pour que la dernière image reste la sienne ;
-#   - CUES[k] : l'image de l'impact et celle où la balle touche le sol, portées dans anchors.json
-#     ("legs") puis dans le manifeste par scripts/frames.py : le compteur de distance du site s'y cale.
+#   - CUES[k] : l'image de l'impact et celle où la balle touche le sol (pour un putt : celle où elle
+#     tombe dans le trou), portées dans anchors.json ("legs") puis dans le manifeste par
+#     scripts/frames.py : le compteur de distance du site s'y cale.
 # Animatique : --leg N --scale 25 --samples 10 --set density=0.35 --out render/out/anim
 LEG_FRAMES = 44
-CUES = {0: {'impact': 10, 'land': 35}, 1: {'impact': 11, 'land': 31}, 2: {'impact': 10, 'land': 20}}
+CUES = {
+    0: {'impact': 10, 'land': 35},
+    1: {'impact': 11, 'land': 31},
+    2: {'impact': 10, 'land': 20},
+    3: {'impact': 8, 'land': 19},
+    4: {'impact': 11, 'land': 31},
+    5: {'impact': 8, 'land': 22},
+}
 
 
 def key(obj, frame, location=None, rotation=None):
@@ -1114,13 +1126,220 @@ def chip_and_run(first, last):
     K.track(cam, frames, pos, target, lens=lens, focus=focus, fstop=fstop)
 
 
+# ---- trajet 3 → 4 : le putt pour birdie, le noir du trou, puis le départ du 2
+def putter_clock(impact):
+    """Le temps d'un putt : presque le temps réel à l'impact (une image = 0,04 s), la descente du
+    putter raccordée à la fin de son recul, et une fin de geste qui se pose sans hâte."""
+    return K.Clock(impact, slow=0.04, before=1.7, after=1.2)
+
+
+def bezier(points, u):
+    """Un point d'une courbe de Bézier à quatre points de contrôle."""
+    a, b, c, d = points
+    return a * (1 - u) ** 3 + b * (3 * u * (1 - u) ** 2) + c * (3 * u * u * (1 - u)) + d * u**3
+
+
+def birdie_putt(first, last):
+    """Plan 1 : le putt de 3 m, de la vue de l'arrêt 3, derrière le trou. Le putter frappe, la balle
+    vient vers nous sur une ligne un peu courbe, bascule par-dessus le bord du trou et tombe. La caméra
+    ne bouge pas tant que la balle roule : elle s'incline à peine, pour remonter le trou dans l'image ;
+    puis elle fonce sur lui, plonge dans le godet, et le plan finit dans le noir."""
+    a = stop_3()
+    view, cam = a.view, a.cam
+    impact, land = CUES[3]['impact'], CUES[3]['land']
+    hole = V((G1_HOLE[0], G1_HOLE[1], 0.0))
+    # L'herbe autour du trou, hors du couloir étroit que voit le téléobjectif : la plongée la découvre.
+    xy = beside(spread(view.pos, hole, (500_000, 1.2, 9.0, 28, 0.6), seed=61), view, 6, back=0.0)
+    a.turf.grow(outside(xy, G1_HOLE, P.CUP_R + 0.001), a.obstacles, seed=63)
+    K.setup()
+    # Le putter reste en fin de geste : le joueur regarde sa balle rouler.
+    K.swing(a.club, 'putter', putter_clock(impact), first=first, back=4, reach=0.004, finish=0.22, last=impact + 10, leave=False, soft=True)
+    where = K.putt(K.Ball(a.ball), G1_HOLE, impact, land, first=first, last=last, bow=opt('bow', -0.05))
+    frames = K.half_frames(first, last)
+    dive = land + 1.5  # la balle bascule et tombe sous nos yeux, puis la caméra part
+    low = aim(view.pos, hole, view.lens, 0.62, 0.64)
+    path = [view.pos, V((hole.x + 1.3, 0.03, 0.42)), V((hole.x + 0.10, 0.0, 0.34)), V((hole.x + 0.02, 0.0, -0.03))]
+    bottom = V((hole.x, hole.y, -P.CUP_DEPTH))
+    pos, target, lens, focus = [], [], [], []
+    for f in frames:
+        g = float(K.smooth((f - impact - 1) / (land - impact - 1)))
+        u = min(1.0, max(0.0, (f - dive) / (last - dive)))
+        e = u**1.3  # de plus en plus vite : on ne freine pas, on entre dans le noir
+        p = bezier(path, e)
+        # Elle vise le trou, et son fond seulement quand elle y entre.
+        t = view.target.lerp(low, g).lerp(hole + (bottom - hole) * float(K.smooth((u - 0.85) / 0.15)), float(K.smooth(2.0 * u)))
+        pos.append(p)
+        target.append(t)
+        lens.append(math.exp(math.log(view.lens) + (math.log(30.0) - math.log(view.lens)) * e))
+        focus.append((V(where[f]) - p).length if f < dive else max(0.05, (t - p).length))
+    K.track(cam, frames, pos, target, lens=lens, focus=focus)
+    key_look(first, a.exposure, a.warmth)
+    key_look(last - 2, a.exposure, a.warmth)
+    key_look(last - 1, a.exposure - 1.0, a.warmth)
+    key_look(last, a.exposure - 14.0, a.warmth)
+
+
+def tee2_descent(first, last):
+    """Plan 2 : on sort du noir dans le ciel de fin d'après-midi, au-dessus du lac ; la caméra descend,
+    bascule vers le sol et se pose sur le cadrage de l'arrêt 4, derrière la balle du par 3. Le fer 7
+    vient se placer derrière elle."""
+    a = stop_4()
+    view, cam = a.view, a.cam
+    phi, edge = math.radians(opt('view', T2_VIEW)), opt('edge', T2_EDGE)
+    d = view.target - view.pos
+    flat = V((d.x, d.y, 0)).normalized()
+    pitch1 = math.atan2(d.z, math.hypot(d.x, d.y))
+    back, up, pitch0, lens0 = opt('back', 2.4), opt('up', 1.5), math.radians(opt('pitch', 24)), opt('lens0', 40.0)
+    done = last - 4  # posée : il reste au fer le temps d'arriver
+    # L'herbe du départ vue d'en haut, autour du secteur que l'arrêt a planté, jusqu'à la rive.
+    high = view.pos - flat * back + V((0, 0, up))
+    xy = beside(spread(high, B4, (700_000, 0.3, 9.0, 34, 0.6), seed=65), view, 22)
+    xy = xy[xy[:, 0] * math.cos(phi) + xy[:, 1] * math.sin(phi) < edge - 0.01]
+    a.turf.grow(outside(xy, (0, 0), 0.006), a.obstacles, seed=67)
+    K.setup()
+    frames = K.half_frames(first, last)
+    pos, target, lens, focus = [], [], [], []
+    for f in frames:
+        u = (f - first) / (done - first)
+        e = float(K.ease_out(u, 2.4))  # déjà lancée en sortant du noir, elle freine en se posant
+        p = view.pos - flat * (back * (1 - e)) + V((0, 0, up * (1 - e)))
+        mm = math.exp(math.log(lens0) + (math.log(view.lens) - math.log(lens0)) * e)
+        # La visée : le même azimut que l'arrêt (la balle reste vers x = 0,63), le regard qui bascule du ciel au sol.
+        b = B4 - p
+        az = math.atan2(b.y, b.x) + math.atan((0.63 - 0.5) * 36.0 / mm)
+        el = pitch1 + (pitch0 - pitch1) * (1 - float(K.ease_out(u, 2.0)))
+        t = p + V((math.cos(el) * math.cos(az), math.cos(el) * math.sin(az), math.sin(el))) * d.length
+        t = t.lerp(view.target, float(K.smooth((f - (done - 4)) / 4.0)))
+        pos.append(p)
+        target.append(t)
+        lens.append(mm)
+        focus.append((B4 - p).length)
+    K.track(cam, frames, pos, target, lens=lens, focus=focus)
+    K.settle(a.club, done - 1, last, 62.5, reach=3.2)
+    key_look(first, a.exposure - 9.0, a.warmth)
+    key_look(first + 1, a.exposure - 1.5, a.warmth)
+    key_look(first + 3, a.exposure, a.warmth)
+
+
+# ---- trajet 4 → 5 : le fer 7 au-dessus de l'eau
+def par3_shot(first, last):
+    """Plan 1 : la frappe au fer 7, de la vue de l'arrêt 4, derrière la balle. La tête la prend sur son
+    tee bas, puis frôle l'herbe : le tee saute, quelques brins volent. La caméra se tourne vers la
+    cible et suit la balle qui monte au-dessus de l'eau, en trace ambre ; le plan finit dans le ciel."""
+    a = stop_4()
+    view = a.view
+    phi, edge = math.radians(opt('view', T2_VIEW)), opt('edge', T2_EDGE)
+    # L'herbe du côté de la cible, jusqu'à la rive : la caméra la balaie en se tournant.
+    xy = beside(spread(view.pos, V((6, 0, 0)), (300_000, 0.1, 9.0, 60, 1.0), seed=81), view, 22)
+    xy = xy[xy[:, 0] * math.cos(phi) + xy[:, 1] * math.sin(phi) < edge - 0.01]
+    a.turf.grow(outside(xy, (0, 0), 0.006), a.obstacles, seed=83)
+    K.setup()
+    impact = CUES[4]['impact']
+    clock = K.Clock(impact, slow=0.095 / K.CLUBS['fer7']['speed'], cap=0.22)
+    K.swing(a.club, 'fer7', clock, first=first, reach=0.010, last=impact + 2)  # il disparaît dans le filé : le champ qui s'ouvre le reprendrait
+    fly = K.Flight.of('fer7', B4)
+    where = K.launch(K.Ball(a.ball), fly, clock, first=first, last=last, step=0.25)
+    turf = a.turf.kinds[0].material()
+    K.burst([a.tee], B4, clock, last, speed=(5.0, 7.0), lift=(40, 55), fan=8, tumble=70, hidden=False)
+    K.burst(K.loose_blades(22, turf), V((0.05, 0, 0)), clock, last, speed=(3, 9), lift=(25, 65), fan=32, scatter=0.03, tumble=50, seed=4)
+    # La caméra reste où elle est et se tourne : elle rattrape la balle en deux images, puis la tient
+    # dans le haut de l'image en ouvrant son champ (du 105 au 32 mm), pour garder sous elle la rive
+    # d'en face et le lac qu'elle survole.
+    frames = K.half_frames(first, last, step=0.25)
+    fx, fy = focus_of(a.cam, B4)
+    wide, high = opt('wide', 32.0), opt('high', 0.32)
+    target, focus, lens = [], [], []
+    for f in frames:
+        w, z, p = float(K.smooth((f - impact) / 2.0)), float(K.smooth((f - impact - 0.5) / 5.0)), V(where[f])
+        mm = math.exp(math.log(view.lens) + (math.log(wide) - math.log(view.lens)) * z)
+        target.append(view.target.lerp(aim(view.pos, p, mm, fx + (0.62 - fx) * w, fy + (high - fy) * z), w))
+        focus.append((p - view.pos).length)
+        lens.append(mm)
+    K.track(a.cam, frames, [view.pos] * len(frames), target, lens=lens, focus=focus)
+    # La trace ambre, vue de derrière : elle monte dans le ciel du soir, et baisse d'autant quand le
+    # plan blanchit.
+    burn = 2.0
+    trace = K.Trace(fly, view.pos, lens=wide, span=(0.03, 3.4), strength=K.amber(a.exposure), tail=1.4, width=0.0017, colour=K.AMBER)
+    for f in frames:
+        trace.key(f, max(0.0, clock.at(f)))
+        trace.glow(f, K.amber(a.exposure + burn * min(1.0, max(0.0, (f - (last - 4)) / 4.0))))
+    key_look(last - 4, a.exposure, a.warmth)
+    key_look(last, a.exposure + burn, a.warmth)
+
+
+def green2_arrival(first, last):
+    """Plan 2 : la balle retombe sur le green du 2, de haut, fait un rebond, roule un peu et s'arrête à
+    1,5 m du trou ; le putter vient se poser derrière elle."""
+    arrive(stop_5(), first, CUES[4]['land'], 38.5, last, 70.0, fall=(0.9, 1.1), hops=((2.0, 1.1, 0.30), (1.2, 0.45, 0.05)), run=0.5, settle=38)
+
+
+# ---- trajet 5 → 6 : le dernier putt, sans coupe
+def last_putt(first, last):
+    """Un seul plan sur le green du 2 : le putter frappe, la balle roule un mètre et demi et tombe dans
+    le trou. La caméra la devance au ras du green, puis s'élève et vient à l'aplomb du trou, sur le
+    cadrage de l'arrêt 6 ; l'image est posée pour l'ombre du godet à mesure qu'elle monte."""
+    place = place_green2()
+    a = stop_5(place=place)
+    fya = focus_of(a.cam, B5)[1]
+    b = stop_6(place=place, ball=a.ball, clear=a.view)
+    fyb = focus_of(b.cam, B6)[1]
+    bpy.data.objects.remove(a.cam)
+    cam, va, vb = b.cam, a.view, b.view
+    impact, land, up_by = CUES[5]['impact'], CUES[5]['land'], 41
+    # L'herbe entre les deux cadrages, et au loin dans le regard de la caméra qui monte. Le disque serré
+    # que l'arrêt 6 plante autour du trou est laissé tel quel ; une couronne plus dense le prolonge.
+    rng = np.random.default_rng(71)
+    n = int(1_400_000 * DENSITY)
+    xy = np.stack([-1.6 + 4.6 * rng.random(n), -1.4 + 4.4 * rng.random(n)], axis=1)
+    m = int(1_200_000 * DENSITY)
+    r, t = np.sqrt(0.65**2 + (1.3**2 - 0.65**2) * rng.random(m)), 2 * math.pi * rng.random(m)
+    ring = np.stack([G2_HOLE[0] + r * np.cos(t), G2_HOLE[1] + r * np.sin(t)], axis=1)
+    far = spread(V((1.6, -0.55, 0.0)), V((1.6, -0.55, 0.0)) + V((math.cos(math.radians(128)), math.sin(math.radians(128)), 0)), (500_000, 1.5, 12.0, 35, 1.0), seed=75)
+    xy = beside(np.concatenate([xy, ring, far]), va, 21)
+    place[0].grow(xy[np.hypot(xy[:, 0] - G2_HOLE[0], xy[:, 1] - G2_HOLE[1]) > 0.65], a.obstacles, seed=73)
+    K.setup()
+    # Le putter quitte la scène dès que la caméra l'a laissé derrière elle.
+    K.swing(a.club, 'putter', putter_clock(impact), first=first, back=4, reach=0.004, finish=0.22, last=impact + int(opt('leave', 8)), soft=True)
+    where = K.putt(K.Ball(a.ball), G2_HOLE, impact, land, first=first, last=last, bow=opt('bow', 0.012), speeds=(0.055, 0.04), rest=B6, final=b.ball_turn)
+    frames = K.half_frames(first, last)
+    pts = [V(where[f]) for f in frames]
+    # La visée suit la balle à plat, sans retard ; elle ne tombe pas d'un coup avec elle dans le trou,
+    # et ne descend au fond du godet qu'à mesure que la caméra s'élève (vu de bas, viser le fond, c'est
+    # viser le green en avant du trou).
+    depth = K.follow([V((0, 0, p.z)) for p in pts], V((0, 0, B5.z)), weight=0.45)
+    pos, target, lens, focus, fstop = [], [], [], [], []
+    for k, f in enumerate(frames):
+        gxy = float(K.smooth((f - impact) / (land + 4.0 - impact)))  # elle devance la balle
+        gz = float(K.smooth((f - (land - 8.0)) / (up_by - (land - 8.0))))  # puis s'élève
+        if f >= up_by + 1:
+            p, mm, t, fs, fo = vb.pos, vb.lens, vb.target, vb.fstop, (vb.focus - vb.pos).length
+        else:
+            p = V((va.pos.x + (vb.pos.x - va.pos.x) * gxy, va.pos.y + (vb.pos.y - va.pos.y) * gxy, va.pos.z + (vb.pos.z - va.pos.z) * gz))
+            mm = math.exp(math.log(va.lens) + (math.log(vb.lens) - math.log(va.lens)) * gz)
+            w = float(K.smooth((f - impact) / 1.5))
+            look = V((pts[k].x, pts[k].y, B5.z + (depth[k].z - B5.z) * float(K.smooth((gz - 0.25) / 0.75))))
+            t = va.target.lerp(aim(p, look, mm, 0.62, fya + (fyb - fya) * gz), w)
+            fs = math.exp(math.log(va.fstop) + (math.log(vb.fstop) - math.log(va.fstop)) * gz)
+            fo = (look - p).length + ((vb.focus - vb.pos).length - (B6 - vb.pos).length) * gz
+        pos.append(p)
+        target.append(t)
+        lens.append(mm)
+        fstop.append(fs)
+        focus.append(fo)
+    K.track(cam, frames, pos, target, lens=lens, focus=focus, fstop=fstop)
+    # Le développement passe de celui du green au soleil à celui de l'ombre du godet.
+    for f in range(first, last + 1):
+        g = float(K.smooth((f - land) / (up_by - 1.0 - land)))
+        key_look(f, a.exposure + (b.exposure - a.exposure) * g, a.warmth + (b.warmth - a.warmth) * g)
+
+
 LEGS = [
     [(1, 12, tee_shot), (13, 29, wide_finish), (30, 44, fairway_arrival)],
     [(1, 24, fairway_shot), (25, 44, green_arrival)],
     [(1, 44, chip_and_run)],
-    None,  # 3 → 4, 4 → 5, 5 → 6 : à écrire
-    None,
-    None,
+    [(1, 26, birdie_putt), (27, 44, tee2_descent)],
+    [(1, 23, par3_shot), (24, 44, green2_arrival)],
+    [(1, 44, last_putt)],
 ]
 
 

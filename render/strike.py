@@ -12,6 +12,7 @@
 #   ball = K.Ball(obj)                           la balle sur son porteur : place, écrasement, roule
 #   fly = K.Flight.of('long', centre)            sa trajectoire réelle (mètres, secondes)
 #   K.launch(ball, fly, clock, last=21)          écrasée à l'impact, puis en vol
+#   K.putt(ball, hole, impact, land)             ou bien : elle roule jusqu'au trou et y tombe
 #   K.burst(K.divot(turf_mat), …)                la motte, les brins, le tee qui sautent
 #   K.Trace(fly, cam_pos, lens)                  la trace ambre de la balle dans le ciel (fly : un vol,
 #                                                ou K.Path(images, places) pour la chute d'une arrivée)
@@ -95,14 +96,15 @@ class Clock:
 
 
 # ---------------------------------------------------------------- le club
-def swing(club, kind, clock, first=1, back=5, reach=0.009, finish=2.5, last=None, leave=True):
+def swing(club, kind, clock, first=1, back=5, reach=0.009, finish=2.5, last=None, leave=True, soft=False):
     """Le geste, vu par sa tête : elle part de l'adresse (image `first`), recule hors champ en `back`
     images, revient sur un arc autour d'un pivot placé côté joueur, traverse la balle à l'image
     clock.impact et accompagne. `club` : le vide parent du club, posé à l'adresse ; `reach` : avancée
     de la face entre l'adresse et le fond de l'écrasement de la balle (mètres). Renvoie l'angle de la
     tête (radians, 0 à l'adresse) à chaque instant posé : {image: angle}. Après l'image `last`, le
     club quitte la scène (leave) : sans joueur pour le tenir, il ne doit pas rester en l'air si la
-    caméra se retourne."""
+    caméra se retourne. soft : après l'impact la tête ralentit et s'arrête en douceur à l'angle
+    `finish` (un putt : le joueur tient sa fin de geste), au lieu de traverser à pleine vitesse."""
     S = CLUBS[kind]
     lie, attack = math.radians(S['lie']), math.radians(S['attack'])
     along, up = V((1, 0, 0)), V((0, math.cos(lie), math.sin(lie)))  # le plan du geste : la ligne de jeu et le manche
@@ -122,6 +124,8 @@ def swing(club, kind, clock, first=1, back=5, reach=0.009, finish=2.5, last=None
         else:
             t = clock.at(f)
             phi = reach / S['radius'] + rate * t * (1.0 if t < 0 else S['keep'])
+            if soft and t > 0:
+                phi = reach / S['radius'] + finish * (1.0 - math.exp(-rate * S['keep'] * t / finish))
             phi = max(-S['top'], min(finish, phi))
         turn = Quaternion(axis, phi)
         club.location = pivot + turn @ (start - pivot)
@@ -174,10 +178,11 @@ class Ball:
         self.obj.rotation_quaternion = quat
         self.obj.keyframe_insert('rotation_quaternion', frame=frame)
 
-    def roll(self, frames, points, final):
+    def roll(self, frames, points, final=None, start=None):
         """La balle roule le long de `points` (une place par instant de `frames`) et finit dans
         l'orientation `final` (quaternion) : son tampon tourne de plus en plus lentement, et s'arrête
-        où l'image de l'arrêt le montre."""
+        où l'image de l'arrêt le montre. Ou bien `start` : elle part de cette orientation (un putt,
+        dont la première image est celle de l'arrêt). Renvoie l'orientation de la fin."""
         pts = [V(p) for p in points]
         left = [0.0] * len(pts)  # chemin qui reste à faire, à plat
         for k in range(len(pts) - 2, -1, -1):
@@ -185,8 +190,11 @@ class Ball:
             left[k] = left[k + 1] + math.hypot(d.x, d.y)
         heading = pts[-1] - pts[0]
         axis = V((0, 0, 1)).cross(V((heading.x, heading.y, 0)).normalized())
+        if final is None:
+            final = Quaternion(axis, left[0] / self.radius) @ start
         for f, rest in zip(frames, left):
             self.turn(f, Quaternion(axis, -rest / self.radius) @ final)
+        return final
 
 
 class Flight:
@@ -237,6 +245,68 @@ def launch(ball, flight, clock, first=1, last=None, squash=0.85, step=0.5):
     spin = V((0, -1, 0))
     for f in half_frames(impact + 0.5, last):
         ball.turn(f, Quaternion(spin, 2.4 * (f - impact)) @ ball.rest)
+    return where
+
+
+def putt(ball, hole, impact, land, first=1, last=None, bow=0.0, speeds=(0.08, 0.05), rest=None, final=None, drop=3.0, cup=P.CUP_R, depth=P.CUP_DEPTH):
+    """Un putt qui tombe. La balle attend, part à l'image `impact`, roule vers le trou `hole` (x, y) sur
+    une ligne un peu courbe (`bow` : flèche en mètres, vers la gauche du putt, plus marquée en fin de
+    course, quand la balle ralentit ; 0 : tout droit), arrive au bord à l'image `land`, bascule
+    par-dessus et tombe au fond du godet en `drop` images (trois : à peu près le temps réel), où elle
+    s'arrête à `rest` (son centre ; par défaut un peu au-delà de l'axe) dans l'orientation `final`
+    (sinon celle où la roule la laisse).
+    speeds : mètres par image au départ et au bord du trou ; entre les deux le film file (le temps
+    est resserré, comme pour un vol). Renvoie {image: place}."""
+    last = last if last is not None else land + 5
+    start = V(ball.carrier.location)
+    z0, zb = start.z, -depth + ball.radius
+    centre = V((hole[0], hole[1], z0))
+    line = (centre - start).normalized()
+    lip = centre - line * cup  # le centre de la balle au-dessus du bord : elle bascule
+    left = V((0, 0, 1)).cross(line)
+    length = (lip - start).length
+    n = land - impact
+    m0, m1 = speeds[0] * n / length, speeds[1] * n / length
+
+    def on_line(u):  # part du chemin faite, puis place : la flèche est aux deux tiers
+        w = (u**3 - 2 * u * u + u) * m0 + (3 * u * u - 2 * u**3) + (u**3 - u * u) * m1
+        return start + (lip - start) * w + left * (bow * 2.6 * w * (1 - w * w))
+
+    ball.key(first, start)
+    ball.key(impact - 0.12, start)
+    where = {f: start.copy() for f in half_frames(first, impact - 0.5)}
+    rolling = half_frames(impact, land)
+    for f in rolling:
+        where[f] = on_line((f - impact) / n)
+    way = (where[land] - where[land - 0.5]).normalized()  # le sens de la balle au bord du trou
+    way.z = 0
+    rest = V(rest) if rest is not None else V((hole[0], hole[1], zb)) + way * 0.020
+    # La chute : part du temps de chute, avancée depuis le bord, hauteur. Elle heurte la paroi d'en
+    # face, puis le fond, revient un peu et s'immobilise.
+    part = [0.0, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5]
+    along = [0.0, 0.022, 0.046, 0.066, 0.080, 0.072, 0.064]
+    height = [z0, z0 - 0.010, z0 - 0.042, z0 - 0.082, zb, zb + 0.007, zb]
+    still = land + math.ceil(2 * 1.5 * drop) / 2  # au fond, à la demi-image près
+    falling = half_frames(land + 0.5, still)
+    for f in falling:
+        k = (f - land) / drop
+        p = where[land] + way * float(np.interp(k, part, along))
+        where[f] = V((p.x, p.y, float(np.interp(k, part, height))))
+    settle = half_frames(still, max(last, still + 1.0))
+    for f in settle:
+        where[f] = where[still].lerp(rest, float(smooth(f - still)))
+    for f in sorted(where):
+        if f >= impact:
+            ball.key(f, where[f])
+    turned = ball.roll(rolling, [where[f] for f in rolling], start=ball.rest)
+    # Dans le godet elle tourne encore un peu, puis s'immobilise.
+    spin = V((0, 0, 1)).cross(way)
+    for f in falling:
+        ball.turn(f, Quaternion(spin, 1.3 * (f - land)) @ turned)
+    down = Quaternion(spin, 1.3 * (still - land)) @ turned
+    end = final if final is not None else down
+    for f in settle:
+        ball.turn(f, down.slerp(end, float(smooth(f - still))))
     return where
 
 
