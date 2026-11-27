@@ -1,14 +1,14 @@
 // La page : sept arrêts posés sur un film pré-rendu. Un geste (molette, balayage, flèche, bouton)
 // joue un coup : le film suit la balle jusqu'à l'arrêt suivant, puis la fiche monte. Deux panneaux
-// s'ouvrent par-dessus : l'étude de cas du projet courant, et la carte de score (le sommaire).
+// s'ouvrent par-dessus : l'étude de cas du projet courant, et le carnet de parcours (le sommaire).
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { LAST, SITE, STOPS, indexOfId, initialLang, pick, saveLang, stopName } from './lib/content.js';
+import { LAST, SITE, STOPS, arrival, indexOfId, initialLang, pick, saveLang, stopName } from './lib/content.js';
 import { Film, pickSizes, savesData } from './lib/film.js';
 import { useShotInput } from './lib/input.js';
 import CaseStudy from './components/CaseStudy.jsx';
 import { ContactCard, IntroCard, ProjectCard } from './components/Cards.jsx';
-import HoleMap from './components/HoleMap.jsx';
-import { Card as CardIcon } from './components/Icons.jsx';
+import Carnet from './components/Carnet.jsx';
+import { Book } from './components/Icons.jsx';
 import NextShot, { Flight } from './components/NextShot.jsx';
 import Scorecard from './components/Scorecard.jsx';
 
@@ -25,6 +25,7 @@ export default function App() {
   const [flight, setFlight] = useState(null); // null au repos ; { shot } pendant un déplacement (shot : le coup joué, ou null pour un fondu)
   const [panel, setPanel] = useState(null); // null, 'case' ou 'card'
   const [caseStop, setCaseStop] = useState(null);
+  const [came, setCame] = useState(null); // l'arrêt qu'on vient de quitter
 
   const canvasRef = useRef(null);
   const filmRef = useRef(null);
@@ -97,6 +98,7 @@ export default function App() {
     moveRef.current += 1;
     const id = moveRef.current;
     stopRef.current = target;
+    setCame(from);
     setStop(target);
     history.replaceState(null, '', target ? `#${STOPS[target].id}` : location.pathname + location.search);
     const land = () => {
@@ -217,6 +219,9 @@ export default function App() {
     document.querySelector(`[data-card="${current.id}"] [data-focus]`)?.focus({ preventScroll: true });
   };
 
+  // À l'arrivée d'un coup, la zone vive dit aussi ce qu'il a donné : « Coup 1 : 244 m, fairway. Reste 234 m. »
+  const landed = settled && came === stop - 1 ? arrival(stop, lang, t) : '';
+
   const loading = progress < 0.999;
   return (
     <div className={`app at-${current.kind} ${ready ? 'ready' : ''} ${flight ? 'moving' : ''} ${flight?.shot != null ? 'flying' : ''}`}>
@@ -250,7 +255,7 @@ export default function App() {
               {t.contact}
             </a>
             <button type="button" className="top-card mono" onClick={() => openPanel('card')} aria-haspopup="dialog" aria-label={t.scorecard}>
-              <CardIcon />
+              <Book />
               <span>{t.scorecard}</span>
             </button>
             <button type="button" className="top-lang mono" onClick={() => setLang(lang === 'fr' ? 'en' : 'fr')} aria-label={t.langSwitch} title={t.langSwitch}>
@@ -281,9 +286,9 @@ export default function App() {
           onReplay={() => go(0)}
           onSkip={() => filmRef.current?.skip()}
         />
-        <HoleMap stop={stop} flight={flight} lang={lang} t={t} onCard={() => openPanel('card')} />
+        <Carnet stop={stop} flight={flight} lang={lang} t={t} reduce={reduce} onOpen={() => openPanel('card')} />
         <p className="sr-only" aria-live="polite">
-          {settled ? `${pick(current.label, lang)} — ${stopName(current, lang, t)}` : ''}
+          {settled ? `${pick(current.label, lang)} — ${stopName(current, lang, t)}${landed ? `. ${landed}` : ''}` : ''}
         </p>
       </div>
 

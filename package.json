@@ -10,6 +10,7 @@
     "dev": "vite",
     "build": "vite build",
     "start": "node server/index.js",
+    "check": "node content/check-golf.mjs",
     "placeholder": "python3 scripts/placeholder_frames.py"
   },
   "dependencies": {

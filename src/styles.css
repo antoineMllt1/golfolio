@@ -250,6 +250,9 @@ svg {
   border-color: var(--ink);
   background: rgb(var(--veil) / 0.8);
 }
+.top-card .short {
+  display: none; /* « Carnet » tout court, quand la barre manque de place */
+}
 .top-link {
   padding: 0 14px;
   color: var(--soft);
@@ -630,172 +633,993 @@ h1 .role {
   color: var(--soft);
 }
 
-/* ---------- plan du trou ---------- */
-.map {
+/* ---------- le carnet de parcours : la page du trou ----------
+   Tout ce qui est golf vit ici. Trois voix : JetBrains Mono pour ce qui est imprimé et mesuré,
+   Instrument Serif italique pour la voix du caddie, l'ambre pour la balle et le coup à jouer. */
+.carnet {
   position: absolute;
   right: var(--gutter);
+  top: 96px;
   bottom: max(30px, env(safe-area-inset-bottom));
   z-index: 3;
-  width: 152px;
-  padding: 14px 14px 13px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: rgb(var(--veil) / 0.62);
+  width: 284px;
 }
-.map-art {
-  position: relative;
-  aspect-ratio: 120 / 280;
-}
-.hole {
-  position: absolute;
-  inset: 0;
-  width: 100%;
+.carnet-in {
+  display: flex;
+  flex-direction: column;
   height: 100%;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgb(var(--veil) / 0.76);
+  overflow: hidden;
+}
+/* Sous la page, le film s'assombrit un peu : les cotes restent lisibles sur une image claire. */
+.app:has(.carnet) .scrim {
+  background:
+    linear-gradient(90deg, rgb(var(--veil) / 0.9) 0%, rgb(var(--veil) / 0.76) 22%, rgb(var(--veil) / 0.4) 40%, rgb(var(--veil) / 0) 58%),
+    linear-gradient(180deg, rgb(var(--veil) / 0.62) 0%, rgb(var(--veil) / 0) 18%),
+    linear-gradient(0deg, rgb(var(--veil) / 0.7) 0%, rgb(var(--veil) / 0) 26%),
+    linear-gradient(270deg, rgb(var(--veil) / 0.5) 0%, rgb(var(--veil) / 0.28) 16%, rgb(var(--veil) / 0) 30%);
+}
+/* Replier : une poignée sur le bord de la page. */
+.carnet-fold {
+  position: absolute;
+  right: 100%;
+  top: 14px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 30px;
+  border: 1px solid var(--line);
+  border-right: 0;
+  border-radius: 7px 0 0 7px;
+  background: rgb(var(--veil) / 0.76);
+  color: var(--muted);
+  transition: color 0.2s, background-color 0.2s;
+}
+.carnet-fold svg {
+  width: 11px;
+  height: 11px;
+}
+.carnet-fold:hover {
+  color: var(--ink);
+  background: rgb(var(--veil) / 0.92);
+}
+/* Les onglets : un par trou. Ce sont aussi la carte de score et le fil des arrêts : une pastille par coup. */
+.tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  flex: none;
+}
+.tab {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  column-gap: 11px;
+  height: 58px;
+  padding: 0 0 0 16px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  transition: color 0.3s ease;
+}
+.tab + .tab {
+  border-left: 1px solid var(--line);
+  padding-left: 15px;
+}
+.tab.on {
+  color: var(--ink);
+  border-bottom-color: transparent;
+}
+.tab.on::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  right: -1px;
+  top: -1px;
+  height: 2px;
+  background: var(--ink);
+}
+.tab-n {
+  position: relative;
+  font-family: var(--serif);
+  font-size: 36px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: lining-nums;
+  text-align: left;
+  transition: color 0.2s;
+}
+.tab-n::after {
+  content: '';
+  position: absolute;
+  inset: -8px -10px -8px -14px; /* la zone de clic déborde du chiffre */
+}
+.tab:not(.on) .tab-n:hover {
+  color: var(--ink);
+}
+.tab-meta {
+  display: grid;
+  gap: 7px;
+}
+.tab-meta .mono {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  height: 9px;
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  line-height: 1;
+  white-space: nowrap;
+}
+.tab-meta .mono span {
+  opacity: 0.62;
+}
+.tab-meta .mono.fin {
+  gap: 0.45em;
+  letter-spacing: 0.12em; /* « Par 5 ④ Birdie » tient dans l'onglet */
+}
+.circ {
+  display: inline-grid;
+  place-items: center;
+  width: 15px;
+  height: 15px;
+  margin: -3px 0;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1;
+}
+.pips {
+  display: flex;
+  gap: 5px;
+}
+.pip {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 17px;
+  height: 17px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1;
+  color: rgb(242 239 232 / 0.4);
+  transition: color 0.2s, background-color 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+/* la zone de clic déborde de la pastille */
+.pip::after {
+  content: '';
+  position: absolute;
+  inset: -4px -3px;
+}
+.tab.on .pip {
+  color: var(--muted);
+}
+.tab .pip:hover {
+  color: var(--ink);
+}
+.tab .pip.done {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--bg);
+}
+.tab:not(.on) .pip.done {
+  border-color: var(--muted);
+  background: var(--muted);
+}
+.tab .pip.done:hover {
+  border-color: var(--amber);
+  background: var(--amber);
+}
+.tab .pip.cur {
+  border-color: var(--amber);
+  background: var(--amber);
+  color: #17120a;
+  box-shadow: 0 0 0 3px rgb(242 169 59 / 0.2);
+}
+.tab .pip.fly {
+  border-color: var(--amber);
+  color: var(--amber);
+  box-shadow: 0 0 0 3px rgb(242 169 59 / 0.2);
+}
+.flagpip {
+  margin-left: 3px;
+  border-style: dashed;
+}
+.flagpip svg {
+  width: 8px;
+  height: 10px;
+  margin-left: 1px;
+}
+.cond {
+  flex: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 2px 16px 0;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--muted);
+}
+.cond b {
+  font-weight: 500;
+  color: var(--ink);
+}
+/* Le plan : il prend la hauteur que laisse la fenêtre ; le dessin est refait à cette taille. */
+.plan {
+  position: relative;
+  flex: 1 1 0;
+  min-height: 0;
+  margin: 0 16px;
+  clip-path: inset(0 -15px);
+}
+.plan-art {
+  position: relative;
+}
+.plan-art .layer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 50% 50%;
+}
+.plan-art .layer.out {
+  pointer-events: none;
+  animation: plan-out var(--ms, 260ms) ease both;
+}
+.plan-art .layer.in {
+  animation: plan-in var(--ms, 260ms) ease both;
+}
+/* Le recadrage : les deux calques suivent la même caméra, l'ancien s'efface, le nouveau paraît. */
+.plan-art .layer.move.out {
+  animation: plan-move-out var(--ms, 700ms) var(--ease) both;
+}
+.plan-art .layer.move.in {
+  animation: plan-move-in var(--ms, 700ms) var(--ease) both;
+}
+.plan-art .layer.move.closer.out {
+  animation-name: plan-move-out-early;
+}
+.plan-art .layer.move.farther.in {
+  animation-name: plan-move-in-late;
+}
+@keyframes plan-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes plan-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes plan-move-in {
+  0% {
+    opacity: 0;
+    transform: rotate(var(--r)) scale(var(--s)) translate(var(--x), var(--y));
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: rotate(0deg) scale(1) translate(0px, 0px);
+  }
+}
+@keyframes plan-move-out {
+  0% {
+    opacity: 1;
+    transform: rotate(0deg) scale(1) translate(0px, 0px);
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(var(--r)) scale(var(--s)) translate(var(--x), var(--y));
+  }
+}
+@keyframes plan-move-out-early {
+  0% {
+    opacity: 1;
+    transform: rotate(0deg) scale(1) translate(0px, 0px);
+  }
+  45% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(var(--r)) scale(var(--s)) translate(var(--x), var(--y));
+  }
+}
+@keyframes plan-move-in-late {
+  0% {
+    opacity: 0;
+    transform: rotate(var(--r)) scale(var(--s)) translate(var(--x), var(--y));
+  }
+  35% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+    transform: rotate(0deg) scale(1) translate(0px, 0px);
+  }
+}
+/* Au survol ou au focus d'un point de chute : le nom du projet. */
+.plan-tip {
+  position: absolute;
+  z-index: 2;
+  transform: translate(-50%, calc(-100% - 5px));
+  padding: 5px 9px 6px;
+  border-radius: 4px;
+  background: var(--ink);
+  color: var(--bg);
+  font-family: var(--serif);
+  font-size: 15px;
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+  animation: tip 0.16s ease both;
+}
+.plan-tip.left {
+  transform: translate(calc(-100% + 14px), calc(-100% - 5px));
+}
+.plan-tip.right {
+  transform: translate(-14px, calc(-100% - 5px));
+}
+@keyframes tip {
+  from {
+    opacity: 0;
+  }
+}
+/* Les notes du caddie */
+.notes {
+  flex: none;
+  height: 212px;
+  margin: 8px 16px 0;
+  padding: 14px 0 0;
+  border-top: 1px solid var(--line);
+  animation: notes 0.45s var(--ease) both;
+}
+@keyframes notes {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+.notes-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  line-height: 1.2;
+  white-space: nowrap;
+  color: var(--muted);
+}
+.notes-head b {
+  font-weight: 500;
+  color: var(--ink);
+}
+.yard {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+}
+.yard-n {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  white-space: nowrap;
+}
+.yard-n strong {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: 48px;
+  line-height: 0.8;
+  letter-spacing: -0.02em;
+  font-variant-numeric: lining-nums;
+}
+.yard-n span {
+  font-size: 12.5px;
+  line-height: 1;
+  color: var(--soft);
+}
+.yard-side {
+  display: grid;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  line-height: 1;
+  color: var(--muted);
+  text-align: right;
+  white-space: nowrap;
+}
+.yard-side div {
+  display: flex;
+  justify-content: flex-end;
+  align-items: baseline;
+}
+.yard-side dd,
+.gauge-l dd {
+  min-width: 3ch;
+  margin-left: 6px;
+  font-size: 10.5px;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+}
+.facts {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  gap: 5px 0;
+  margin-top: 16px;
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: var(--soft);
+}
+.facts dt {
+  padding-top: 3.5px;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  line-height: 1.2;
+  color: var(--muted);
+}
+.say {
+  margin-top: 13px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 17px;
+  line-height: 1.2;
+  color: var(--ink);
+  text-wrap: pretty;
+}
+.say.dim {
+  color: var(--soft);
+}
+/* la carte signée : le nom, comme une signature */
+.say.signed {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 25px;
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+.say.signed span {
+  font-family: var(--mono);
+  font-style: normal;
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.back-ball {
+  font-style: italic;
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+  text-underline-offset: 4px;
+}
+.back-ball:hover {
+  text-decoration-color: var(--amber);
+}
+/* Pendant le vol : le coup s'écrit. La réglette avance avec les images du film (--p, de 0 à 1). */
+.gauge {
+  --p: 0;
+  position: relative;
+  height: 13px;
+  margin-top: 30px;
+}
+.gauge::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 6px;
+  height: 1px;
+  background: var(--line-strong);
+}
+.gauge i {
+  position: absolute;
+  top: 2px;
+  width: 1px;
+  height: 9px;
+  margin-left: -0.5px;
+  background: var(--muted);
+}
+.gauge .fill {
+  position: absolute;
+  left: 0;
+  top: 6px;
+  width: calc(var(--p) * 100%);
+  height: 1px;
+  background: var(--amber);
+}
+.gauge .dot {
+  position: absolute;
+  left: calc(var(--p) * 100%);
+  top: 3px;
+  width: 7px;
+  height: 7px;
+  margin-left: -3.5px;
+  border-radius: 50%;
+  background: var(--amber);
+  box-shadow: 0 0 0 3px rgb(242 169 59 / 0.2);
+}
+.gauge-l {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 11px;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--muted);
+}
+.gauge-l div {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+}
+.gauge-l dt.sr-only + dd {
+  margin-left: 0;
+}
+.live .say {
+  margin-top: 26px;
+  padding-top: 14px;
+}
+
+/* La languette : la page en petit (téléphone, petite fenêtre, page repliée). On la touche pour
+   ouvrir le carnet ; repliée sur un grand écran, elle déplie la page. */
+.carnet-tag {
+  position: absolute;
+  right: var(--gutter);
+  top: 96px;
+  z-index: 3;
+}
+.languette {
+  display: block;
+  width: 76px;
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgb(var(--veil) / 0.72);
+  text-align: left;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+.languette:hover {
+  border-color: var(--line-strong);
+  background: rgb(var(--veil) / 0.88);
+}
+.lang-h {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-bottom: 7px;
+  border-bottom: 1px solid var(--line);
+  font-family: var(--mono);
+  font-size: 8.5px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--muted);
+}
+.lang-h b {
+  font-family: var(--serif);
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 0.8;
+  letter-spacing: 0;
+  color: var(--ink);
+}
+.languette svg {
+  width: 56px;
+  height: auto;
+  margin: 8px auto 0;
+}
+.lang-pips {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 8px;
+}
+.lang-pips i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  border: 1px solid var(--muted);
+}
+.lang-pips i.gap {
+  margin-left: 4px;
+}
+.lang-pips i.done {
+  border-color: var(--ink);
+  background: var(--ink);
+}
+.lang-pips i.cur {
+  border-color: var(--amber);
+  background: var(--amber);
+  box-shadow: 0 0 0 2px rgb(242 169 59 / 0.22);
+}
+
+/* ---------- le dessin du carnet ----------
+   Deux encres : sur le film (verre sombre, trait crème) et sur le papier (crème, trait sombre).
+   --k : la couleur du trait ; --p : celle du support (pour détourer les chiffres) ; --a : l'ambre. */
+.ink {
+  --k: 242 239 232;
+  --p: 13 23 19;
+  --a: #f2a93b;
+  --halo: rgb(var(--p) / 0.92);
+}
+.ink.paper {
+  --k: 22 32 27;
+  --p: 240 236 226;
+  --a: #c9781a;
+  --halo: rgb(var(--p));
+}
+.ink svg {
+  display: block;
   overflow: visible;
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 0.4s ease calc(var(--swap, 1.05s) - 0.25s), visibility 0s linear calc(var(--swap, 1.05s) + 0.15s);
 }
-.hole.on {
-  opacity: 1;
-  visibility: visible;
-  transition: opacity 0.4s ease var(--swap, 1.05s), visibility 0s linear var(--swap, 1.05s);
-}
-.hole * {
+.ink svg * {
   vector-effect: non-scaling-stroke;
 }
-.rough {
-  fill: rgb(242 239 232 / 0.035);
-  stroke: rgb(242 239 232 / 0.3);
-  stroke-width: 1;
-  stroke-dasharray: 1.5 3.5;
+.ink .t {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  fill: rgb(var(--k));
+  paint-order: stroke;
+  stroke: var(--halo);
+  stroke-width: 2.6px;
+  stroke-linejoin: round;
+}
+.ink pattern circle {
+  fill: rgb(var(--k) / 0.62);
+}
+.ink pattern path {
+  fill: none;
+  stroke: rgb(var(--k) / 0.34);
+  stroke-width: 0.6;
+}
+.ink .wood,
+.ink .tree {
+  fill: none;
+  stroke: rgb(var(--k) / 0.34);
+  stroke-width: 0.7;
+  stroke-linejoin: round;
+}
+.ink .tree-dot {
+  fill: rgb(var(--k) / 0.4);
+}
+.ink .rough {
+  fill: rgb(var(--k) / 0.025);
+  stroke: rgb(var(--k) / 0.34);
+  stroke-width: 0.7;
+  stroke-dasharray: 1.4 2.6;
   stroke-linecap: round;
 }
-.fairway {
-  fill: rgb(242 239 232 / 0.13);
-  stroke: rgb(242 239 232 / 0.5);
-  stroke-width: 1;
+.ink .fairway {
+  fill: rgb(var(--k) / 0.085);
+  stroke: rgb(var(--k) / 0.62);
+  stroke-width: 0.8;
 }
-.green {
-  fill: rgb(242 239 232 / 0.26);
-  stroke: rgb(242 239 232 / 0.75);
-  stroke-width: 1;
-}
-.bunker {
-  fill: rgb(242 239 232 / 0.62);
-}
-.water {
-  fill: #101c18;
-  stroke: rgb(242 239 232 / 0.55);
-  stroke-width: 1;
-}
-.wave {
+.ink .collar {
   fill: none;
-  stroke: rgb(242 239 232 / 0.42);
+  stroke: rgb(var(--k) / 0.42);
+  stroke-width: 0.6;
+  stroke-dasharray: 1 2;
+}
+.ink .green {
+  fill: rgb(var(--k) / 0.3);
+  stroke: rgb(var(--k) / 0.95);
   stroke-width: 1;
+}
+.ink.paper .green {
+  fill: rgb(var(--k) / 0.2);
+}
+.ink .bunker {
+  fill: rgb(var(--p) / 0.55);
+  stroke: rgb(var(--k) / 0.7);
+  stroke-width: 0.7;
+}
+.ink .bunker-s,
+.ink .water-h {
+  stroke: none;
+}
+.ink .water {
+  fill: rgb(var(--p) / 0.5);
+  stroke: rgb(var(--k) / 0.66);
+  stroke-width: 0.8;
+}
+.ink .teebox {
+  fill: rgb(var(--k) / 0.06);
+  stroke: rgb(var(--k) / 0.5);
+  stroke-width: 0.7;
+}
+.ink .teebox.ours {
+  fill: rgb(var(--k) / 0.16);
+  stroke: rgb(var(--k) / 0.8);
+}
+.ink .arc {
+  fill: none;
+  stroke: rgb(var(--k) / 0.4);
+  stroke-width: 0.6;
+  stroke-dasharray: 0.8 2.4;
   stroke-linecap: round;
 }
-.tee {
-  fill: rgb(242 239 232 / 0.2);
-  stroke: rgb(242 239 232 / 0.6);
-  stroke-width: 1;
+.ink .arc-t {
+  font-size: 9px;
+  font-weight: 400;
+  fill: rgb(var(--k) / 0.66);
 }
-.shot {
-  fill: none;
-  stroke: var(--ink);
-  stroke-width: 1;
-  stroke-dasharray: 1;
-  stroke-dashoffset: 1;
-  opacity: 0.8;
-  transition: stroke-dashoffset var(--move, 0.5s) cubic-bezier(0.35, 0.05, 0.25, 1);
-}
-.shot.on {
-  stroke-dashoffset: 0;
-}
-.flag {
-  fill: var(--ink);
-  stroke: var(--ink);
-  stroke-width: 1;
+.ink .flag {
+  fill: rgb(var(--k));
+  stroke: rgb(var(--k));
+  stroke-width: 0.9;
   stroke-linejoin: round;
   stroke-linecap: round;
 }
-.cup {
-  fill: var(--bg);
-  stroke: var(--ink);
-  stroke-width: 1;
+.ink .cup {
+  fill: rgb(var(--p));
+  stroke: rgb(var(--k));
+  stroke-width: 0.9;
 }
-.hit {
+/* les coups */
+.ink .shot {
+  fill: none;
+  stroke: rgb(var(--k));
+  stroke-width: 1;
+  stroke-linecap: round;
+}
+.ink .shot.next {
+  stroke: var(--a);
+  stroke-dasharray: 3 3.2;
+}
+.ink .shot.now {
+  stroke: var(--a);
+  stroke-width: 1.3;
+}
+.ink .shot.ghost {
+  stroke: rgb(var(--k) / 0.5);
+  stroke-width: 0.8;
+  stroke-dasharray: 1.5 3.5;
+}
+.ink .shot.air {
+  stroke-dasharray: 1.2 2.6;
+}
+.ink .aim {
+  fill: none;
+  stroke: rgb(var(--k) / 0.5);
+  stroke-width: 0.6;
+  stroke-dasharray: 1 2.2;
+}
+.ink .land {
+  fill: none;
+  stroke: rgb(var(--k));
+  stroke-width: 0.9;
+  stroke-linecap: round;
+}
+.ink .land.next,
+.ink .land.now {
+  stroke: var(--a);
+}
+.ink .fly-land {
+  opacity: 0;
+}
+.ink .shot-t {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+.ink .shot-t.next {
+  fill: var(--a);
+}
+/* les points de chute : des liens vers leur arrêt */
+.ink a.pt {
+  cursor: pointer;
+  outline: none;
+}
+.ink .hit {
   fill: transparent;
   stroke: transparent;
   stroke-width: 1.5;
 }
-.hole a:focus-visible .hit {
-  stroke: var(--amber);
+.ink a.pt:focus-visible .hit {
+  stroke: var(--a);
 }
-/* Sur téléphone, les points sont trop petits pour le doigt : tout le plan ouvre la carte de score. */
-.map-open {
-  display: none;
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
+.ink .stop .disc {
+  fill: rgb(var(--p));
+  stroke: rgb(var(--k) / 0.75);
+  stroke-width: 0.9;
+  transition: fill 0.2s, stroke 0.2s;
 }
-.spot {
-  fill: #18241f;
-  stroke: rgb(242 239 232 / 0.8);
-  stroke-width: 1;
-  transition: fill 0.3s ease var(--move, 0.5s);
-}
-.spot.done {
-  fill: var(--ink);
-}
-.hole a:hover .spot,
-.hole a:focus-visible .spot {
-  fill: var(--amber);
-  stroke: var(--amber);
-}
-.hole a:focus-visible {
-  outline: none;
-}
-.ball {
-  transition: transform var(--move, 0.5s) cubic-bezier(0.35, 0.05, 0.25, 1);
-}
-.ball .ring {
-  fill: rgb(242 169 59 / 0.16);
-  stroke: var(--amber);
-  stroke-width: 1.3;
-}
-.ball .dot {
-  fill: var(--ink);
-}
-.map-head,
-.map-foot {
-  font-size: 9.5px;
-  font-weight: 500;
-  line-height: 1.4;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-.map-head {
-  display: grid;
-  gap: 2px;
-  margin-bottom: 12px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--line);
-}
-.map-head b {
+.ink .stop .num {
+  font-size: 9px;
   font-weight: 600;
+  stroke: none;
+  fill: rgb(var(--k) / 0.85);
 }
-.map-head span,
-.map-foot {
-  color: var(--muted);
+.ink .stop.done .disc {
+  fill: rgb(var(--k));
+  stroke: rgb(var(--k));
 }
-.map-head i {
-  font-style: normal;
+.ink .stop.done .num {
+  fill: rgb(var(--p));
 }
-.map-foot {
-  margin-top: 12px;
-  padding-top: 10px;
-  border-top: 1px solid var(--line);
+.ink .stop.cur .disc,
+.ink a.pt:hover .stop .disc,
+.ink a.pt:focus-visible .stop .disc {
+  fill: var(--a);
+  stroke: var(--a);
+}
+.ink .stop.cur .num,
+.ink a.pt:hover .stop .num,
+.ink a.pt:focus-visible .stop .num {
+  fill: #17120a;
+}
+.ink .stop .ring {
+  fill: rgb(242 169 59 / 0.14);
+  stroke: var(--a);
+  stroke-width: 0.9;
+}
+.ink .spot {
+  fill: rgb(var(--p));
+  stroke: rgb(var(--k) / 0.8);
+  stroke-width: 0.8;
+}
+.ink .spot.done {
+  fill: rgb(var(--k));
+}
+.ink a.pt:hover .spot,
+.ink a.pt:focus-visible .spot {
+  fill: var(--a);
+  stroke: var(--a);
+}
+.ink .ball {
+  fill: rgb(var(--k));
+  stroke: none;
+}
+.ink.paper .ball {
+  fill: var(--a);
+}
+.ink .ball-halo {
+  fill: rgb(242 169 59 / 0.16);
+  stroke: var(--a);
+  stroke-width: 1;
+}
+/* l'encart du green */
+.ink .slope {
+  fill: none;
+  stroke: rgb(var(--k) / 0.72);
+  stroke-width: 0.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.ink .slope-t {
+  font-size: 8.5px;
+  font-weight: 400;
+  fill: rgb(var(--k) / 0.66);
+  stroke: none;
+}
+.ink .crest {
+  fill: none;
+  stroke: rgb(var(--k) / 0.5);
+  stroke-width: 0.6;
+  stroke-dasharray: 3 2 0.6 2;
+}
+.ink .ruler,
+.ink .dim {
+  fill: none;
+  stroke: rgb(var(--k) / 0.6);
+  stroke-width: 0.6;
+}
+.ink .ruler-t,
+.ink .dim-t {
+  font-size: 9px;
+  font-weight: 400;
+  fill: rgb(var(--k) / 0.7);
+}
+.ink .lead {
+  fill: none;
+  stroke: rgb(var(--k) / 0.45);
+  stroke-width: 0.6;
+}
+.ink .cap {
+  font-size: 9px;
+  font-weight: 400;
+  fill: rgb(var(--k) / 0.72);
+}
+.ink .cap.b {
+  font-weight: 500;
+  fill: rgb(var(--k));
+}
+.ink .north,
+.ink .scale {
+  fill: none;
+  stroke: rgb(var(--k) / 0.6);
+  stroke-width: 0.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.ink .north-f {
+  fill: rgb(var(--k) / 0.75);
+  stroke: none;
+}
+.ink .sep {
+  fill: rgb(var(--k) / 0.45);
+  font-weight: 400;
+}
+.ink .windp {
+  fill: none;
+  stroke: rgb(var(--k) / 0.85);
+  stroke-width: 0.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.ink .word {
+  font-size: 7.5px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  fill: rgb(var(--k) / 0.6);
+}
+.ink .sprk {
+  fill: rgb(var(--p));
+  stroke: rgb(var(--k) / 0.7);
+  stroke-width: 0.7;
+}
+.ink .sprk-dot {
+  fill: rgb(var(--k) / 0.8);
+}
+.ink .sprk-t {
+  font-size: 9px;
+  font-weight: 400;
+  fill: rgb(var(--k) / 0.85);
+}
+.ink .carry {
+  fill: none;
+  stroke: var(--a);
+  stroke-width: 1;
+  stroke-linecap: round;
+}
+.ink .carry-t {
+  font-size: 9px;
+  font-weight: 500;
+  fill: var(--a);
 }
 
 /* ---------- panneaux : étude de cas et carte de score ---------- */
@@ -1511,27 +2335,15 @@ h1 .role {
   .links a {
     min-height: 42px;
   }
-  .map {
-    width: 124px;
-    padding: 11px 11px 10px;
-  }
-  .map-head,
-  .map-foot {
-    font-size: 8.5px;
-  }
-  .map-head {
-    margin-bottom: 8px;
-    padding-bottom: 7px;
-  }
-  .map-foot {
-    margin-top: 8px;
-    padding-top: 7px;
-  }
   .shots {
     bottom: 22px;
   }
-  .map {
+  .carnet {
+    top: 84px;
     bottom: 22px;
+  }
+  .carnet-tag {
+    top: 84px;
   }
 }
 @media (max-height: 640px) and (min-aspect-ratio: 9/10) {
@@ -1545,9 +2357,6 @@ h1 .role {
   }
   .card .links a {
     min-height: 36px;
-  }
-  .map {
-    width: 104px;
   }
 }
 
@@ -1651,34 +2460,6 @@ h1 .role {
     font-size: 0;
     gap: 0;
     color: var(--ink);
-  }
-  /* Le plan du trou, réduit : un repère, et un bouton vers la carte de score. */
-  .map {
-    width: 66px;
-    padding: 8px 8px 7px;
-    border-radius: 9px;
-    background: rgb(var(--veil) / 0.56);
-  }
-  .map-head {
-    gap: 1px;
-    margin-bottom: 6px;
-    padding-bottom: 5px;
-    font-size: 8.5px;
-    letter-spacing: 0.04em;
-  }
-  .map-head span i,
-  .map-foot,
-  .hole .hit {
-    display: none;
-  }
-  .ball .ring {
-    stroke-width: 1.2;
-  }
-  .hole a {
-    pointer-events: none;
-  }
-  .map-open {
-    display: block;
   }
 }
 
@@ -1827,11 +2608,10 @@ h1 .role {
   .flight {
     bottom: calc(100px + env(safe-area-inset-bottom));
   }
-  /* Le plan du trou, en haut à gauche sous le nom. */
-  .map {
-    top: calc(74px + env(safe-area-inset-top));
+  /* La languette du carnet, en haut à gauche sous le nom. */
+  .carnet-tag {
+    top: calc(78px + env(safe-area-inset-top));
     right: auto;
-    bottom: auto;
     left: var(--gutter);
   }
   .head-link {
@@ -1895,13 +2675,30 @@ h1 .role {
   .top {
     height: 60px;
   }
-  .map {
-    top: calc(64px + env(safe-area-inset-top));
-    width: 58px;
-    padding: 7px 7px 6px;
+  .carnet-tag {
+    top: calc(66px + env(safe-area-inset-top));
   }
-  .map-head {
+  .languette {
+    width: 64px;
+    padding: 7px 7px 8px;
+  }
+  .languette svg {
+    width: 46px;
+    margin-top: 6px;
+  }
+  .lang-h {
+    padding-bottom: 6px;
     font-size: 7.5px;
+  }
+  .lang-h b {
+    font-size: 18px;
+  }
+  .lang-pips {
+    gap: 3px;
+    margin-top: 6px;
+  }
+  .lang-pips i.gap {
+    margin-left: 3px;
   }
   .card {
     padding-bottom: calc(84px + env(safe-area-inset-bottom));
@@ -1975,14 +2772,26 @@ h1 .role {
 }
 /* Très petits téléphones (320 × 568) : la fiche rapetisse encore pour ne pas monter sur la balle. */
 @media (max-aspect-ratio: 9/10) and (max-height: 600px) {
-  .map {
-    width: 50px;
-    padding: 6px 6px 5px;
+  .languette {
+    width: 54px;
+    padding: 6px 6px 7px;
   }
-  .map-head {
-    margin-bottom: 4px;
-    padding-bottom: 4px;
+  .languette svg {
+    width: 38px;
+  }
+  .lang-h {
     font-size: 6.5px;
+    letter-spacing: 0.06em;
+  }
+  .lang-h b {
+    font-size: 16px;
+  }
+  .lang-pips {
+    gap: 2px;
+  }
+  .lang-pips i {
+    width: 4px;
+    height: 4px;
   }
   h1 .name {
     font-size: 2.5rem;
@@ -2184,11 +2993,16 @@ h1 .role {
     margin-top: 4px;
     font-size: 14px;
   }
-  .map {
-    top: calc(58px + env(safe-area-inset-top));
-    bottom: auto;
-    width: 58px;
-    padding: 7px 7px 6px;
+  /* Très peu de hauteur : la languette sans son plan, sous la barre. */
+  .carnet-tag {
+    top: calc(56px + env(safe-area-inset-top));
+  }
+  .languette {
+    width: 70px;
+    padding: 7px 8px 8px;
+  }
+  .languette svg {
+    display: none;
   }
   .sheet-head {
     min-height: 56px;

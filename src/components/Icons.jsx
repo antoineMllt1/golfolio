@@ -31,11 +31,22 @@ export const Replay = (p) => (
     <path d="M3 8a5 5 0 1 0 1.6-3.7M3 2.5v2.6h2.6" />
   </svg>
 );
-// Une petite carte de score : le bouton du sommaire.
-export const Card = (p) => (
+// Un carnet ouvert : le bouton du carnet de parcours, le sommaire du site.
+export const Book = (p) => (
+  <svg {...base} strokeWidth={1.2} {...p}>
+    <path d="M8 3.6C6.6 2.7 4.6 2.4 2.5 2.6v9.6c2.1-.2 4.1.1 5.5 1 1.4-.9 3.4-1.2 5.5-1V2.6c-2.1-.2-4.1.1-5.5 1ZM8 3.6v9.6" />
+  </svg>
+);
+// Un chevron : replier la page du carnet vers le bord.
+export const Fold = (p) => (
   <svg {...base} {...p}>
-    <rect x="2.5" y="3" width="11" height="10" rx="1.2" />
-    <path d="M2.5 6.5h11M6.5 6.5V13M10 6.5V13" />
+    <path d="M6 3.5 10.5 8 6 12.5" />
+  </svg>
+);
+// Le drapeau du trou : la pastille du contact.
+export const Flag = (p) => (
+  <svg viewBox="0 0 10 12" fill="currentColor" stroke="currentColor" strokeWidth={1} strokeLinejoin="round" strokeLinecap="round" aria-hidden {...p}>
+    <path d="M2 11V1.2l6 2.4-6 2.4" />
   </svg>
 );
 

@@ -7,6 +7,9 @@
 // l'image nette remplace la dernière image du trajet par un fondu d'un tiers de seconde, puis la vue
 // dérive très lentement : l'image ne ressemble jamais à une vidéo en pause. Reculer, sauter plusieurs
 // arrêts, ou avancer alors que le trajet est absent ou pas encore chargé : fondu d'un arrêt à l'autre.
+// Pendant un trajet, le lecteur dit à chaque image où il en est au magasin d'état du vol (flight.js) :
+// le carnet, le traceur et la ligne du tour s'y abonnent pour avancer avec la balle.
+import { flight } from './flight.js';
 
 const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
 const ease = (t) => t * t * (3 - 2 * t);
@@ -224,6 +227,7 @@ export class Film {
     if (this.anim || this.fade) {
       // Un déplacement était en cours : il est remplacé (son « done » n'est pas appelé).
       this.anim = null;
+      flight.rest();
       this.dissolve(to, done);
       return false;
     }
@@ -235,6 +239,7 @@ export class Film {
       this.stop = to;
       this.under = null;
       this.anim = { leg: from, t0: this.now, done };
+      flight.begin(from, this.legs[from], this.m.legs?.find((l) => l.from === from && l.to === to));
       // L'image nette de l'arrivée sera prête à être peinte quand la balle se posera.
       this.holds[to]?.decode?.().catch(() => {});
       return true;
@@ -248,7 +253,15 @@ export class Film {
     const a = this.anim;
     if (!a) return false;
     this.anim = null;
-    this.dissolve(a.leg + 1, a.done, 260);
+    flight.finish();
+    this.dissolve(
+      a.leg + 1,
+      () => {
+        a.done?.();
+        flight.rest();
+      },
+      260,
+    );
     return true;
   }
 
@@ -307,8 +320,11 @@ export class Film {
         this.under = this.nearest(a.leg, n - 1);
         this.hdAlpha = 0;
         this.rest = 0;
+        flight.finish();
         a.done?.();
+        flight.rest();
       } else {
+        flight.at(f);
         const i = Math.round(f);
         base = this.nearest(a.leg, i);
         key = `l${a.leg}_${i}`;
@@ -391,6 +407,7 @@ export class Film {
 
   dispose() {
     this.alive = false;
+    flight.rest();
     cancelAnimationFrame(this.raf);
     window.removeEventListener('resize', this.resize);
   }
