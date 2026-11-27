@@ -1,6 +1,8 @@
 // La page : sept arrêts posés sur un film pré-rendu. Un geste (molette, balayage, flèche, bouton)
-// joue un coup : le film suit la balle jusqu'à l'arrêt suivant, puis la fiche monte. Deux panneaux
-// s'ouvrent par-dessus : l'étude de cas du projet courant, et le carnet de parcours (le sommaire).
+// joue un coup : le film suit la balle jusqu'à l'arrêt suivant, puis la fiche monte. En bas, la
+// pastille du coup et la ligne du tour (les sept arrêts) ; à droite, le carnet de parcours. Des
+// panneaux s'ouvrent par-dessus : l'étude de cas du projet courant, le carnet ouvert (le sommaire),
+// et sur téléphone la liste des arrêts.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { LAST, SITE, STOPS, arrival, indexOfId, initialLang, pick, saveLang, stopName } from './lib/content.js';
 import { Film, pickSizes, savesData } from './lib/film.js';
@@ -9,8 +11,11 @@ import CaseStudy from './components/CaseStudy.jsx';
 import { ContactCard, IntroCard, ProjectCard } from './components/Cards.jsx';
 import Carnet from './components/Carnet.jsx';
 import { Book } from './components/Icons.jsx';
+import Keys from './components/Keys.jsx';
 import NextShot, { Flight } from './components/NextShot.jsx';
+import Rail, { Strip } from './components/Rail.jsx';
 import Scorecard from './components/Scorecard.jsx';
+import Tour from './components/Tour.jsx';
 
 const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
 const startIndex = () => Math.max(0, indexOfId(location.hash.slice(1)));
@@ -23,9 +28,11 @@ export default function App() {
   const [progress, setProgress] = useState(0);
   const [stop, setStop] = useState(startIndex); // l'arrêt courant, ou visé pendant un déplacement
   const [flight, setFlight] = useState(null); // null au repos ; { shot } pendant un déplacement (shot : le coup joué, ou null pour un fondu)
-  const [panel, setPanel] = useState(null); // null, 'case' ou 'card'
+  const [panel, setPanel] = useState(null); // null, 'case' (étude de cas), 'card' (carnet ouvert) ou 'tour' (liste des arrêts)
   const [caseStop, setCaseStop] = useState(null);
   const [came, setCame] = useState(null); // l'arrêt qu'on vient de quitter
+  const [railSub, setRailSub] = useState(false); // la ligne du tour a la place d'écrire les concepts : elle est plus haute
+  const [legend, setLegend] = useState(false); // la légende des raccourcis clavier
 
   const canvasRef = useRef(null);
   const filmRef = useRef(null);
@@ -109,10 +116,25 @@ export default function App() {
     if (film.go(target, land)) setFlying({ shot: from });
   }, []);
 
+  // Les raccourcis : flèches et Espace jouent ou reviennent, 1 à 7 vont à un arrêt, C ouvre le carnet,
+  // E l'étude de cas du projet posé, ? la légende, Échap la referme.
+  const openRef = useRef(null);
   useShotInput({
     blocked: () => !!panelRef.current,
     step: (d) => go(stopRef.current + d, true),
     jump: (where) => go(where === 'first' ? 0 : LAST),
+    goTo: (k) => {
+      if (k > LAST) return false;
+      go(k);
+      return true;
+    },
+    open: (name) => {
+      if (name === 'case' && (flightRef.current || STOPS[stopRef.current].kind !== 'project')) return false;
+      openRef.current(name);
+      return true;
+    },
+    help: () => setLegend((on) => !on),
+    escape: () => setLegend(false),
   });
 
   // Un lien direct (#payfit), tapé dans la barre d'adresse ou cliqué dans la page, mène à son arrêt.
@@ -154,6 +176,7 @@ export default function App() {
       history.back();
     }
   }, []);
+  openRef.current = openPanel;
   useEffect(() => {
     // Page rechargée panneau ouvert : l'entrée est encore là, le panneau non.
     if (history.state?.panel) history.replaceState(null, '');
@@ -224,7 +247,7 @@ export default function App() {
 
   const loading = progress < 0.999;
   return (
-    <div className={`app at-${current.kind} ${ready ? 'ready' : ''} ${flight ? 'moving' : ''} ${flight?.shot != null ? 'flying' : ''}`}>
+    <div className={`app at-${current.kind} ${ready ? 'ready' : ''} ${flight ? 'moving' : ''} ${flight?.shot != null ? 'flying' : ''} ${railSub ? 'rail-sub' : ''}`}>
       <a href="#main" className="skip" onClick={skipToContent}>
         {t.skip}
       </a>
@@ -287,6 +310,9 @@ export default function App() {
           onReplay={() => go(0)}
           onSkip={() => filmRef.current?.skip()}
         />
+        <Rail stop={stop} flight={flight} lang={lang} t={t} onSub={setRailSub} />
+        <Strip stop={stop} flight={flight} lang={lang} t={t} onOpen={() => openPanel('tour')} />
+        <Keys open={legend} onToggle={() => setLegend((on) => !on)} t={t} />
         <Carnet stop={stop} flight={flight} lang={lang} t={t} reduce={reduce} onOpen={() => openPanel('card')} />
         <p className="sr-only" aria-live="polite">
           {settled ? `${pick(current.label, lang)} — ${stopName(current, lang, t)}${landed ? `. ${landed}` : ''}` : ''}
@@ -295,6 +321,7 @@ export default function App() {
 
       <CaseStudy stop={caseStop} open={panel === 'case'} lang={lang} t={t} onClose={closePanel} />
       <Scorecard open={panel === 'card'} stop={stop} lang={lang} t={t} onClose={closePanel} onGo={goFromCard} />
+      <Tour open={panel === 'tour'} stop={stop} lang={lang} t={t} onClose={closePanel} onGo={goFromCard} onBook={() => openPanel('card')} />
     </div>
   );
 }

@@ -1,5 +1,7 @@
 // Un geste = un coup. La molette (crans de souris, balayages de trackpad et leur inertie), les
-// balayages tactiles et le clavier deviennent step(±1) ou jump('first' | 'last').
+// balayages tactiles et le clavier deviennent step(±1) ou jump('first' | 'last'). Le clavier a aussi
+// ses raccourcis : 1 à 9 → goTo(rang), C → open('card'), E → open('case'), ? → help(), Échap → escape().
+// Aucun raccourci avec Ctrl, Alt ou Cmd, ni dans un champ, ni quand un panneau est ouvert.
 // Tant que handlers.blocked() est vrai (un panneau est ouvert), rien n'est intercepté : le panneau
 // défile normalement.
 import { useEffect, useRef } from 'react';
@@ -75,7 +77,17 @@ export function useShotInput(handlers) {
       else if (k === 'ArrowUp' || k === 'ArrowLeft' || k === 'PageUp' || (k === ' ' && !onControl && e.shiftKey)) h.current.step?.(-1);
       else if (k === 'Home') h.current.jump?.('first');
       else if (k === 'End') h.current.jump?.('last');
-      else return;
+      else if (/^[1-9]$/.test(k)) {
+        if (!h.current.goTo?.(Number(k) - 1)) return;
+      } else if (k === 'c' || k === 'C') {
+        if (!h.current.open?.('card')) return;
+      } else if (k === 'e' || k === 'E') {
+        if (!h.current.open?.('case')) return;
+      } else if (k === '?') h.current.help?.();
+      else if (k === 'Escape') {
+        h.current.escape?.();
+        return;
+      } else return;
       e.preventDefault();
     };
 

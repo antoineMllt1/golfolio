@@ -1,7 +1,6 @@
 // L'avancée du vol : un petit magasin d'état alimenté par le lecteur de film (film.js), pour tout ce
 // qui s'anime au rythme des images sans passer par React (la ligne du coup sur le plan du carnet, la
-// réglette portée / roule / total ; demain le compteur et le profil du traceur, le segment de la
-// ligne du tour).
+// réglette portée / roule / total, le compteur et le profil du traceur, le segment de la ligne du tour).
 //
 // USAGE
 //   import { flight, ratio, travelled, useFlight } from '../lib/flight.js';
@@ -30,8 +29,8 @@
 //
 // CALAGE de l'impact et de la chute : legs[k].impact et legs[k].land de public/frames/manifest.json
 // s'ils existent ; sinon next[k].sync de content/site.json ; sinon 20 % et 85 % du trajet.
-import { useEffect, useRef } from 'react';
-import { NEXT } from './content.js';
+import { useEffect, useRef, useState } from 'react';
+import { NEXT, STOPS } from './content.js';
 
 const clamp01 = (x) => Math.min(1, Math.max(0, x));
 const state = { leg: null, frames: 0, frame: 0, p: 0, impact: 0, land: 0, t: 0, roll: 0, done: false };
@@ -101,4 +100,34 @@ export function useFlight(fn) {
   const ref = useRef(fn);
   ref.current = fn;
   useEffect(() => flight.subscribe((s) => ref.current(s)), []);
+}
+
+// Les moments d'un vol qui changent ce que React affiche (deux ou trois rendus par vol, pas plus) :
+//   holed   la balle vient de tomber dans le trou (un putt, à l'image de la chute) ;
+//   turned  le film a changé de trou (sync.pageTurn du coup, sinon la dernière image) ;
+//   ending  le vol touche à sa fin (le dernier dixième du trajet).
+const REST = { holed: false, turned: false, ending: false };
+export function useCue() {
+  const [cue, setCue] = useState(REST);
+  const ref = useRef(REST);
+  useEffect(
+    () =>
+      flight.subscribe((s) => {
+        let next = REST;
+        if (s.leg != null) {
+          const shot = NEXT[s.leg];
+          const holed = shot.leaves === 0 && s.t >= 1;
+          const turned = STOPS[s.leg + 1].hole !== STOPS[s.leg].hole && (s.done || (shot.sync?.pageTurn != null && s.frame >= shot.sync.pageTurn));
+          const ending = s.p >= 0.9;
+          const was = ref.current;
+          next = was.holed === holed && was.turned === turned && was.ending === ending ? was : { holed, turned, ending };
+        }
+        if (next !== ref.current) {
+          ref.current = next;
+          setCue(next);
+        }
+      }),
+    [],
+  );
+  return cue;
 }

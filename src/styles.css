@@ -104,7 +104,8 @@ svg {
   outline-offset: 3px;
 }
 [data-focus],
-.sheet {
+.sheet,
+.tour {
   outline: none; /* mis au point par le script quand la fiche change : ce ne sont pas des commandes */
 }
 .sr-only {
@@ -164,13 +165,16 @@ svg {
 /* Le voile : sombre du côté du texte, en haut sous la barre, en bas sous les commandes. Sans flou
    (il coûterait une image par seconde au film). Pendant un vol il s'allège : place à l'image. */
 .scrim {
+  /* à gauche sous la fiche ; en haut sous la barre ; en bas, le socle de la ligne du tour et de la
+     pastille ; à droite sous la page du carnet (quand elle est ouverte) */
+  --scrim-left: linear-gradient(90deg, rgb(var(--veil) / 0.9) 0%, rgb(var(--veil) / 0.76) 22%, rgb(var(--veil) / 0.4) 40%, rgb(var(--veil) / 0) 58%);
+  --scrim-top: linear-gradient(180deg, rgb(var(--veil) / 0.62) 0%, rgb(var(--veil) / 0) 18%);
+  --scrim-bottom: linear-gradient(0deg, rgb(var(--veil) / 0.94) 0%, rgb(var(--veil) / 0.86) 10%, rgb(var(--veil) / 0.5) 21%, rgb(var(--veil) / 0) 34%);
+  --scrim-right: linear-gradient(270deg, rgb(var(--veil) / 0) 0%, rgb(var(--veil) / 0) 100%);
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background:
-    linear-gradient(90deg, rgb(var(--veil) / 0.9) 0%, rgb(var(--veil) / 0.76) 22%, rgb(var(--veil) / 0.4) 40%, rgb(var(--veil) / 0) 58%),
-    linear-gradient(180deg, rgb(var(--veil) / 0.62) 0%, rgb(var(--veil) / 0) 18%),
-    linear-gradient(0deg, rgb(var(--veil) / 0.7) 0%, rgb(var(--veil) / 0) 26%);
+  background: var(--scrim-left), var(--scrim-top), var(--scrim-bottom), var(--scrim-right);
   transition: opacity 0.5s ease;
 }
 .flying .scrim {
@@ -284,7 +288,7 @@ svg {
   inset: 0;
   display: flex;
   align-items: center;
-  padding: 104px var(--gutter) 132px;
+  padding: 104px var(--gutter) calc(var(--dock) + var(--shot-h) + 10px);
   visibility: hidden;
   opacity: 0;
   transition: opacity 0.2s ease, visibility 0s linear 0.2s;
@@ -515,11 +519,31 @@ h1 .role {
   color: var(--muted);
 }
 
-/* ---------- coup suivant, coup précédent ---------- */
+/* ---------- le socle du bas : la ligne du tour, et la pastille du coup posée dessus ----------
+   --rail-b : la marge sous la ligne ; --rail-h : sa hauteur (81 px avec les concepts, 63 px sans) ;
+   --rail-gap : l'air entre la ligne et la pastille ; --shot-h : la hauteur de la pastille ;
+   --rail-r : où la ligne s'arrête à droite (24 px avant la page du carnet, sinon la marge) ;
+   --dock : le bas de la pastille. */
+.app {
+  --rail-b: max(30px, env(safe-area-inset-bottom));
+  --rail-h: 63px;
+  --rail-gap: 29px;
+  --shot-h: 58px;
+  --rail-r: var(--gutter);
+  --dock: calc(var(--rail-b) + var(--rail-h) + var(--rail-gap));
+}
+.app.rail-sub {
+  --rail-h: 81px;
+}
+.app:has(.carnet) {
+  --rail-r: calc(var(--gutter) + 284px + 24px);
+}
+
+/* ---------- la pastille du coup : coup suivant, coup précédent ---------- */
 .shots {
   position: absolute;
   left: var(--gutter);
-  bottom: max(30px, env(safe-area-inset-bottom));
+  bottom: var(--dock);
   z-index: 3;
   display: flex;
   align-items: center;
@@ -644,11 +668,766 @@ h1 .role {
   }
 }
 
+/* ---------- la ligne du tour ----------
+   Sept arrêts sur un trait, tout en bas, de la marge gauche jusqu'à 24 px avant le carnet. Au-dessus
+   du trait le golf (les trous, les drapeaux, le club du coup à jouer), en dessous le métier (le nom
+   de l'arrêt, son concept). Les positions viennent de Rail.jsx, en pixels. */
+.rail {
+  position: absolute;
+  left: var(--gutter);
+  right: var(--rail-r);
+  bottom: var(--rail-b);
+  z-index: 3;
+  height: var(--rail-h);
+}
+.rail-stops {
+  position: relative;
+  height: 100%;
+}
+.st {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+}
+.st > a {
+  position: absolute;
+  inset: 0 14px 0 0;
+  display: block;
+  border-radius: 6px;
+}
+.st > a:focus-visible {
+  outline-offset: 6px;
+}
+.st-top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  font-size: 9.5px;
+  font-weight: 500;
+  line-height: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgb(242 239 232 / 0.5);
+  white-space: nowrap;
+}
+.st-name {
+  position: absolute;
+  top: 41px;
+  left: 0;
+  font-family: var(--serif);
+  font-size: 20px;
+  line-height: 22px;
+  letter-spacing: 0.002em;
+  color: rgb(242 239 232 / 0.7);
+  white-space: nowrap;
+  transition: color 0.2s;
+}
+.st-sub {
+  position: absolute;
+  top: 68px;
+  left: 0;
+  font-size: 9.5px;
+  line-height: 12px;
+  letter-spacing: 0.03em;
+  color: rgb(242 239 232 / 0.5);
+  white-space: nowrap;
+}
+.st-sub b {
+  margin-right: 0.55em;
+  font-weight: 500;
+  color: rgb(242 239 232 / 0.78);
+}
+/* Les concepts ne s'écrivent que s'ils tiennent : tous, ceux des projets, ou aucun. */
+.sub-none .st-sub,
+.sub-projects .st:first-child .st-sub,
+.sub-projects .st:last-child .st-sub {
+  visibility: hidden;
+}
+.st.next .st-name {
+  color: rgb(242 239 232 / 0.9);
+}
+.st.here .st-name,
+.st.target .st-name,
+.st > a:hover .st-name,
+.st > a:focus-visible .st-name {
+  color: var(--ink);
+}
+.st.here .st-top {
+  color: var(--ink);
+}
+.st.here .st-sub {
+  color: var(--soft);
+}
+.st.here .st-sub b {
+  color: var(--amber);
+}
+
+/* Le trait */
+.rail-art {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 28px;
+  height: 0;
+  pointer-events: none;
+}
+.rail-art > *,
+.strip-art > * {
+  position: absolute;
+}
+.ln {
+  top: 0;
+  height: 1px;
+  background: rgb(242 239 232 / 0.2);
+}
+.ln.done {
+  background: rgb(242 239 232 / 0.86);
+}
+.ln.next {
+  background: rgb(242 239 232 / 0.42);
+}
+/* du trou au départ suivant : on marche, en pointillé */
+.ln.walk {
+  background: none;
+  border-top: 1px dotted rgb(242 239 232 / 0.3);
+}
+.ln.walk.done {
+  border-top-color: rgb(242 239 232 / 0.7);
+}
+/* le coup à jouer : son club écrit sur le trait */
+.ln.armed {
+  top: -7px;
+  display: flex;
+  align-items: center;
+  height: 15px;
+  background: none;
+}
+.ln.armed i {
+  flex: 1;
+  height: 1px;
+  background: rgb(242 239 232 / 0.42);
+}
+.ln.armed b {
+  padding: 0 9px;
+  font: 500 9px/1 var(--mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.ln.armed svg {
+  flex: none;
+  width: 7px;
+  height: 9px;
+  margin-left: -1px;
+  color: rgb(242 239 232 / 0.6);
+}
+/* le coup en vol : ce qui est parcouru, ce qui reste ; le film fait avancer la coupure */
+.ln.live,
+.ln.live.walk {
+  background: none;
+  border: 0;
+}
+.ln.live i {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 1px;
+}
+.ln.live .was {
+  width: 0;
+  background: rgb(242 239 232 / 0.86);
+}
+.ln.live .will {
+  width: 100%;
+  background: rgb(242 239 232 / 0.3);
+}
+.ln.live.walk i {
+  height: 0;
+  background: none;
+  border-top: 1px dotted rgb(242 239 232 / 0.3);
+}
+.ln.live.walk .was {
+  border-top-color: rgb(242 239 232 / 0.7);
+}
+/* les signes : un point par arrêt, un carré pour un départ, un drapeau par trou, la balle */
+.g {
+  top: 0.5px;
+  transform: translate(-50%, -50%);
+}
+.g-dot {
+  width: 7px;
+  height: 7px;
+  border: 1px solid rgb(242 239 232 / 0.6);
+  border-radius: 50%;
+}
+.g-dot.done {
+  width: 5px;
+  height: 5px;
+  border-color: var(--ink);
+  background: var(--ink);
+}
+.g-tee {
+  width: 7px;
+  height: 7px;
+  border: 1px solid rgb(242 239 232 / 0.6);
+  border-radius: 1px;
+}
+.g-tee.done {
+  border-color: var(--ink);
+  background: var(--ink);
+}
+.g-cup {
+  width: 12px;
+  height: 17px;
+  transform: translate(-3px, -15.5px);
+  color: rgb(242 239 232 / 0.6);
+}
+.g-ball {
+  width: 17px;
+  height: 17px;
+  border: 1.3px solid var(--amber);
+  border-radius: 50%;
+  background: rgb(242 169 59 / 0.16);
+  transition: left 0.6s var(--ease); /* un saut d'arrêt en arrêt : la balle glisse ; en vol, c'est le film qui la mène */
+}
+.flying > .g-ball {
+  transition: none;
+}
+.g-ball::after {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  background: var(--ink);
+}
+/* Le putt rentré, le drapeau laisse la place au score du trou, entouré comme sur une carte : un
+   cercle, un birdie. */
+.g-score {
+  display: grid;
+  place-items: center;
+  width: 15px;
+  height: 15px;
+  border: 1px solid var(--ink);
+  border-radius: 50%;
+  background: rgb(var(--veil) / 0.55);
+  font: 500 9px/1 var(--mono);
+  font-style: normal;
+  color: var(--ink);
+}
+.g-score.here {
+  width: 19px;
+  height: 19px;
+  border: 1.3px solid var(--amber);
+  background: rgb(242 169 59 / 0.16);
+  font-size: 10px;
+}
+.rail-art .score,
+.rail-art .total {
+  top: -28px;
+  height: 12px;
+  font: 500 9.5px/12px var(--mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.rail-art .score {
+  transform: translateX(-7px);
+}
+.rail-art .total {
+  right: 0;
+}
+.rail-art .total b {
+  font-weight: 500;
+  color: var(--amber);
+}
+
+/* L'aperçu d'un arrêt, au survol ou au focus : ce que la ligne ne dit pas. */
+.pv {
+  position: absolute;
+  bottom: calc(100% + 14px);
+  width: 328px;
+  padding: 15px 19px 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: 14px 14px 14px 3px;
+  background: rgb(11 21 17 / 0.95);
+  box-shadow: 0 18px 50px rgb(0 0 0 / 0.35);
+  pointer-events: none;
+  animation: pv 0.2s var(--ease) both;
+}
+.pv.shifted {
+  border-radius: 14px;
+}
+@keyframes pv {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+.pv-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 19px;
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.pv-head b {
+  font-weight: 500;
+  color: var(--amber);
+}
+.pv-name {
+  margin-top: 9px;
+  overflow: hidden;
+  font-family: var(--serif);
+  font-size: 25px;
+  line-height: 27px;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.pv-concept {
+  margin-top: 1px;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 16.5px;
+  line-height: 20px;
+  color: var(--soft);
+  white-space: nowrap;
+}
+.pv-result {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-top: 11px;
+  white-space: nowrap;
+}
+.pv-result .mono {
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgb(242 239 232 / 0.5);
+}
+.pv-result strong {
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 18px;
+  letter-spacing: -0.005em;
+}
+.pv-foot {
+  margin-top: 9px;
+  font-size: 9.5px;
+  font-weight: 500;
+  line-height: 14px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* Les touches : de petites capsules au trait. */
+kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
+  border: 1px solid var(--line-strong);
+  border-radius: 5px;
+  background: rgb(var(--veil) / 0.35);
+  font: 500 10px/1 var(--mono);
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--soft);
+}
+kbd svg {
+  width: 9px;
+  height: 9px;
+  stroke-width: 1.5;
+}
+/* Le « ? » au bout de la ligne du tour, à hauteur de la pastille ; sa légende s'écrit à sa gauche. */
+.keys {
+  position: absolute;
+  left: calc(var(--gutter) + var(--shot-h) + 10px + 452px + 26px);
+  right: var(--rail-r);
+  bottom: var(--dock);
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 16px;
+  height: var(--shot-h);
+}
+.help {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: rgb(var(--veil) / 0.3);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--muted);
+  transition: border-color 0.2s, color 0.2s, background-color 0.2s;
+}
+.help::before {
+  content: '';
+  position: absolute;
+  inset: -8px; /* la zone de clic déborde du rond */
+}
+.help:hover,
+.keys.open .help {
+  border-color: var(--line-strong);
+  background: rgb(var(--veil) / 0.7);
+  color: var(--ink);
+}
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: center;
+  justify-content: flex-end;
+  gap: 8px 18px;
+  min-width: 0;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--soft);
+  white-space: nowrap;
+  animation: pv 0.2s var(--ease) both;
+}
+.legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.legend i {
+  margin: 0 -3px;
+  font-style: normal;
+  color: var(--muted);
+}
+
+/* La ligne du tour en petit : une bande au-dessus de la pastille (téléphone, petite fenêtre). */
+.strip {
+  position: absolute;
+  left: var(--gutter);
+  bottom: calc(var(--dock) + var(--shot-h) + 8px);
+  z-index: 3;
+  display: none;
+  align-items: center;
+  gap: 16px;
+  width: calc(var(--shot-h) + 10px + 452px);
+  height: 42px;
+  padding: 0 16px 0 20px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgb(var(--veil) / 0.5);
+  transition: border-color 0.2s, background-color 0.2s;
+}
+.strip::before {
+  content: '';
+  position: absolute;
+  inset: -1px; /* 44 px de haut sous le doigt */
+}
+.strip:hover {
+  border-color: var(--line-strong);
+  background: rgb(var(--veil) / 0.8);
+}
+.strip-art {
+  position: relative;
+  flex: 1;
+  height: 0;
+}
+.strip .g-cup {
+  transform: translate(-2.5px, -15px);
+}
+.strip-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font: 500 9.5px/1 var(--mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--soft);
+  white-space: nowrap;
+}
+.strip-label svg {
+  width: 9px;
+  height: 9px;
+}
+
+/* « Le tour » : la même ligne, debout, dans une feuille qui monte du bas. */
+.tour {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  width: min(100%, 520px);
+  max-height: 100%;
+  margin: 0 auto;
+  padding: 9px 20px max(10px, env(safe-area-inset-bottom));
+  border: 1px solid var(--line-strong);
+  border-bottom: 0;
+  border-radius: 22px 22px 0 0;
+  background: #0c1713;
+  outline: none;
+  transform: translateY(100%);
+  transition: transform 0.45s var(--ease);
+}
+.open .tour {
+  transform: none;
+}
+.tour-grab {
+  flex: none;
+  width: 36px;
+  height: 4px;
+  margin: 0 auto;
+  border-radius: 2px;
+  background: var(--line-strong);
+}
+.tour-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: none;
+  gap: 12px;
+  height: 54px;
+}
+.tour-head h2 {
+  font-family: var(--serif);
+  font-size: 27px;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+.tour-head .mono {
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.tour-close {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  margin-right: -10px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  transition: border-color 0.2s;
+}
+.tour-close:hover {
+  border-color: var(--ink);
+}
+.tour-close svg {
+  width: 13px;
+  height: 13px;
+}
+.tour-body {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.tour-hole {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 30px;
+  padding: 4px 0 0 34px;
+  border-top: 1px solid var(--line);
+  font: 500 9.5px/1 var(--mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgb(242 239 232 / 0.5);
+}
+.tour-score {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--ink);
+}
+.tour-score em {
+  display: grid;
+  place-items: center;
+  width: 15px;
+  height: 15px;
+  border: 1px solid var(--ink);
+  border-radius: 50%;
+  font-style: normal;
+  font-size: 9px;
+  letter-spacing: 0;
+}
+.tour-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 34px 1fr auto;
+  align-items: center;
+  height: 47px;
+  margin: 0 -10px;
+  padding: 0 10px;
+  border-radius: 12px;
+}
+.tour-row.here {
+  background: rgb(242 239 232 / 0.07);
+}
+.tour-row:focus-visible {
+  outline-offset: -2px;
+}
+.tour-g {
+  position: relative;
+  align-self: stretch;
+  width: 17px;
+}
+.tour-g::before {
+  content: '';
+  position: absolute;
+  left: 8px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgb(242 239 232 / 0.2);
+}
+.tour-row.done .tour-g::before {
+  background: rgb(242 239 232 / 0.86);
+}
+.tour-row.here .tour-g::before {
+  background: linear-gradient(180deg, rgb(242 239 232 / 0.86) 0 50%, rgb(242 239 232 / 0.2) 50% 100%);
+}
+.tour-row.first .tour-g::before {
+  top: 50%;
+}
+.tour-row.last .tour-g::before {
+  bottom: 50%;
+}
+.tour-row.first.here .tour-g::before {
+  background: rgb(242 239 232 / 0.2);
+}
+.tour-row.last.here .tour-g::before {
+  background: rgb(242 239 232 / 0.86);
+}
+.tour-g > i,
+.tour-g > svg {
+  position: absolute;
+  left: 8.5px;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+.tour-g > i.g-dot,
+.tour-g > i.g-tee {
+  background-color: #0c1713;
+}
+.tour-g > i.g-dot.done,
+.tour-g > i.g-tee.done {
+  background-color: var(--ink);
+}
+.tour-row.here .tour-g > i.g-ball {
+  background: #2b2a1c;
+  transition: none;
+}
+.tour-g > .tour-flag {
+  width: 12px;
+  height: 17px;
+  color: rgb(242 239 232 / 0.6);
+  transform: translate(-3px, -15.5px);
+}
+.tour-txt {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.tour-name {
+  overflow: hidden;
+  font-family: var(--serif);
+  font-size: 21px;
+  line-height: 22px;
+  color: rgb(242 239 232 / 0.74);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.tour-row.here .tour-name,
+.tour-row.next .tour-name,
+.tour-row:hover .tour-name {
+  color: var(--ink);
+}
+.tour-sub {
+  overflow: hidden;
+  font: 400 9.5px/12px var(--mono);
+  letter-spacing: 0.03em;
+  color: rgb(242 239 232 / 0.5);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.tour-sub b {
+  margin-right: 0.55em;
+  font-weight: 500;
+  color: rgb(242 239 232 / 0.78);
+}
+.tour-row.here .tour-sub {
+  color: var(--soft);
+}
+.tour-row.here .tour-sub b {
+  color: var(--amber);
+}
+.tour-lie {
+  padding-left: 12px;
+  font: 500 9px/1.2 var(--mono);
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: rgb(242 239 232 / 0.5);
+  text-align: right;
+  white-space: nowrap;
+}
+.tour-row.here .tour-lie {
+  color: var(--amber);
+}
+.tour-row.next .tour-lie {
+  color: var(--soft);
+}
+.tour-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: none;
+  height: 54px;
+  margin-top: 6px;
+  border-top: 1px solid var(--line);
+  font-size: 14px;
+  font-weight: 600;
+}
+.tour-foot button {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 44px;
+}
+.tour-foot svg {
+  width: 13px;
+  height: 13px;
+  transition: transform 0.3s var(--ease);
+}
+.tour-foot button:hover svg {
+  transform: translateX(3px);
+}
+
 /* Pendant le vol : le coup joué, en bas à gauche, comme un titre de film. */
 .flight {
   position: absolute;
   left: var(--gutter);
-  bottom: 132px;
+  bottom: calc(var(--dock) + var(--shot-h) + 40px);
   z-index: 2;
   opacity: 0;
   transform: translateY(10px);
@@ -702,11 +1481,7 @@ h1 .role {
 }
 /* Sous la page, le film s'assombrit un peu : les cotes restent lisibles sur une image claire. */
 .app:has(.carnet) .scrim {
-  background:
-    linear-gradient(90deg, rgb(var(--veil) / 0.9) 0%, rgb(var(--veil) / 0.76) 22%, rgb(var(--veil) / 0.4) 40%, rgb(var(--veil) / 0) 58%),
-    linear-gradient(180deg, rgb(var(--veil) / 0.62) 0%, rgb(var(--veil) / 0) 18%),
-    linear-gradient(0deg, rgb(var(--veil) / 0.7) 0%, rgb(var(--veil) / 0) 26%),
-    linear-gradient(270deg, rgb(var(--veil) / 0.5) 0%, rgb(var(--veil) / 0.28) 16%, rgb(var(--veil) / 0) 30%);
+  --scrim-right: linear-gradient(270deg, rgb(var(--veil) / 0.5) 0%, rgb(var(--veil) / 0.28) 16%, rgb(var(--veil) / 0) 30%);
 }
 /* Replier : une poignée sur le bord de la page. */
 .carnet-fold {
@@ -2885,9 +3660,44 @@ h1 .role {
 
 /* ---------- écrans bas (portables) ---------- */
 @media (max-height: 800px) and (min-aspect-ratio: 9/10) {
+  .app {
+    --rail-b: 22px;
+    --rail-gap: 19px;
+    --shot-h: 52px;
+  }
   .card {
     padding-top: 88px;
-    padding-bottom: 112px;
+  }
+  .shot-prev {
+    width: 52px;
+    height: 52px;
+  }
+  .shot-next {
+    height: 52px;
+  }
+  .shot-icon {
+    width: 38px;
+    height: 38px;
+  }
+  .pv {
+    bottom: calc(100% + 6px);
+    padding: 12px 17px 13px;
+  }
+  .pv-name {
+    margin-top: 6px;
+    font-size: 22px;
+    line-height: 24px;
+  }
+  .pv-concept {
+    margin-top: 0;
+    font-size: 15px;
+    line-height: 18px;
+  }
+  .pv-result {
+    margin-top: 8px;
+  }
+  .pv-foot {
+    margin-top: 7px;
   }
   h1 .name {
     font-size: clamp(3.2rem, 6.4vw, 5.6rem);
@@ -2919,9 +3729,6 @@ h1 .role {
   .links a {
     min-height: 42px;
   }
-  .shots {
-    bottom: 22px;
-  }
   .carnet {
     top: 84px;
     bottom: 22px;
@@ -2941,6 +3748,40 @@ h1 .role {
   }
   .card .links a {
     min-height: 36px;
+  }
+}
+
+/* ---------- petites fenêtres, téléphones : pas de ligne du tour ----------
+   Sous 1180 × 700, la ligne devient une bande de sept points posée sur la pastille (elle ouvre la
+   liste des arrêts) ; sous 700 px de haut, plus de bande du tout. --strip : la place qu'elle prend. */
+@media (max-width: 1179px), (max-height: 699px), (max-aspect-ratio: 9/10) {
+  .app {
+    --dock: var(--rail-b);
+    --strip: 0px;
+    --card-gap: 44px;
+  }
+  .rail,
+  .keys {
+    display: none;
+  }
+  .card {
+    padding-bottom: calc(var(--dock) + var(--shot-h) + var(--strip) + var(--card-gap));
+  }
+  .scrim {
+    --scrim-bottom: linear-gradient(0deg, rgb(var(--veil) / 0.78) 0%, rgb(var(--veil) / 0.5) 14%, rgb(var(--veil) / 0) 30%);
+  }
+}
+@media (max-width: 1179px) and (min-height: 700px), (max-aspect-ratio: 9/10) and (min-height: 700px) {
+  .app {
+    --strip: 50px;
+  }
+  .strip {
+    display: flex;
+  }
+}
+@media (max-height: 800px) and (min-aspect-ratio: 9/10) {
+  .app {
+    --card-gap: 38px;
   }
 }
 
@@ -3025,9 +3866,13 @@ h1 .role {
     padding: 0 4px 0 8px;
     font-size: 10px;
   }
+  .app {
+    --dock: max(18px, env(safe-area-inset-bottom));
+    --shot-h: 56px;
+  }
   .card {
     align-items: flex-end;
-    padding: 76px var(--gutter) calc(96px + env(safe-area-inset-bottom));
+    padding: 76px var(--gutter) calc(96px + var(--strip) + env(safe-area-inset-bottom));
   }
   .copy {
     position: relative;
@@ -3048,8 +3893,12 @@ h1 .role {
     animation: veil 0.5s ease both;
   }
   .kicker {
-    font-size: 10.5px;
-    letter-spacing: 0.14em;
+    font-size: 10px;
+    letter-spacing: 0.13em;
+  }
+  .kicker .sep {
+    width: 12px;
+    margin: 0 8px 0 6px;
   }
   h1 {
     margin-top: 14px;
@@ -3107,8 +3956,11 @@ h1 .role {
   }
   .shots {
     right: var(--gutter);
-    bottom: max(18px, env(safe-area-inset-bottom));
     gap: 8px;
+  }
+  .strip {
+    right: var(--gutter);
+    width: auto;
   }
   .shot-prev {
     width: 56px;
@@ -3117,12 +3969,34 @@ h1 .role {
   .shot-next {
     flex: 1;
     gap: 12px;
+    width: auto;
     min-width: 0;
     height: 56px;
     padding-left: 20px;
   }
+  .shot-text .mono {
+    font-size: 9px;
+    letter-spacing: 0.13em;
+  }
+  /* La place manque : « Coup suivant » s'efface devant le club et la distance, le concept devant le nom. */
+  .shot-text .mono.long .lead,
+  .shot-line i {
+    display: none;
+  }
   .shot-line {
-    font-size: clamp(12px, 3.5vw, 14.5px);
+    font-size: 14.5px;
+  }
+  .shot-line b {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .shot-line .full {
+    display: none;
+  }
+  .shot-line .brief {
+    display: inline;
   }
   .shot-icon {
     width: 40px;
@@ -3223,8 +4097,12 @@ h1 .role {
   .lang-pips i.gap {
     margin-left: 3px;
   }
+  .app {
+    --dock: max(14px, env(safe-area-inset-bottom));
+    --shot-h: 52px;
+  }
   .card {
-    padding-bottom: calc(84px + env(safe-area-inset-bottom));
+    padding-bottom: calc(84px + var(--strip) + env(safe-area-inset-bottom));
   }
   h1 {
     margin-top: 10px;
@@ -3269,9 +4147,6 @@ h1 .role {
   }
   .card .links {
     margin-top: 6px;
-  }
-  .shots {
-    bottom: max(14px, env(safe-area-inset-bottom));
   }
   .shot-prev {
     width: 52px;
@@ -3338,6 +4213,17 @@ h1 .role {
   }
 }
 @media (max-width: 380px) {
+  .kicker {
+    font-size: 9.5px;
+    letter-spacing: 0.1em;
+  }
+  .kicker .sep {
+    width: 12px;
+    margin: 0 8px 0 6px;
+  }
+  .shot-text .mono .lead {
+    display: none; /* la place manque : le club et la distance d'abord */
+  }
   .card .links {
     gap: 0 14px;
   }
@@ -3350,6 +4236,17 @@ h1 .role {
 }
 /* Sous 350 px de large, la barre du haut ne tient plus : la carte de score devient un pictogramme. */
 @media (max-width: 350px) {
+  /* l'étiquette de la fiche passe sur deux lignes : le rang du projet, puis le golf */
+  .card .kicker {
+    white-space: normal;
+  }
+  .card .kicker span {
+    display: block;
+    white-space: nowrap;
+  }
+  .card .kicker .sep {
+    display: none;
+  }
   .brand {
     font-size: 19px;
   }
@@ -3382,7 +4279,7 @@ h1 .role {
     padding-left: 16px;
   }
   .shot-line {
-    font-size: 11.5px;
+    font-size: 13px;
   }
 }
 
@@ -3408,6 +4305,10 @@ h1 .role {
     padding: 0 12px;
     font-size: 10px;
     letter-spacing: 0.1em;
+  }
+  .app {
+    --dock: max(12px, env(safe-area-inset-bottom));
+    --shot-h: 46px;
   }
   .card {
     padding: 52px var(--gutter) 10px;
@@ -3472,7 +4373,6 @@ h1 .role {
   .shots {
     left: auto;
     right: var(--gutter);
-    bottom: max(12px, env(safe-area-inset-bottom));
     gap: 8px;
   }
   .shot-prev {
@@ -3481,9 +4381,14 @@ h1 .role {
   }
   .shot-next {
     gap: 12px;
+    width: auto;
     min-width: 236px;
+    max-width: 46vw;
     height: 46px;
     padding: 0 6px 0 18px;
+  }
+  .shot-line i {
+    display: none;
   }
   .shot-text {
     gap: 1px;
