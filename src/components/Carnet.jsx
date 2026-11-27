@@ -311,6 +311,7 @@ function Tag({ at, flying, turned, lang, t, onClick, label }) {
   const ball = turned ? at + 1 : at;
   const hole = HOLES[STOPS[ball].hole - 1];
   const art = useRef(null);
+  const tag = useRef(null);
   const mini = useMemo(() => {
     const h = COURSE[hole.n - 1];
     return miniView(h, 56, 142, ball, inAir ? { shot: ball - h.first } : null);
@@ -320,10 +321,12 @@ function Tag({ at, flying, turned, lang, t, onClick, label }) {
     if (inAir && s.leg != null) paintFlight(art.current, ratio(NEXT[s.leg], s));
   }, [mini, inAir]);
   useFlight((s) => {
+    // plan d'ensemble du film (sur téléphone, il lui faut toute la largeur) : la languette s'efface
+    tag.current?.classList.toggle('quiet', s.leg != null && s.quiet);
     if (s.leg != null) paintFlight(art.current, ratio(NEXT[s.leg], s));
   });
   return (
-    <button type="button" className="languette ink" onClick={onClick} aria-label={`${label}. ${t.hole} ${hole.n}, ${t.par.toLowerCase()} ${hole.par}, ${stopLabel(at, lang, t)}`}>
+    <button ref={tag} type="button" className="languette ink" onClick={onClick} aria-label={`${label}. ${t.hole} ${hole.n}, ${t.par.toLowerCase()} ${hole.par}, ${stopLabel(at, lang, t)}`}>
       <span className="lang-h">
         <b>{hole.n}</b>
         {t.par} {hole.par}
@@ -373,7 +376,7 @@ export default function Carnet({ stop, flight, lang, t, reduce, onOpen, onPage }
     if (s.leg == null) return;
     const shot = NEXT[s.leg];
     const holed = shot.leaves === 0 && s.t >= 1;
-    const turned = STOPS[s.leg + 1].hole !== STOPS[s.leg].hole && (s.done || (shot.sync?.pageTurn != null && s.frame >= shot.sync.pageTurn));
+    const turned = STOPS[s.leg + 1].hole !== STOPS[s.leg].hole && (s.done || (s.turn != null && s.frame >= s.turn));
     if (cueRef.current.holed !== holed || cueRef.current.turned !== turned) {
       cueRef.current = { holed, turned };
       setCue(cueRef.current);

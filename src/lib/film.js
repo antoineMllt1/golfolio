@@ -9,6 +9,14 @@
 // arrêts, ou avancer alors que le trajet est absent ou pas encore chargé : fondu d'un arrêt à l'autre.
 // Pendant un trajet, le lecteur dit à chaque image où il en est au magasin d'état du vol (flight.js) :
 // le carnet, le traceur et la ligne du tour s'y abonnent pour avancer avec la balle.
+//
+// Le cadrage : l'image couvre l'écran, recadrée autour du « focus » (la place du sujet dans l'image,
+// de 0 à 1). À l'arrêt c'est stops[k].focus. Pendant un trajet, legs[k].focus du manifeste donne une
+// piste de clés [image, fx, fy] ou [image, fx, fy, zoom] (image de 1 à 44), lue en ligne droite entre
+// deux clés ; une coupe s'écrit par deux clés sur deux images qui se suivent. Sans piste, le cadrage
+// glisse d'un arrêt à l'autre. « zoom » (1 par défaut) ne joue que sur un écran vertical : en dessous
+// de 1, l'image est montrée plus petite que l'écran n'est haut, donc plus large (un plan d'ensemble
+// tient alors dans la largeur d'un téléphone).
 import { flight } from './flight.js';
 
 const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
@@ -45,6 +53,30 @@ export function pickSizes(manifest) {
 // Économiseur de données : comme pour les animations réduites, on ne charge pas les trajets.
 export const savesData = () => !!navigator.connection?.saveData;
 
+// La piste de cadrage d'un trajet de n images : les clés du manifeste, triées, bordées par le cadrage
+// des deux arrêts (image 1 et image n) si elles ne les donnent pas. null : pas de piste.
+function track(keys, n, from, to) {
+  if (!Array.isArray(keys)) return null;
+  const ok = keys
+    .filter((k) => Array.isArray(k) && k.length >= 3 && k.slice(0, 3).every(Number.isFinite) && k[0] >= 1 && k[0] <= n)
+    .map((k) => [k[0], k[1], k[2], Number.isFinite(k[3]) ? k[3] : 1])
+    .sort((a, b) => a[0] - b[0]);
+  if (!ok.length) return null;
+  if (ok[0][0] > 1) ok.unshift([1, from[0], from[1], 1]);
+  if (ok[ok.length - 1][0] < n) ok.push([n, to[0], to[1], 1]);
+  return ok;
+}
+
+// Le cadrage à l'image « frame » (de 1 à n) le long d'une piste.
+function along(keys, frame) {
+  let j = 0;
+  while (j < keys.length - 2 && keys[j + 1][0] <= frame) j += 1;
+  const a = keys[j];
+  const b = keys[j + 1] || a;
+  const t = b[0] > a[0] ? clamp((frame - a[0]) / (b[0] - a[0]), 0, 1) : 0;
+  return [a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t, a[3] + (b[3] - a[3]) * t];
+}
+
 export class Film {
   constructor(canvas, { manifest, sizes, reduce, still = reduce, start = 0, onReady, onProgress }) {
     this.canvas = canvas;
@@ -59,7 +91,9 @@ export class Film {
     this.stops = manifest.stops;
     // Nombre d'images de chaque trajet k → k+1 (0 : pas de trajet, la page fera un fondu).
     // « still » : animations réduites ou économiseur de données, aucun trajet n'est chargé.
-    this.legs = this.stops.slice(0, -1).map((_, k) => (still ? 0 : manifest.legs?.find((l) => l.from === k && l.to === k + 1)?.frames || 0));
+    const legOf = (k) => manifest.legs?.find((l) => l.from === k && l.to === k + 1);
+    this.legs = this.stops.slice(0, -1).map((_, k) => (still ? 0 : legOf(k)?.frames || 0));
+    this.tracks = this.legs.map((n, k) => (n ? track(legOf(k)?.focus, n, this.stops[k].focus, this.stops[k + 1].focus) : null));
     this.holds = [];
     this.frames = this.legs.map(() => []);
     this.count = this.legs.map(() => 0);
@@ -195,10 +229,12 @@ export class Film {
   }
 
   // Où dessiner l'image pour qu'elle couvre l'écran, selon l'endroit où se trouve la balle (0 à 1).
-  place([fx, fy]) {
+  place([fx, fy, zoom = 1]) {
     const cw = this.canvas.width;
     const ch = this.canvas.height;
-    const s = Math.max(cw / this.m.width, ch / this.m.height);
+    let s = Math.max(cw / this.m.width, ch / this.m.height);
+    // Écran vertical : un plan d'ensemble se montre plus petit (zoom < 1), sans jamais découvrir les côtés.
+    if (this.portrait) s = Math.max(s * clamp(zoom, 0.2, 1), cw / this.m.width);
     const dw = this.m.width * s;
     const dh = this.m.height * s;
     if (this.portrait) {
@@ -332,10 +368,14 @@ export class Film {
         const i = Math.round(f);
         base = this.nearest(a.leg, i);
         key = `l${a.leg}_${i}`;
-        const t = ease(f / (n - 1));
-        const from = this.stops[a.leg].focus;
-        const to = this.stops[a.leg + 1].focus;
-        focus = [from[0] + (to[0] - from[0]) * t, from[1] + (to[1] - from[1]) * t];
+        const keys = this.tracks[a.leg];
+        if (keys) focus = along(keys, i + 1);
+        else {
+          const t = ease(f / (n - 1));
+          const from = this.stops[a.leg].focus;
+          const to = this.stops[a.leg + 1].focus;
+          focus = [from[0] + (to[0] - from[0]) * t, from[1] + (to[1] - from[1]) * t];
+        }
       }
     }
     const moving = !!this.anim;

@@ -143,6 +143,7 @@ export default function Tracer({ flight, lang, t, onCarton }) {
   if (flying != null && kept !== flying) setKept(flying);
   const k = flying ?? kept;
   const box = useRef(null);
+  const root = useRef(null);
   const svg = useRef(null);
   const big = useRef(null);
   const last = useRef('');
@@ -188,6 +189,8 @@ export default function Tracer({ flight, lang, t, onCarton }) {
   };
   // À chaque image du film : où en est le coup.
   const paint = (s) => {
+    // Le film montre sa propre trace : le profil de la page lui laisse la place.
+    root.current?.classList.toggle('quiet', s.leg === k && s.quiet);
     if (s.leg == null || s.leg !== k) return;
     mem.current = { k, m: travelled(NEXT[k], s) };
     apply(mem.current.m);
@@ -215,7 +218,7 @@ export default function Tracer({ flight, lang, t, onCarton }) {
   const width = putt ? num(stop.golf.toPin.toFixed(1), lang).length : String(Math.round(shot.total)).length;
   return (
     <>
-      <div className={`trace ${on ? 'on' : ''} ${putt ? 'putt' : ''}`} aria-hidden>
+      <div ref={root} className={`trace ${on ? 'on' : ''} ${putt ? 'putt' : ''}`} aria-hidden>
         <div className="trace-hero">
           <p className="trace-head mono">
             <b>

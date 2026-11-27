@@ -10,7 +10,9 @@
 #   <legs>/l<k>_<nnnn>.png             images des trajets, 1920 × 1080 (--leg N --scale 100), n de 1 à 44
 #   render/out/anchors.json            où tombe la balle à chaque arrêt ("focus") et, sous "legs", le calage
 #                                      de chaque trajet : {"0": {"impact": 10, "land": 35}} (image de
-#                                      l'impact, image où la balle touche le sol), écrits par scene.py
+#                                      l'impact, image où la balle touche le sol), écrits par scene.py ;
+#                                      un trajet peut y ajouter "focus" (piste de cadrage) et "quiet"
+#                                      (images où le film montre sa propre trace) : voir framing()
 #   render/out/legs.json (facultatif)  un calage posé à la main, qui l'emporte sur celui d'anchors.json
 #
 # Règles :
@@ -67,6 +69,24 @@ def poster(src, dst):
         if os.path.getsize(dst) <= POSTER_MAX:
             break
     return os.path.getsize(dst)
+
+
+def framing(cue):
+    """Ce qu'un trajet dit de plus à la page (voir src/lib/film.js et src/lib/flight.js) :
+    « focus » : la piste de cadrage, des clés [image, fx, fy] ou [image, fx, fy, zoom] ;
+    « quiet » : les plages [première image, dernière image] où le film montre lui-même la trace ;
+    « turn » : l'image où le film change de trou (le carton du trou suivant entre à ce moment)."""
+    out = {}
+    keys = [[int(k[0])] + [round(float(v), 4) for v in k[1:4]] for k in cue.get('focus') or []
+            if len(k) >= 3 and 1 <= k[0] <= LEG_FRAMES and all(0 <= v <= 1 for v in k[1:3])]
+    if keys:
+        out['focus'] = sorted(keys)
+    quiet = [[int(a), int(b)] for a, b in cue.get('quiet') or [] if 1 <= a <= b <= LEG_FRAMES]
+    if quiet:
+        out['quiet'] = quiet
+    if isinstance(cue.get('turn'), int) and 1 <= cue['turn'] <= LEG_FRAMES:
+        out['turn'] = cue['turn']
+    return out
 
 
 def main():
@@ -131,6 +151,7 @@ def main():
         cue = cues.get(str(k))
         if cue and 1 <= cue.get('impact', 0) < cue.get('land', 0) <= LEG_FRAMES:
             entry.update(impact=cue['impact'], land=cue['land'])
+        entry.update(framing(cue or {}))
         legs.append((entry, files))
 
     hold_width = min(w for _, _, w, _ in holds)

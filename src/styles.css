@@ -1596,6 +1596,12 @@ kbd svg {
   min-width: 0;
   height: 226px;
   margin-bottom: -22px;
+  transition: opacity 0.22s ease;
+}
+/* Le film montre lui-même la trace du coup (et, au départ, le joueur) : le profil s'efface. */
+.trace.quiet .profile-box {
+  opacity: 0;
+  transition: opacity 0.1s ease;
 }
 .profile {
   display: block;
@@ -1673,7 +1679,10 @@ kbd svg {
 .carton.on {
   visibility: visible;
   opacity: 1;
-  transition: opacity 0.3s ease;
+  transition: opacity 0.3s ease 0.14s; /* le temps que le traceur soit parti : jamais l'un sur l'autre */
+}
+.with-carton .trace {
+  transition: opacity 0.12s ease, visibility 0s linear 0.12s;
 }
 .carton-prev {
   display: flex;
@@ -4401,6 +4410,15 @@ kbd svg {
     top: calc(78px + env(safe-area-inset-top));
     right: auto;
     left: var(--gutter);
+  }
+  /* Quand le film montre un plan d'ensemble (le joueur, la trace), elle lui laisse la largeur. */
+  .languette {
+    transition: opacity 0.25s ease;
+  }
+  .languette.quiet {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.1s ease;
   }
   .head-link {
     font-size: 10px;

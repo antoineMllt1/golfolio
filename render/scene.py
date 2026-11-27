@@ -1023,12 +1023,25 @@ def render_stop(k):
 #     scripts/frames.py : le compteur de distance du site s'y cale.
 # Animatique : --leg N --scale 25 --samples 10 --set density=0.35 --out render/out/anim
 LEG_FRAMES = 44
+#   - CUES[k] peut aussi dire à la page comment cadrer le trajet (scripts/frames.py les porte au manifeste,
+#     src/lib/film.js et src/lib/flight.js les lisent) :
+#       'focus' : la piste de cadrage, des clés [image, fx, fy] ou [image, fx, fy, zoom] : la place du sujet
+#                 dans l'image (0 à 1), lue en ligne droite entre deux clés ; une coupe = deux clés sur deux
+#                 images qui se suivent ; sans clé à l'image 1 ou 44, le cadrage des arrêts sert de bord.
+#                 Sur un écran large l'image entière est montrée et la piste ne change presque rien. Sur un
+#                 téléphone tenu debout on ne voit qu'une bande d'environ 26 % de la largeur de l'image,
+#                 centrée sur fx, et y de fy − 0,29 à fy + 0,15 environ. zoom < 1 (téléphone seulement)
+#                 montre l'image plus petite, donc plus large : bande de 26 % / zoom, image collée en haut.
+#       'quiet' : des plages [première image, dernière image] où le film montre lui-même la trace du coup
+#                 (ou le joueur) : le profil de vol de la page et, sur téléphone, le petit plan s'effacent.
+#       'turn'  : l'image où le film change de trou (la première image noire du trajet 3) : le score du trou
+#                 fini s'efface et le carton « Trou 2 » entre à ce moment.
 CUES = {
-    0: {'impact': 10, 'land': 30},
-    1: {'impact': 11, 'land': 29},
+    0: {'impact': 10, 'land': 30, 'focus': [[12, 0.6443, 0.5582], [13, 0.565, 0.45, 0.64], [24, 0.575, 0.45, 0.64], [25, 0.625, 0.44], [30, 0.625, 0.56], [38, 0.625, 0.60]], 'quiet': [[13, 24]]},
+    1: {'impact': 11, 'land': 29, 'quiet': [[16, 24]]},
     2: {'impact': 10, 'land': 20},
-    3: {'impact': 8, 'land': 19},
-    4: {'impact': 11, 'land': 29},
+    3: {'impact': 8, 'land': 19, 'turn': 26},
+    4: {'impact': 11, 'land': 29, 'quiet': [[15, 23]]},
     5: {'impact': 8, 'land': 22},
 }
 

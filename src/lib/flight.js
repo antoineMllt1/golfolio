@@ -21,6 +21,9 @@
 //   t       avancée de 0 à 1 entre l'impact et la chute : 0 avant l'impact, 1 dès que la balle touche
 //   roll    avancée de 0 à 1 entre la chute et la dernière image (la roule)
 //   done    true dès que la dernière image est atteinte (ou le vol sauté) : tout est à sa valeur finale
+//   turn    image où le film change de trou (null : à la dernière image)
+//   quiet   true pendant les images où le film montre lui-même la trace du coup (legs[k].quiet du
+//           manifeste, des paires [première image, dernière image]) : le profil de la page s'efface
 //
 // Un trajet se déroule ainsi : begin (t = 0), une notification par image, puis une dernière avec
 // t = 1, roll = 1, done = true (aussi quand un geste saute à l'arrivée), enfin leg = null quand la
@@ -33,7 +36,8 @@ import { useEffect, useRef, useState } from 'react';
 import { NEXT, STOPS } from './content.js';
 
 const clamp01 = (x) => Math.min(1, Math.max(0, x));
-const state = { leg: null, frames: 0, frame: 0, p: 0, impact: 0, land: 0, t: 0, roll: 0, done: false };
+const state = { leg: null, frames: 0, frame: 0, p: 0, impact: 0, land: 0, t: 0, roll: 0, done: false, quiet: false, turn: null };
+let hush = []; // les plages d'images où le film porte sa propre trace
 const subs = new Set();
 const emit = () => {
   for (const fn of subs) fn(state);
@@ -58,7 +62,10 @@ export const flight = {
   // --- côté film
   // Le trajet k part : n images ; leg est son entrée dans le manifeste (pour le calage).
   begin(k, n, leg) {
-    Object.assign(state, { leg: k, frames: n, done: false }, cue(k, n, leg));
+    // « turn » : l'image où le film change de trou (legs[k].turn du manifeste, sinon sync.pageTurn du coup)
+    const turn = Number.isFinite(leg?.turn) ? leg.turn : (NEXT[k]?.sync?.pageTurn ?? null);
+    Object.assign(state, { leg: k, frames: n, done: false, quiet: false, turn }, cue(k, n, leg));
+    hush = Array.isArray(leg?.quiet) ? leg.quiet.filter((r) => Array.isArray(r) && r.length === 2) : [];
     this.at(0);
   },
   // Le film est à la position f du trajet (0 = première image, n - 1 = dernière).
@@ -70,18 +77,21 @@ export const flight = {
     state.p = n > 1 ? clamp01((frame - 1) / (n - 1)) : 1;
     state.t = clamp01((frame - state.impact) / (state.land - state.impact));
     state.roll = state.land < n ? clamp01((frame - state.land) / (n - state.land)) : state.t >= 1 ? 1 : 0;
+    const shown = Math.round(frame); // l'image dessinée
+    state.quiet = hush.some(([a, b]) => shown >= a && shown <= b);
     emit();
   },
   // Dernière image, ou vol sauté : tout prend sa valeur finale.
   finish() {
     if (state.leg == null) return;
-    Object.assign(state, { frame: state.frames, p: 1, t: 1, roll: 1, done: true });
+    Object.assign(state, { frame: state.frames, p: 1, t: 1, roll: 1, done: true, quiet: false });
     emit();
   },
   // La page est posée (ou le vol a été remplacé par un autre déplacement).
   rest() {
     if (state.leg == null) return;
     state.leg = null;
+    state.quiet = false;
     emit();
   },
 };
@@ -104,7 +114,8 @@ export function useFlight(fn) {
 
 // Les moments d'un vol qui changent ce que React affiche (deux ou trois rendus par vol, pas plus) :
 //   holed   la balle vient de tomber dans le trou (un putt, à l'image de la chute) ;
-//   turned  le film a changé de trou (sync.pageTurn du coup, sinon la dernière image) ;
+//   turned  le film a changé de trou (legs[k].turn du manifeste, sinon sync.pageTurn du coup, sinon la
+//           dernière image) ;
 //   ending  le vol touche à sa fin (le dernier dixième du trajet).
 const REST = { holed: false, turned: false, ending: false };
 export function useCue() {
@@ -117,7 +128,7 @@ export function useCue() {
         if (s.leg != null) {
           const shot = NEXT[s.leg];
           const holed = shot.leaves === 0 && s.t >= 1;
-          const turned = STOPS[s.leg + 1].hole !== STOPS[s.leg].hole && (s.done || (shot.sync?.pageTurn != null && s.frame >= shot.sync.pageTurn));
+          const turned = STOPS[s.leg + 1].hole !== STOPS[s.leg].hole && (s.done || (s.turn != null && s.frame >= s.turn));
           const ending = s.p >= 0.9;
           const was = ref.current;
           next = was.holed === holed && was.turned === turned && was.ending === ending ? was : { holed, turned, ending };
