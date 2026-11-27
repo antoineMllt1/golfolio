@@ -72,7 +72,9 @@ export function stopLabel(k, lang, t) {
   const s = STOPS[k];
   const g = s.golf;
   if (k === LAST) return `${stopName(s, lang, t)} · ${pick(g.lie, lang)}`;
-  return `${t.stroke}\u00a0${shotInHole(k)}${lang === 'fr' ? '\u00a0:' : ':'} ${stopName(s, lang, t)} · ${pick(g.lie, lang)} · ${num(g.toPin, lang)}\u00a0${pick(g.what, lang)}`;
+  // à l'accueil, le nom de l'arrêt (« Départ ») est déjà le premier mot du lie : on ne le dit qu'une fois
+  const name = s.kind === 'project' ? `${stopName(s, lang, t)} · ` : '';
+  return `${t.stroke}\u00a0${shotInHole(k)}${lang === 'fr' ? '\u00a0:' : ':'} ${name}${pick(g.lie, lang)} · ${num(g.toPin, lang)}\u00a0${pick(g.what, lang)}`;
 }
 // Ce que le dessin d'un trou (plan.js) doit savoir du site : l'écriture des nombres, le bord du
 // drapeau (D/G, R/L), les repères et le vent du trou, et les liens des points de chute.

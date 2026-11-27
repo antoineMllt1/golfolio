@@ -253,8 +253,9 @@ export default function Tracer({ flight, lang, t, onCarton }) {
                 <dd>{metres(shot.roll, lang, t)}</dd>
               </div>
               <div>
-                <dt>{t.maxHeight}</dt>
-                <dd>{metres(shot.apex, lang, t)}</dd>
+                {/* le profil réduit porte déjà la hauteur maximale : ici, le total du coup */}
+                <dt>{small ? t.total : t.maxHeight}</dt>
+                <dd>{metres(small ? shot.total : shot.apex, lang, t)}</dd>
               </div>
             </dl>
           )}

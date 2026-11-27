@@ -217,7 +217,7 @@ function LiveNotes({ k, holed, lang, t }) {
   const cells = putt ? [...g.side.map(([a, b]) => [pick(a, lang), pick(b, lang)]), ['', metres(shot.total, lang, t)]] : [[t.carry, num(shot.carry, lang)], [t.roll, num(shot.roll, lang)], [t.total, num(shot.total, lang)]];
   return (
     <div className="notes live">
-      <Head left={t.inFlight} right={`${t.stroke} ${shotInHole(k)} · ${pick(shot.club, lang)}`} />
+      <Head left={putt ? t.rolling : t.inFlight} right={`${t.stroke} ${shotInHole(k)} · ${pick(shot.club, lang)}`} />
       <div className="gauge" ref={bar} aria-hidden>
         <span className="fill" />
         <i style={{ left: 0 }} />

@@ -36,6 +36,8 @@
       "resume": "Reprendre le parcours",
       "skipFlight": "Aller à l’arrivée",
       "inFlight": "En vol",
+      "rolling": "En route",
+      "skipRoll": "Aller à l’arrivée",
       "stops": "Arrêts du parcours",
       "goTo": "Aller à",
       "hole": "Trou",
@@ -166,6 +168,8 @@
       "resume": "Back to the course",
       "skipFlight": "Skip to landing",
       "inFlight": "In the air",
+      "rolling": "Rolling",
+      "skipRoll": "Skip ahead",
       "stops": "Course stops",
       "goTo": "Go to",
       "hole": "Hole",
@@ -430,7 +434,7 @@
         "view": "hole",
         "lie": {
           "fr": "Départ, tee bas",
-          "en": "Tee box, teed low"
+          "en": "On the tee, teed low"
         },
         "toPin": 478,
         "what": {
@@ -461,7 +465,7 @@
             },
             {
               "fr": "Départ, tee bas",
-              "en": "Tee box, teed low"
+              "en": "On the tee, teed low"
             }
           ],
           [
@@ -616,7 +620,7 @@
         ],
         "say": {
           "fr": "Porter 198, laisser rouler jusqu’à l’entrée. Surtout pas long.",
-          "en": "Carry it 198, let it run to the front edge. Whatever happens, not long."
+          "en": "Carry it 198, let it run to the front edge. Whatever you do, not long."
         }
       }
     },
@@ -991,7 +995,7 @@
         "view": "hole",
         "lie": {
           "fr": "Départ, tee au ras du sol",
-          "en": "Tee box, teed just off the ground"
+          "en": "On the tee, just off the ground"
         },
         "toPin": 152,
         "what": {
@@ -1022,7 +1026,7 @@
             },
             {
               "fr": "Départ, tee au ras du sol",
-              "en": "Tee box, teed just off the ground"
+              "en": "On the tee, just off the ground"
             }
           ],
           [
@@ -1367,8 +1371,8 @@
       "total": 152,
       "apex": 32,
       "lands": {
-        "fr": "Green, à 1,5\u00a0m, à hauteur du drapeau",
-        "en": "On the green, 1.5\u00a0m, pin high"
+        "fr": "Green, à hauteur du drapeau, à 1,5\u00a0m du trou",
+        "en": "On the green, pin high, 1.5\u00a0m from the hole"
       },
       "lie": {
         "fr": "Green",

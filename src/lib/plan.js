@@ -446,7 +446,7 @@ export function pageView(h, name, w, hh, state, ctx) {
     const show = h.shots.map((_, i) => i).filter((i) => i >= Math.max(0, first - (h.fairway ? 0 : 1)));
     return green(h, {
       ...base, rulerX: 24, show, north: [16, 28], scaleBar: [w - 54, 30, 5],
-      ...(h.fairway ? { side: { 2: 1, 3: -1 }, lenAt: { 2: 0.42, 3: 0.5 } } : { side: { 1: -1 }, lenAt: { 1: 0 }, lenOff: { 1: 0 }, lenShift: { 1: [21, 0] }, dimDy: 11 }),
+      ...(h.fairway ? { side: { 2: 1, 3: -1 }, lenAt: { 2: 0.7, 3: 0.5 } } : { side: { 1: -1 }, lenAt: { 1: 0 }, lenOff: { 1: 0 }, lenShift: { 1: [21, 0] }, dimDy: 11 }),
     });
   }
   if (name === 'approach') {
@@ -480,7 +480,7 @@ export function spreadViews(h, size, mark, ctx) {
   const g = green(h, {
     ...state, w: gw, h: gh, numbers: true, rulerX: wide ? 30 : 34, cx: wide ? 168 : 190, cy: wide ? 120 : 112, scaleBar: [gw - 60, 20, 5],
     ...(one
-      ? { scale: wide ? 5.5 : 5.4, show: [2, 3], lead: { 3: [22, 5] }, side: { 2: 1, 3: -1 }, lenAt: { 2: 0.42, 3: 0.5 } }
+      ? { scale: wide ? 5.5 : 5.4, show: [2, 3], lead: { 3: [22, 5] }, side: { 2: 1, 3: -1 }, lenAt: { 2: 0.7, 3: 0.5 } }
       : { scale: wide ? 6.8 : 6.6, show: [1], lead: { 1: [25, -15] }, side: { 1: -1 }, lenOff: { 1: 12 }, lenShift: { 1: [3, 1] }, dimDy: 11 }),
   });
   return { plan: p, green: g };

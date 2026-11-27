@@ -17,12 +17,14 @@ export default function NextShot({ stop, flight, lang, t, onNext, onPrev, onRepl
   let icon = <ArrowDown />;
   let say; // le libellé lu par les lecteurs d'écran
   if (flying) {
-    lead = t.inFlight;
+    // un putt ne vole pas : « En route », et rien n'« atterrit »
+    const rolls = isPutt(NEXT[flight.shot]);
+    lead = rolls ? t.rolling : t.inFlight;
     fact = pick(NEXT[flight.shot].club, lang);
-    name = t.skipFlight;
+    name = rolls ? t.skipRoll : t.skipFlight;
     action = onSkip;
     icon = <Skip />;
-    say = `${t.inFlight}. ${t.skipFlight}`;
+    say = `${lead}. ${name}`;
   } else if (last) {
     const card = STOPS[LAST].golf.card;
     lead = t.roundOver;
