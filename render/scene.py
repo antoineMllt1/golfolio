@@ -20,7 +20,7 @@
 #   départ du 1 (arrêt 0) · fairway (1) · green du 1 (2 et 3) · départ du 2 au bord de l'eau (4) · green du 2 (5 et 6)
 # Chaque arrêt N a sa balle (BN), son cadrage (view_N) et sa scène (stop_N), qui renvoie un Stage : sa
 # caméra, sa balle, son club, son lieu (sol, trou, gazon à replanter). Les trajets s'appuient dessus :
-# voir LEGS, key, key_view et render_leg en bas du fichier.
+# voir LEGS, key, key_view, key_look et render_leg en bas du fichier.
 import argparse
 import json
 import math
@@ -128,6 +128,7 @@ class Stage:
             self.cam_pos, self.target, self.lens, self.fstop = view.pos, view.target, view.lens, view.fstop
         self.__dict__.update(kw)
         self.exposure = scene.view_settings.exposure
+        self.warmth = scene.view_settings.white_balance_temperature if scene.view_settings.use_white_balance else 6500.0
 
 
 # ---------------------------------------------------------------- ciel
@@ -367,6 +368,14 @@ def club_obstacle(root):
     return lambda pts: C.distance(root, pts)
 
 
+def socket_floor(hole):
+    """Le fond de la douille où s'emboîte le drapeau : sans lui, on verrait le panorama à travers le godet."""
+    x, y, z, r = hole[0], hole[1], -P.CUP_DEPTH - 0.028, 0.012
+    o = P.mesh_obj('FondDouille', [(x - r, y - r, z), (x + r, y - r, z), (x + r, y + r, z), (x - r, y + r, z)], [(0, 1, 2, 3)], smooth=False)
+    P.assign(o, P.mat('FondDouille', (0.012, 0.011, 0.010), rough=0.9))
+    return o
+
+
 def outside(xy, centre, radius):
     """Garde les points hors d'un cercle (le trou, le pied du tee)."""
     return xy[np.hypot(xy[:, 0] - centre[0], xy[:, 1] - centre[1]) > radius]
@@ -519,6 +528,7 @@ def place_green1(pin=False):
     scene.view_settings.exposure = args.exposure if args.exposure is not None else -0.9
     P.lawn((0.028, 0.080, 0.011), (0.20, 0.22, 0.10), hole=(*G1_HOLE, P.CUP_R), disc=(*G1_C, G1_R, (0.034, 0.095, 0.014)), specular=0.12)
     P.cup(G1_HOLE)
+    socket_floor(G1_HOLE)
     flag = P.flagstick(G1_HOLE, heading=math.radians(200)) if pin else None
     return green_turf(G1_C, G1_R, angle=math.radians(opt('stripes', 168))), flag
 
@@ -661,6 +671,7 @@ def place_green2(pin=False):
     scene.view_settings.exposure = args.exposure if args.exposure is not None else -1.5
     P.lawn((0.028, 0.080, 0.011), (0.22, 0.20, 0.09), hole=(*G2_HOLE, P.CUP_R), disc=(*G2_C, G2_R, (0.034, 0.095, 0.014)), specular=0.2)
     P.cup(G2_HOLE)
+    socket_floor(G2_HOLE)
     flag = P.flagstick(G2_HOLE, heading=math.radians(215)) if pin else None
     return green_turf(G2_C, G2_R, angle=math.radians(opt('stripes', 152)), green=GREEN_GOLD), flag
 
@@ -680,11 +691,12 @@ def view_5():
 
 
 def view_6():
-    """Plongée presque à l'aplomb du trou, d'un peu plus d'un mètre : le godet entier tient dans la bande
+    """Plongée sur le trou, d'un peu plus d'un mètre, penchée de 28° : on voit la paroi du fond, sa bande
+    de terre au soleil, et le gazon se floute en haut et en bas. Le godet entier tient dans la bande
     que garde un téléphone."""
-    tilt, dist = math.radians(12), opt('dist', 1.22)
+    tilt, dist = math.radians(opt('tilt', 28)), opt('dist', 1.22)
     pos = V((G2_HOLE[0] - dist * math.sin(tilt) * math.cos(G2_UP), G2_HOLE[1] - dist * math.sin(tilt) * math.sin(G2_UP), dist * math.cos(tilt)))
-    return View(pos, aim(pos, B6, 85, 0.62, opt('fy', 0.47)), 85, 9.0, B6 + V((0, 0, P.BALL_R + 0.012)))
+    return View(pos, aim(pos, B6, 85, 0.62, opt('fy', 0.47)), 85, opt('fstop', 2.8), B6 + V((0, 0, P.BALL_R)))
 
 
 def stop_5(pin=False):
@@ -710,8 +722,8 @@ def stop_5(pin=False):
 
 
 def stop_6(pin=False):
-    """Le contact : la balle au fond du trou du 2. Vue plongeante, presque à l'aplomb : le godet blanc,
-    la bande de terre, le bord de gazon ras dans la lumière dorée."""
+    """Le contact : la balle au fond du trou du 2. Vue plongeante : le godet blanc, la bande de terre
+    au soleil, le bord de gazon ras dans la lumière dorée."""
     turf, flag = place_green2(pin)
     up = G2_UP
     hx, hy = G2_HOLE
@@ -719,10 +731,10 @@ def stop_6(pin=False):
     b = P.ball(centre, stamp=STAMP)
     # Le soleil rasant n'entre pas dans le trou : le godet n'est éclairé que par le ciel, bleu. On pose
     # pour lui, et on réchauffe la balance des blancs, comme le ferait un photographe à l'ombre.
-    scene.view_settings.exposure = args.exposure if args.exposure is not None else 1.0
-    if opt('wb', 9000):
+    scene.view_settings.exposure = args.exposure if args.exposure is not None else 1.1
+    if opt('wb', 8500):
         scene.view_settings.use_white_balance = True
-        scene.view_settings.white_balance_temperature = opt('wb', 9000)
+        scene.view_settings.white_balance_temperature = opt('wb', 8500)
 
     view = view_6()
     cam = shoot(view)
@@ -795,6 +807,8 @@ def render_stop(k):
 #       key(a.ball, 36, B6)
 #       key_view(a.cam, first, a.view)
 #       key_view(a.cam, last, end)
+#       key_look(first, a.exposure, a.warmth)         # l'arrêt 6 est posé pour l'ombre du godet
+#       key_look(last, 1.1, 8500)
 #   LEGS[5] = [(1, 44, putt_du_2)]
 #
 # Le flou de mouvement vient des clés. La première image d'un trajet est la vue de son arrêt de départ
@@ -828,6 +842,19 @@ def key_view(cam, frame, view):
     cam.data.keyframe_insert('lens', frame=frame)
     cam.data.dof.keyframe_insert('focus_distance', frame=frame)
     cam.data.dof.keyframe_insert('aperture_fstop', frame=frame)
+
+
+def key_look(frame, exposure=None, warmth=None):
+    """Clé sur le développement de l'image : l'exposition, et la balance des blancs (kelvins ; 6500 :
+    neutre). Deux arrêts d'un même lieu ne sont pas posés pareil (stage.exposure, stage.warmth)."""
+    vs = scene.view_settings
+    if exposure is not None:
+        vs.exposure = exposure
+        scene.keyframe_insert('view_settings.exposure', frame=frame)
+    if warmth is not None:
+        vs.use_white_balance = True
+        vs.white_balance_temperature = warmth
+        scene.keyframe_insert('view_settings.white_balance_temperature', frame=frame)
 
 
 def render_leg(k):
