@@ -239,13 +239,14 @@ def animate(cam, cam_pos, target, first, last):
     """Le plan en mouvement : la trace ambre de la balle monte dans le ciel à droite d'Antoine, sa tête
     plus haut à chaque image ; le trait s'affine en s'éloignant et tire un rien à gauche (un léger
     draw) : vu de derrière, un trait droit et blanc se lirait comme un piquet. La caméra l'accompagne
-    de deux degrés, puis décroche vers le ciel, où le film change de lieu. La silhouette et la trace
-    restent entre x = 0,30 et x = 0,74."""
+    de deux degrés, puis décroche vers le ciel, où le film change de lieu. Le cadre est tourné de deux
+    degrés vers la droite par rapport à l'image fixe : la trace monte vers x = 0,65 et reste à gauche
+    du carnet du site, qui couvre l'image au-delà de x = 0,72 sur un écran 16:10."""
     K.setup()
-    fly = K.Flight((0.0, 0.0, 0.04), 66.0, 11.5, g=5.2, drag=0.055, draw=(-0.040, 0.00021))
+    fly = K.Flight((0.0, 0.0, 0.04), 66.0, 11.5, g=5.2, drag=0.055, draw=(-0.030, 0.00030))
     trace = K.Trace(fly, cam_pos, lens=cam.data.lens, span=(0.0, 2.4), strength=K.amber(ARGS.exposure, ARGS.glow), width=0.0026, taper=0.4, colour=K.AMBER, steps=200)
     aim = target - cam_pos
-    az, pitch, reach = math.atan2(aim.y, aim.x), math.atan2(aim.z, math.hypot(aim.x, aim.y)), aim.length
+    az, pitch, reach = math.atan2(aim.y, aim.x) - math.radians(2.0), math.atan2(aim.z, math.hypot(aim.x, aim.y)), aim.length
     frames = K.half_frames(first, last)
     pos, look, focus = [], [], []
     for f in frames:
