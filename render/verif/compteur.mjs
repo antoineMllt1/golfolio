@@ -10,7 +10,7 @@ const page = await ctx.newPage();
 await page.goto(base, { waitUntil: 'networkidle' });
 await page.waitForSelector('.app.ready', { state: 'attached' });
 await page.waitForTimeout(1500);
-const manifest = await (await page.request.get(base + '/frames/manifest.json')).json();
+const manifest = await page.evaluate(() => fetch('/frames/manifest.json').then((r) => r.json()));
 for (let k = 0; k < 3; k++) {
   await page.evaluate(() => {
     window.__rec = [];
