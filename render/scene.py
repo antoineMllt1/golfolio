@@ -47,7 +47,16 @@ ap.add_argument('--sky', default='', help='un autre ciel de render/assets, pour 
 ap.add_argument('--exposure', type=float, default=None)
 ap.add_argument('--view', default='', choices=['', 'top', 'side', 'front', 'wide'], help='vue de contrôle')
 ap.add_argument('--force', action='store_true', help='recalcule les images de trajet déjà présentes')
+ap.add_argument('--set', default='', help='réglages d\'essai, « nom=valeur,nom=valeur » (voir opt dans les arrêts)')
 args = ap.parse_args(argv)
+OPT = {k: float(v) for k, v in (kv.split('=') for kv in args.set.split(',') if kv)}
+
+
+def opt(name, default):
+    """Un réglage que --set peut changer le temps d'un essai."""
+    return OPT.get(name, default)
+
+
 V = Vector
 T0 = time.time()
 OUT = args.out or os.path.join(HERE, 'out', f's{args.scale}')
@@ -132,15 +141,17 @@ def sun_azimuth(hdr):
     return math.pi - 2 * math.pi * (u - 0.5), (v - 0.5) * math.pi
 
 
-def sky_at(hdr, sun, strength=1.0, tint=None):
+def sky_at(hdr, sun, strength=1.0, tint=None, backdrop=1.0):
     """Ciel photographié, tourné pour que son soleil soit à l'azimut `sun` (degrés, 0 = +X, sens
     trigonométrique vu de dessus). Blender place la colonne u dans la direction 2π·(0,5 − u), et la
     rotation tourne le regard : le soleil se retrouve à (azimut d'origine − rotation).
-    `tint` : teinte multipliée au ciel (pour réchauffer une fin d'après-midi)."""
+    `tint` : teinte multipliée au ciel (pour réchauffer une fin d'après-midi) ; `backdrop` : le fond vu
+    par la caméra, plus clair ou plus sombre que la lumière qu'il donne (des arbres à contre-jour)."""
     hdr = args.sky or hdr
     sun = args.sun if args.sun is not None else sun
     u, el = SUN_U[hdr]
-    world = P.sky(hdr, rotation=2 * math.pi * (0.5 - u) - math.radians(sun), strength=strength)
+    rotation = 2 * math.pi * (0.5 - u) - math.radians(sun)
+    world = P.sky(hdr, rotation=rotation, strength=strength * backdrop, light=strength if backdrop != 1.0 else None)
     if tint is not None:
         nt = world.node_tree
         env = next(n for n in nt.nodes if n.type == 'TEX_ENVIRONMENT')
@@ -439,9 +450,9 @@ def green_turf(centre, radius, angle=math.radians(35), width=0.56):
 
 def place_green1():
     """Le green du 1, un matin clair : ciel, sol, trou et drapeau. Renvoie le gazon à planter."""
-    sky_at('meadow_2', sun=120)
+    sky_at('meadow_2', sun=120, backdrop=opt('backdrop', 2.2))
     scene.view_settings.exposure = args.exposure if args.exposure is not None else -0.3
-    P.lawn((0.028, 0.080, 0.011), (0.20, 0.22, 0.10), hole=(*G1_HOLE, P.CUP_R), disc=(*G1_C, G1_R, (0.034, 0.095, 0.014)))
+    P.lawn((0.028, 0.080, 0.011), (0.20, 0.22, 0.10), hole=(*G1_HOLE, P.CUP_R), disc=(*G1_C, G1_R, (0.034, 0.095, 0.014)), specular=0.12)
     P.cup(G1_HOLE)
     flag = P.flagstick(G1_HOLE, heading=math.radians(200))
     return green_turf(G1_C, G1_R), flag
@@ -495,7 +506,7 @@ def stop_3():
 
 
 # ---------------------------------------------------------------- arrêt 4 : le départ du 2, au bord de l'eau
-T2_VIEW = 62.0  # azimut du regard (degrés) : la rive d'en face est perpendiculaire à lui
+T2_VIEW = 64.0  # azimut du regard (degrés) : la rive d'en face est perpendiculaire à lui
 T2_EDGE = 1.7  # distance de la balle au bord de l'eau, le long du regard
 T2_FAR = 150.0  # la rive d'en face
 
@@ -503,9 +514,12 @@ T2_FAR = 150.0  # la rive d'en face
 def stop_4():
     """Départ du 2, un par 3 au-dessus de l'eau, en fin d'après-midi : la balle sur un tee bas, le fer 7
     derrière elle. Vue de trois quarts arrière : le dos du fer, la balle, puis l'eau et l'autre rive."""
-    phi = math.radians(T2_VIEW)
-    sky_at('rooitou_park', sun=T2_VIEW - 18)
-    scene.view_settings.exposure = args.exposure if args.exposure is not None else -0.6
+    view, edge = opt('view', T2_VIEW), opt('edge', T2_EDGE)
+    phi = math.radians(view)
+    tint = opt('warm', 0.22)
+    # Contre-jour : le soleil bas est juste au-dessus du cadre, à droite de la balle ; l'eau le renvoie.
+    sky_at('ehingen_hillside', sun=view - opt('sun', 4.5), tint=(1.0, 1.0 - 0.45 * tint, 1.0 - tint) if tint else None)
+    scene.view_settings.exposure = args.exposure if args.exposure is not None else -1.5
     lift = 0.012
     centre = V((0, 0, lift + P.BALL_R))
     b = P.ball(centre, stamp=STAMP)
@@ -513,25 +527,26 @@ def stop_4():
     club = C.iron(kind='fer7')
     C.address(club, centre, gap=0.004, lift=0.004)
 
-    cam_pos = V((-1.00 * math.cos(phi), -1.00 * math.sin(phi), 0.13))
-    lens, fstop = 105, 3.5
-    target = aim(cam_pos, centre, lens, 0.63, 0.66)
+    dist = opt('dist', 1.00)
+    cam_pos = V((-dist * math.cos(phi), -dist * math.sin(phi), opt('height', 0.13)))
+    lens, fstop = opt('lens', 105), opt('fstop', 5.0)
+    target = aim(cam_pos, centre, lens, 0.63, opt('fy', 0.66))
     cam = camera(cam_pos, target, lens=lens, fstop=fstop, focus=centre)
     face_stamp(b, cam_pos, turn=-10, roll=4)
 
     # Le sol du départ s'arrête à la rive ; l'eau, un peu plus bas ; puis la butte du green d'en face.
     rot = (0, 0, phi)
-    P.lawn((0.030, 0.085, 0.012), (0.20, 0.21, 0.10), bounds=(-450, T2_EDGE, -450, 450)).rotation_euler = rot
-    P.water((T2_EDGE - 0.4, T2_FAR + 30, -450, 450), z=-0.10, ripple=0.5, scale=(0.25, 1.2), rough=0.05).rotation_euler = rot
+    P.lawn((0.030, 0.085, 0.012), (0.20, 0.21, 0.10), bounds=(-450, edge, -450, 450)).rotation_euler = rot
+    P.water((edge - 0.4, T2_FAR + 30, -450, 450), z=-0.10, ripple=opt('ripple', 0.5), scale=(opt('rx', 0.50), opt('ry', 0.12)), rough=opt('rough', 0.05)).rotation_euler = rot
     rise, top = 22.0, 2.6
     bank = P.mesh_obj('Rive', [(T2_FAR, -450, -0.4), (T2_FAR, 450, -0.4), (T2_FAR + rise, 450, top), (T2_FAR + rise, -450, top), (450, 450, top), (450, -450, top)], [(0, 3, 2, 1), (3, 5, 4, 2)], smooth=False)
-    P.assign(bank, P.mat('Rive', (0.085, 0.17, 0.035), rough=0.9))
+    P.assign(bank, P.mat('Rive', (0.045, 0.085, 0.020), rough=0.9))
     bank.rotation_euler = rot
 
     turf = Turf([TEE])
     obstacles = [ball_obstacle(centre), club_obstacle(club), post_obstacle((0, 0), 0.004)]
     xy = spread(cam_pos, target, (900_000, 0.1, 6.0, 22, 1.0), [((0.0, -0.1), 0.8, 200_000)])
-    xy = xy[xy[:, 0] * math.cos(phi) + xy[:, 1] * math.sin(phi) < T2_EDGE - 0.01]
+    xy = xy[xy[:, 0] * math.cos(phi) + xy[:, 1] * math.sin(phi) < edge - 0.01]
     turf.grow(xy, obstacles)
     P.bloom()
     return Stage(id=IDS[4], cam=cam, cam_pos=cam_pos, target=target, lens=lens, fstop=fstop, ball=b, ball_pos=centre, club=club, turf=turf, obstacles=obstacles, exposure=scene.view_settings.exposure)
@@ -541,14 +556,15 @@ def stop_4():
 G2_HOLE = (1.5, 0.0)  # le trou, à 1,5 m de la balle de l'arrêt 5
 G2_C = (3.0, 2.5)
 G2_R = 11.0
-G2_SUN = 22.0  # le soleil de l'heure dorée : il éclaire de côté, par la droite, la vue de l'arrêt 5
+G2_SUN = 12.0  # le soleil de l'heure dorée : il éclaire de côté, par la droite, la vue de l'arrêt 5
 
 
 def place_green2():
     """Le green du 2, à l'heure dorée."""
-    sky_at('ehingen_hillside', sun=G2_SUN)
-    scene.view_settings.exposure = args.exposure if args.exposure is not None else -0.9
-    P.lawn((0.028, 0.080, 0.011), (0.22, 0.20, 0.09), hole=(*G2_HOLE, P.CUP_R), disc=(*G2_C, G2_R, (0.034, 0.095, 0.014)))
+    tint = opt('warm', 0.25)
+    sky_at('ehingen_hillside', sun=G2_SUN, tint=(1.0, 1.0 - 0.45 * tint, 1.0 - tint))
+    scene.view_settings.exposure = args.exposure if args.exposure is not None else -0.8
+    P.lawn((0.028, 0.080, 0.011), (0.22, 0.20, 0.09), hole=(*G2_HOLE, P.CUP_R), disc=(*G2_C, G2_R, (0.034, 0.095, 0.014)), specular=0.2)
     P.cup(G2_HOLE)
     flag = P.flagstick(G2_HOLE, heading=math.radians(215))
     return green_turf(G2_C, G2_R, angle=math.radians(62)), flag
@@ -586,7 +602,7 @@ def stop_6():
     hx, hy = G2_HOLE
     centre = V((hx + 0.0312 * math.cos(side), hy + 0.0312 * math.sin(side), -P.CUP_DEPTH + P.BALL_R))
     b = P.ball(centre, stamp=STAMP)
-    scene.view_settings.exposure = args.exposure if args.exposure is not None else -0.3
+    scene.view_settings.exposure = args.exposure if args.exposure is not None else 0.2
 
     tilt, dist = math.radians(12), 0.60
     cam_pos = V((hx - dist * math.sin(tilt) * math.cos(up), hy - dist * math.sin(tilt) * math.sin(up), dist * math.cos(tilt)))

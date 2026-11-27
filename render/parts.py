@@ -675,11 +675,12 @@ def lay(xy, height, yaw, lean, obstacles, margin=0.0006):
     return h
 
 
-def lawn(color_near, color_far, size=900.0, haze=(25, 260), bounds=None, hole=None, stripes=None, disc=None, z=0.0, name='Sol'):
+def lawn(color_near, color_far, size=900.0, haze=(25, 260), bounds=None, hole=None, stripes=None, disc=None, z=0.0, specular=0.5, name='Sol'):
     """Sol sous les brins, à zones. bounds : (x0, x1, y0, y1) pour un sol qui s'arrête (bord de l'eau) ;
     hole : (x, y, rayon) d'un trou rond découpé dans le sol ; stripes : (angle, largeur, contraste,
     décalage) bandes de tonte alternées ; disc : (x, y, rayon, couleur) zone ronde d'une autre teinte
-    (le green). Les couleurs lointaines se fondent dans le ciel photographié, comme ground()."""
+    (le green) ; specular : reflet du sol vu de très loin, en rasant (0,5 : voile pâle ; moins : sol
+    plus sombre). Les couleurs lointaines se fondent dans le ciel photographié, comme ground()."""
     if hole is not None:
         hx, hy, hr = hole
         rings, segs = 72, 128
@@ -697,7 +698,7 @@ def lawn(color_near, color_far, size=900.0, haze=(25, 260), bounds=None, hole=No
     else:
         x0, x1, y0, y1 = bounds or (-size / 2, size / 2, -size / 2, size / 2)
         o = mesh_obj(name, [(x0, y0, z), (x1, y0, z), (x1, y1, z), (x0, y1, z)], [(0, 1, 2, 3)], smooth=False)
-    m = mat(name, color_near, rough=0.9)
+    m = mat(name, color_near, rough=0.9, specular_ior_level=specular)
     nt = m.node_tree
     C = _Calc(nt)
     tc = nt.nodes.new('ShaderNodeTexCoord')
