@@ -232,12 +232,14 @@ def face_stamp(ball, toward, up=(0, 0, 1), turn=0.0, roll=0.0):
 # ---------------------------------------------------------------- gazons
 class Kind:
     """Une herbe : hauteurs h et demi-largeurs w des brins (mètres), inclinaison, touffes, part de
-    brins qui dépassent, sens de tonte (radians, None : en tous sens) et teintes."""
+    brins qui dépassent, sens de tonte (radians, None : en tous sens), teintes, et part de brins secs
+    (straw ; None : le gazon doré du départ, où presque tous les brins tirent vers la paille)."""
 
-    def __init__(self, name, h, w, lean=(0.1, 0.9), clump=0.22, tall=0.05, mow=None, spread=0.7, dark=(0.030, 0.105, 0.012), light=(0.105, 0.25, 0.03), glow=(0.27, 0.55, 0.06), translucency=0.38, tone=1.0):
+    def __init__(self, name, h, w, lean=(0.1, 0.9), clump=0.22, tall=0.05, mow=None, spread=0.7, dark=(0.030, 0.105, 0.012), light=(0.105, 0.25, 0.03), glow=(0.27, 0.55, 0.06), translucency=0.38, tone=1.0, straw=None):
         self.name, self.h, self.w, self.lean, self.clump, self.tall, self.mow, self.spread = name, h, w, lean, clump, tall, mow, spread
         self.colours = [tuple(c * tone for c in col) for col in (dark, light, glow)]
         self.translucency = translucency
+        self.straw = straw
 
     def but(self, name, **kw):
         """La même herbe, à quelques réglages près (une bande de tonte dans l'autre sens)."""
@@ -251,13 +253,15 @@ class Kind:
         return other
 
     def material(self):
-        return P.grass_material('Brin' + self.name, *self.colours, translucency=self.translucency)
+        if self.straw is None:
+            return P.grass_material('Brin' + self.name, *self.colours, translucency=self.translucency)
+        return P.turf_material('Brin' + self.name, *self.colours, translucency=self.translucency, straw=self.straw)
 
 
 TEE = Kind('Depart', h=(0.0085, 0.0125), w=(0.00060, 0.00110), clump=0.18)
 FAIRWAY = Kind('Fairway', h=(0.010, 0.014), w=(0.00062, 0.00115), lean=(0.25, 0.95), clump=0.14, tall=0.03)
-COLLAR = Kind('Avantgreen', h=(0.010, 0.0155), w=(0.00070, 0.00130), clump=0.22, tall=0.06, dark=(0.026, 0.095, 0.011), light=(0.095, 0.235, 0.028))
-GREEN = Kind('Green', h=(0.0032, 0.0046), w=(0.00042, 0.00072), lean=(0.05, 0.50), clump=0.05, tall=0.0, dark=(0.030, 0.105, 0.018), light=(0.085, 0.235, 0.045), glow=(0.20, 0.48, 0.09), translucency=0.32)
+COLLAR = Kind('Avantgreen', h=(0.010, 0.0155), w=(0.00070, 0.00130), clump=0.22, tall=0.06, dark=(0.026, 0.095, 0.011), light=(0.095, 0.235, 0.028), straw=0.14)
+GREEN = Kind('Green', h=(0.0032, 0.0046), w=(0.00042, 0.00072), lean=(0.05, 0.50), clump=0.05, tall=0.0, dark=(0.030, 0.105, 0.018), light=(0.085, 0.235, 0.045), glow=(0.20, 0.48, 0.09), translucency=0.32, straw=0.07)
 
 
 class Turf:
@@ -529,8 +533,8 @@ def stop_3():
 
     # La caméra est à 6 m derrière le trou, à hauteur de genou, à peine décalée de la ligne du putt :
     # le trou passe juste à gauche de l'aplomb de la balle.
-    cam_pos = V((G1_HOLE[0] + opt('back', 6.0), opt('side', 0.07), opt('height', 0.36)))
-    lens, fstop = opt('lens', 500), opt('fstop', 16.0)
+    cam_pos = V((G1_HOLE[0] + opt('back', 6.0), opt('side', 0.07), opt('height', 0.34)))
+    lens, fstop = opt('lens', 540), opt('fstop', 22.0)
     target = aim(cam_pos, centre, lens, 0.62, opt('fy', 0.30))
     cam = camera(cam_pos, target, lens=lens, fstop=fstop, focus=centre)
     face_stamp(b, cam_pos, turn=6, roll=4)
@@ -547,9 +551,9 @@ def stop_3():
 # ---------------------------------------------------------------- arrêt 4 : le départ du 2, au bord de l'eau
 # L'eau n'est pas modélisée : c'est le lac photographié du panorama, que le sol du départ laisse voir
 # au-delà de sa rive. Le coup part vers +X et survole l'eau en biais.
-T2_VIEW = 64.0  # azimut du regard (degrés) : la rive du départ est perpendiculaire à lui
+T2_VIEW = 68.0  # azimut du regard (degrés) : la rive du départ est perpendiculaire à lui
 T2_EDGE = 1.7  # distance de la balle à la rive, le long du regard
-T2_SUN = T2_VIEW - 5.5  # le soleil est au-dessus du cadre, à droite : son reflet descend dans l'eau
+T2_SUN = T2_VIEW - 4.8  # le soleil est au-dessus du cadre, à droite : son reflet descend dans l'eau
 
 
 def stop_4():
@@ -564,12 +568,13 @@ def stop_4():
     lift = opt('lift', 0.019)  # un tee bas, comme pour un fer : la coupelle dépasse à peine de l'herbe
     centre = V((0, 0, lift + P.BALL_R))
     b = P.ball(centre, stamp=STAMP)
-    P.tee(top=(0, 0, lift + 0.0015))
+    tee = P.tee(top=(0, 0, lift + 0.0015))
+    tee.data.materials[0] = P.mat('TeeBlanc', (0.86, 0.86, 0.82), rough=0.45, coat_weight=0.2, coat_roughness=0.3)  # blanc : il se lit à contre-jour
     club = C.iron(kind='fer7')
     C.address(club, centre, gap=0.004, lift=0.004)
 
     cam_pos = around(centre, view + 180, opt('dist', 1.29), opt('height', 0.15))
-    lens, fstop = opt('lens', 135), opt('fstop', 6.3)
+    lens, fstop = opt('lens', 135), opt('fstop', 8.0)
     target = aim(cam_pos, centre, lens, 0.63, opt('fy', 0.66))
     cam = camera(cam_pos, target, lens=lens, fstop=fstop, focus=centre)
     face_stamp(b, cam_pos, turn=-10, roll=4)
@@ -577,7 +582,7 @@ def stop_4():
     # Le sol du départ s'arrête à la rive : au-delà, le lac du panorama.
     P.lawn((0.030, 0.085, 0.012), (0.20, 0.21, 0.10), bounds=(-450, edge, -450, 450)).rotation_euler = (0, 0, phi)
 
-    turf = Turf([TEE])
+    turf = Turf([TEE.but('Depart2', straw=opt('straw', 0.16))])
     obstacles = [ball_obstacle(centre), club_obstacle(club), post_obstacle((0, 0), 0.004)]
     xy = spread(cam_pos, target, (900_000, 0.1, 6.0, 22, 1.0), [((0.0, -0.1), 0.8, 200_000)])
     xy = xy[xy[:, 0] * math.cos(phi) + xy[:, 1] * math.sin(phi) < edge - 0.01]
@@ -621,7 +626,7 @@ def stop_5():
     lens, fstop = opt('lens', 115), opt('fstop', 3.2)
     target = aim(cam_pos, centre, lens, 0.62, opt('fy', 0.60))
     cam = camera(cam_pos, target, lens=lens, fstop=fstop, focus=centre)
-    face_stamp(b, cam_pos, turn=7, roll=-5)
+    face_stamp(b, cam_pos, turn=-13, roll=-5)  # le tampon à gauche du reflet du soleil
 
     obstacles = [ball_obstacle(centre), club_obstacle(club)]
     xy = spread(cam_pos, target, (1_100_000, 0.1, 10.0, 21, 1.0), [((0.15, -0.2), 0.8, 380_000)])

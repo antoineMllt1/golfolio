@@ -883,3 +883,30 @@ def water(bounds, z=0.0, color=(0.010, 0.022, 0.024), ripple=0.35, scale=(0.5, 2
     nt.links.new(bump.outputs[0], bsdf(m).inputs['Normal'])
     assign(o, m)
     return o
+
+
+def turf_material(name='Gazon', dark=(0.030, 0.105, 0.012), light=(0.105, 0.25, 0.03), glow=(0.27, 0.55, 0.06), translucency=0.38, straw=0.06, straw_colour=(0.30, 0.30, 0.07)):
+    """Matière d'herbe, comme grass_material, mais dont on choisit la part de brins secs : la teinte de
+    chaque brin va de `dark` à `light`, et la part `straw` des brins tire vers la paille. (Dans
+    grass_material, presque tous les brins tirent vers la paille : c'est le gazon doré du départ.)"""
+    m = mat(name, light, rough=0.42, sheen_weight=0.25)
+    nt = m.node_tree
+    b = bsdf(m)
+    geo = nt.nodes.new('ShaderNodeNewGeometry')
+    ramp = nt.nodes.new('ShaderNodeValToRGB')
+    first, last = ramp.color_ramp.elements[0], ramp.color_ramp.elements[1]
+    first.color = (*dark, 1)
+    last.position = 1.0
+    last.color = (*straw_colour, 1)
+    green = ramp.color_ramp.elements.new(max(0.3, 1.0 - 1.6 * straw))
+    green.color = (*light, 1)
+    nt.links.new(geo.outputs['Random Per Island'], ramp.inputs[0])
+    nt.links.new(ramp.outputs[0], b.inputs['Base Color'])
+    tr = nt.nodes.new('ShaderNodeBsdfTranslucent')  # la lumière traverse le brin à contre-jour
+    tr.inputs['Color'].default_value = (*glow, 1)
+    mix = nt.nodes.new('ShaderNodeMixShader')
+    mix.inputs[0].default_value = translucency
+    nt.links.new(b.outputs[0], mix.inputs[1])
+    nt.links.new(tr.outputs[0], mix.inputs[2])
+    nt.links.new(mix.outputs[0], nt.nodes['Material Output'].inputs['Surface'])
+    return m
