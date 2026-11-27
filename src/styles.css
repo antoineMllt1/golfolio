@@ -2439,7 +2439,7 @@ h1 .role {
   .pager button::after {
     content: '';
     position: absolute;
-    inset: -20px -3px;
+    inset: -21px -5px;
   }
   .pager button.on {
     background: rgb(var(--pk));
@@ -2594,6 +2594,49 @@ h1 .role {
   }
   .leaf-list > .legend {
     display: none; /* la légende n'a pas la place à côté du plan */
+  }
+}
+/* Petits téléphones : l'en-tête garde le titre et la croix ; le plan cède de la place à la liste. */
+@media (max-width: 379px) {
+  .card-sheet .head-link {
+    display: none;
+  }
+}
+@media (max-width: 359px) {
+  .leaf {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+  .leaf-body {
+    grid-template-columns: 112px minmax(0, 1fr);
+    column-gap: 12px;
+  }
+  .leaf-plan .ink svg {
+    width: 100%;
+    height: auto;
+  }
+  .stroke .name {
+    font-size: 18px;
+  }
+  .stroke .dist,
+  .stroke .meta i {
+    grid-column: 2 / 4;
+  }
+  .stroke .meta i {
+    order: 6;
+    margin-top: 2px;
+  }
+  .stroke .meta i::before {
+    content: none;
+  }
+  .sign b {
+    font-size: 21px;
+  }
+  .sc td {
+    width: 22px;
+  }
+  .sc td:last-child {
+    width: 40px;
   }
 }
 /* Parcours, savoir-faire, certifications, contact : l'étiquette à gauche, le contenu à droite. */
