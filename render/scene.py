@@ -1471,10 +1471,11 @@ def par3_shot(first, last):
     a.turf.grow(outside(xy, (0, 0), 0.006), a.obstacles, seed=83)
     K.setup()
     impact = CUES[4]['impact']
-    # Le temps file vite après l'impact (chaque image dure 2,3 fois la précédente, 1,3 s de vol au
-    # plus) : la balle est à son sommet huit images après l'impact, et redescend sur le drapeau avant
-    # que le plan ne blanchisse.
-    clock = K.Clock(impact, slow=0.095 / K.CLUBS['fer7']['speed'], after=opt('after', 2.3), cap=opt('cap', 1.3))
+    # Le temps file vite après l'impact (chaque image dure 2,3 fois la précédente, 1,1 s de vol au
+    # plus) : la balle est à son sommet huit images après l'impact, et redescend vers le drapeau avant
+    # que le plan ne blanchisse ; à la coupe elle est encore à dix mètres du sol, le plan suivant la
+    # reçoit.
+    clock = K.Clock(impact, slow=0.095 / K.CLUBS['fer7']['speed'], after=opt('after', 2.3), cap=opt('cap', 1.1))
     K.swing(a.club, 'fer7', clock, first=first, reach=0.010, last=impact + 2)  # il disparaît dans le filé : le champ qui s'ouvre le reprendrait
     # Un fer 7 tenu, vent contre : 150 m de portée, un sommet vers 28 m, six secondes de vol. Il part
     # un rien à droite du drapeau et revient sur lui.
