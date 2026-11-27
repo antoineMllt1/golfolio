@@ -8,17 +8,14 @@ import urllib.request
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, 'assets')
 UA = {'User-Agent': 'render-client'}
-# Un ciel par arrêt, de l'aube au crépuscule.
+# Les deux ciels du film : une matinée pour le trou 1, une fin d'après-midi au bord d'un lac pour le trou 2.
 SKIES = {
-    'spruit_sunrise': '4k',  # 0  aube, brume
-    'lilienstein': '4k',  # 1  matin
-    'limpopo_golf_course': '4k',  # 2  matin clair, étang
-    'evening_meadow': '4k',  # 3  midi doux
-    'meadow_2': '4k',  # 4  fin d'après-midi
-    'rooitou_park': '4k',  # 5  heure dorée
-    'belfast_sunset': '4k',  # 6  coucher de soleil
-    'sunset_fairway': '4k',  # 7  crépuscule
+    'spruit_sunrise': '4k',  # trou 1 : aube, brume, arbres à contre-jour
+    'lakeside_sunrise': '4k',  # trou 2 : soleil bas et doré, lac, falaise ocre
 }
+# Essayés puis écartés (render/scene.py connaît la place de leur soleil, pour --sky) : meadow_2,
+# ehingen_hillside, je_gray_park, spaichingen_hill, rooitou_park, park_bench, lilienstein,
+# small_harbour_sunset, golf_course_sunrise.
 
 
 def get(url, path):

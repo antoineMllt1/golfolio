@@ -549,7 +549,9 @@ def view_3():
     putt : le trou passe juste à gauche de l'aplomb de la balle."""
     pos = V((G1_HOLE[0] + opt('back', 6.0), opt('side', 0.07), opt('height', 0.34)))
     lens = opt('lens', 540)
-    return View(pos, aim(pos, B3, lens, 0.62, opt('fy', 0.30)), lens, opt('fstop', 22.0), B3)
+    # Diaphragme très fermé : à cette focale, c'est ce qui garde au trou, trois mètres devant la balle,
+    # un contour lisible.
+    return View(pos, aim(pos, B3, lens, 0.62, opt('fy', 0.30)), lens, opt('fstop', 36.0), B3)
 
 
 def stop_2(pin=False):
