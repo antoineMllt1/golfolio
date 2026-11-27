@@ -54,7 +54,7 @@ export function ProjectCard({ stop, on, lang, t, onCase }) {
         <i className="sep" aria-hidden />
         <span className="golf">{pick(stop.label, lang)}</span>
       </R>
-      <R i={1} as="h2" data-focus tabIndex={-1}>
+      <R i={1} as="h2" className={stop.name.length > 20 ? 'long' : ''} data-focus tabIndex={-1}>
         {stop.name}
       </R>
       <R i={2} as="p" className="concept">

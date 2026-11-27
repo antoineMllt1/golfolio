@@ -1113,7 +1113,7 @@ kbd svg {
   background: rgb(var(--veil) / 0.7);
   color: var(--ink);
 }
-.legend {
+.keys-legend {
   display: flex;
   flex-wrap: wrap;
   align-content: center;
@@ -1127,12 +1127,12 @@ kbd svg {
   white-space: nowrap;
   animation: pv 0.2s var(--ease) both;
 }
-.legend li {
+.keys-legend li {
   display: inline-flex;
   align-items: center;
   gap: 7px;
 }
-.legend i {
+.keys-legend i {
   margin: 0 -3px;
   font-style: normal;
   color: var(--muted);
@@ -4164,6 +4164,11 @@ kbd svg {
     margin-top: 12px;
     font-size: clamp(2.35rem, 11.4vw, 3.2rem);
   }
+  /* un nom long tient sur une ligne : la fiche ne monte pas sur la balle */
+  .card h2.long {
+    font-size: min(8.1vw, 2.3rem);
+    white-space: nowrap;
+  }
   .concept {
     margin-top: 6px;
     font-size: 1.3rem;
@@ -4440,6 +4445,9 @@ kbd svg {
     margin-top: 10px;
     font-size: clamp(2.05rem, 9.8vw, 2.6rem);
   }
+  .card h2.long {
+    font-size: min(8.1vw, 2.3rem);
+  }
   .concept {
     margin-top: 4px;
     font-size: 1.16rem;
@@ -4539,6 +4547,9 @@ kbd svg {
     margin-top: 8px;
     font-size: 1.9rem;
   }
+  .card h2.long {
+    font-size: min(8.1vw, 1.9rem);
+  }
   .concept {
     font-size: 1.05rem;
   }
@@ -4574,16 +4585,14 @@ kbd svg {
 }
 /* Sous 350 px de large, la barre du haut ne tient plus : la carte de score devient un pictogramme. */
 @media (max-width: 350px) {
-  /* l'étiquette de la fiche passe sur deux lignes : le rang du projet, puis le golf */
+  /* l'étiquette de la fiche reste sur une ligne, plus serrée */
   .card .kicker {
-    white-space: normal;
-  }
-  .card .kicker span {
-    display: block;
-    white-space: nowrap;
+    font-size: 9px;
+    letter-spacing: 0.07em;
   }
   .card .kicker .sep {
-    display: none;
+    width: 8px;
+    margin: 0 6px 0 5px;
   }
   .brand {
     font-size: 19px;
@@ -4593,7 +4602,8 @@ kbd svg {
     width: 44px;
     padding: 0;
   }
-  .top-card span {
+  .top-card .long,
+  .top-card .short {
     display: none;
   }
   .top-card svg {

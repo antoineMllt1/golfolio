@@ -7,7 +7,7 @@ export default function Keys({ open, onToggle, t }) {
   return (
     <div className={`keys ${open ? 'open' : ''}`}>
       {open && (
-        <ul className="legend mono" id="legend" aria-label={t.shortcuts}>
+        <ul className="keys-legend mono" id="keys-legend" aria-label={t.shortcuts}>
           <li>
             <kbd>
               <ArrowDown />
@@ -43,7 +43,7 @@ export default function Keys({ open, onToggle, t }) {
           </li>
         </ul>
       )}
-      <button type="button" className="help mono" onClick={onToggle} aria-expanded={open} aria-controls="legend" aria-label={t.shortcuts} title={t.shortcuts}>
+      <button type="button" className="help mono" onClick={onToggle} aria-expanded={open} aria-controls="keys-legend" aria-label={t.shortcuts} title={t.shortcuts}>
         ?
       </button>
     </div>

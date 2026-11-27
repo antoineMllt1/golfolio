@@ -204,8 +204,9 @@ export class Film {
     if (this.portrait) {
       // Téléphone : la balle au milieu de la largeur et dans le tiers haut, la fiche occupe le bas.
       // L'image remonte donc, et le bas de l'écran reste dans la couleur du fond, sous le dégradé.
-      // Sur un petit téléphone la fiche monte plus haut : la balle aussi.
-      const ty = window.innerHeight < 720 ? 0.27 : 0.31;
+      // Sur un petit téléphone la fiche monte plus haut : la balle aussi. (Au-dessus de 700 px de haut,
+      // la bande du tour s'ajoute sous la fiche : la balle reste au-dessus de 0,3.)
+      const ty = window.innerHeight < 720 ? 0.27 : 0.285;
       return { dx: clamp(cw / 2 - fx * dw, cw - dw, 0), dy: clamp(ch * ty - fy * dh, -0.34 * ch, 0), dw, dh };
     }
     // Écran horizontal : voir ballAt.
