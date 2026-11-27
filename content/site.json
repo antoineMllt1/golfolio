@@ -322,7 +322,7 @@
       "sprinklers": [
         298,
         258,
-        221,
+        215,
         187,
         149,
         113,
@@ -352,11 +352,11 @@
         "en": "Late afternoon"
       },
       "wind": {
-        "kmh": 8,
+        "kmh": 12,
         "to": 180,
         "label": {
-          "fr": "Vent contre, 8\u00a0km/h",
-          "en": "Into the wind, 8\u00a0km/h"
+          "fr": "Vent contre, 12\u00a0km/h",
+          "en": "Into the wind, 12\u00a0km/h"
         }
       },
       "green": {
@@ -443,7 +443,7 @@
               "fr": "Zone",
               "en": "Landing"
             },
-            "244"
+            "250"
           ],
           [
             {
@@ -571,7 +571,7 @@
           "fr": "Fairway, dans la rosée",
           "en": "Fairway, in the dew"
         },
-        "toPin": 234,
+        "toPin": 228,
         "what": {
           "fr": "m au drapeau",
           "en": "m to the pin"
@@ -582,14 +582,14 @@
               "fr": "Entrée",
               "en": "Front"
             },
-            "217"
+            "211"
           ],
           [
             {
               "fr": "Fond",
               "en": "Back"
             },
-            "251"
+            "245"
           ]
         ],
         "facts": [
@@ -599,8 +599,8 @@
               "en": "Marker"
             },
             {
-              "fr": "Arroseur 221, moins 4",
-              "en": "Sprinkler 221, minus 4"
+              "fr": "Arroseur 215, moins 4",
+              "en": "Sprinkler 215, minus 4"
             }
           ],
           [
@@ -615,8 +615,8 @@
           ]
         ],
         "say": {
-          "fr": "Porter 204, laisser rouler jusqu’à l’entrée. Surtout pas long.",
-          "en": "Carry it 204, let it run to the front edge. Whatever happens, not long."
+          "fr": "Porter 198, laisser rouler jusqu’à l’entrée. Surtout pas long.",
+          "en": "Carry it 198, let it run to the front edge. Whatever happens, not long."
         }
       }
     },
@@ -1004,7 +1004,7 @@
               "fr": "Joue",
               "en": "Plays"
             },
-            "157"
+            "160"
           ],
           [
             {
@@ -1031,8 +1031,8 @@
               "en": "Wind"
             },
             {
-              "fr": "Contre, 8\u00a0km/h\u00a0: +\u00a05\u00a0m",
-              "en": "Into, 8\u00a0km/h: +5\u00a0m"
+              "fr": "Contre, 12\u00a0km/h\u00a0: +\u00a08\u00a0m",
+              "en": "Into, 12\u00a0km/h: +8\u00a0m"
             }
           ]
         ],
@@ -1252,9 +1252,9 @@
         "fr": "Mise en jeu",
         "en": "Tee shot"
       },
-      "carry": 235,
-      "roll": 9,
-      "total": 244,
+      "carry": 240,
+      "roll": 10,
+      "total": 250,
       "apex": 29,
       "shape": {
         "fr": "Léger fade",
@@ -1268,7 +1268,7 @@
         "fr": "Fairway",
         "en": "Fairway"
       },
-      "leaves": 234,
+      "leaves": 228,
       "sync": {
         "impact": 9,
         "land": 37
@@ -1283,9 +1283,9 @@
         "fr": "Attaque du green",
         "en": "Going for the green"
       },
-      "carry": 204,
+      "carry": 198,
       "roll": 11,
-      "total": 215,
+      "total": 209,
       "apex": 30,
       "lands": {
         "fr": "Avant-green, à 19\u00a0m du trou",

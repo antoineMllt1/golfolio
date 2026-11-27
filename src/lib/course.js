@@ -94,7 +94,7 @@ export function treeline(pts, step, side = 1) {
 // Trou 1 : par 5 en dog-leg droit. Mise en jeu au bois 3, fer long, approche roulée, putt.
 const H1 = (() => {
   const tee = [60, 0];
-  const s1 = [52, 244]; // la balle après la mise en jeu : fairway, centre gauche
+  const s1 = [54, 250]; // la balle après la mise en jeu : fairway, centre gauche
   const pin = [190, 433]; // le drapeau du jour
   const u = [(pin[0] - s1[0]) / dist(pin, s1), (pin[1] - s1[1]) / dist(pin, s1)]; // la ligne de jeu vers le drapeau
   const r = [u[1], -u[0]]; // à droite de la ligne de jeu
@@ -139,7 +139,7 @@ const H1 = (() => {
       { at: [-7, -6], to: 185, pct: 1 }, { at: [-9, 1.5], to: 162, pct: 2 }, { at: [-13, -2], to: 178, pct: 1 }, { at: [6, 10.5], to: 140, pct: 3 },
     ],
     crest: [[13, -9], [11, -2], [12, 5], [14.5, 9]], // la crête du fond
-    sprinklers: [[57, 150], [57, 194], [56.5, 236], [74, 266], [95, 297], [116, 327], [136, 356], [154, 383]],
+    sprinklers: [[57, 150], [57, 194], [58.5, 242], [74, 266], [95, 297], [116, 327], [136, 356], [154, 383]],
     north: 52,
   };
 })();

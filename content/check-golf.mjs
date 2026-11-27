@@ -88,6 +88,28 @@ ok(side('spendmap', 1) === Math.round(m1.balls[1].toBack), `SpendMap : fond du g
 ok(side('fnac-darty', 0) + side('fnac-darty', 1) === golf('fnac-darty').toPin, `Fnac Darty : avant-green ${side('fnac-darty', 0)} + green ${side('fnac-darty', 1)} = ${golf('fnac-darty').toPin} m au trou`);
 ok(side('revenue-engine', 1) === site.holes[1].marks[0].m, `Revenue Engine : eau à ${side('revenue-engine', 1)} m`);
 
+// --- les distances du joueur, données par lui : bois 3 à 250 m, fer 7 plein à 160 m par temps calme
+const PLAYER = { wood3: 250, iron7: 160 };
+const cited = (text) => [...String(text).matchAll(/\d+(?:[.,]\d+)?/g)].map((x) => num(x[0]));
+ok(site.next[0].total === PLAYER.wood3, `bois 3 : ${site.next[0].total} m au total, sa distance (${PLAYER.wood3})`);
+ok(side('revenue-engine', 0) === PLAYER.iron7, `Revenue Engine : joue ${side('revenue-engine', 0)} m, un fer 7 plein (${PLAYER.iron7})`);
+for (const lang of ['fr', 'en']) {
+  // « Arroseur 215, moins 4 » : l'arroseur existe, et le compte tombe sur l'entrée du green
+  const [n, minus] = cited(golf('spendmap').facts[0][1][lang]);
+  ok(site.holes[0].sprinklers.includes(n) && n - minus === side('spendmap', 0) && minus <= 5, `SpendMap (${lang}) : arroseur ${n}, moins ${minus} = entrée à ${side('spendmap', 0)} m`);
+  // « Porter 198 » : la portée du fer long
+  ok(cited(golf('spendmap').say[lang])[0] === site.next[1].carry, `SpendMap (${lang}) : la phrase du caddie cite la portée du fer long (${site.next[1].carry})`);
+  // « Poser 4 m après l'entrée » : la portée du wedge, moins l'avant-green
+  ok(side('fnac-darty', 0) + cited(golf('fnac-darty').say[lang])[0] === site.next[2].carry, `Fnac Darty (${lang}) : avant-green ${side('fnac-darty', 0)} + ${cited(golf('fnac-darty').say[lang])[0]} m = portée du wedge (${site.next[2].carry})`);
+  // « Contre, 12 km/h : + 8 m » : le vent du trou, et ce qu'il ajoute fait la distance jouée
+  const [kmh, plus] = cited(golf('revenue-engine').facts[1][1][lang]);
+  ok(kmh === site.holes[1].wind.kmh && cited(site.holes[1].wind.label[lang])[0] === kmh, `Revenue Engine (${lang}) : vent de ${kmh} km/h, comme sur la page du trou`);
+  ok(golf('revenue-engine').toPin + plus === side('revenue-engine', 0), `Revenue Engine (${lang}) : ${golf('revenue-engine').toPin} + ${plus} = joue ${side('revenue-engine', 0)}`);
+  // « Fer 7 plein » : le club de la phrase est celui du coup
+  const plain = (text) => text.toLowerCase().replace(/\s+/g, ' '); // les espaces insécables comptent comme des espaces
+  ok(plain(golf('revenue-engine').say[lang]).includes(plain(site.next[4].club[lang])), `Revenue Engine (${lang}) : la phrase du caddie nomme le ${site.next[4].club[lang]}`);
+}
+
 // --- la carte
 const card = golf('contact').card;
 const strokes = site.holes.reduce((a, h) => a + h.score, 0);
