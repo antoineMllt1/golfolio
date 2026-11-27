@@ -35,7 +35,7 @@
       "backToStart": "Retour au départ",
       "resume": "Reprendre le parcours",
       "skipFlight": "Aller à l’arrivée",
-      "inFlight": "Balle en vol",
+      "inFlight": "En vol",
       "stops": "Arrêts du parcours",
       "goTo": "Aller à",
       "hole": "Trou",
@@ -90,7 +90,38 @@
       "fullPortfolio": "Portfolio complet",
       "reducedMotion": "Animations réduites\u00a0: les coups s’enchaînent en fondu.",
       "noScript": "Ce site rejoue un film au fil des gestes. Sans JavaScript, tout le contenu reste lisible ci-dessous.",
-      "credits": "Film pré-rendu dans Blender. Ciels et panoramas\u00a0: Poly Haven, CC0."
+      "credits": "Film pré-rendu dans Blender. Ciels et panoramas\u00a0: Poly Haven, CC0.",
+      "yardageBook": "Carnet de parcours",
+      "caddieNotes": "Notes du caddie",
+      "travelled": "m parcourus",
+      "carry": "Portée",
+      "roll": "Roule",
+      "youAreHere": "Vous êtes ici",
+      "pin": "Drapeau",
+      "legendSprinkler": "Arroseur, distance à l’entrée",
+      "legendBunker": "Du départ\u00a0: l’atteindre · le passer",
+      "legendPin": "Drapeau\u00a0: profondeur · bord",
+      "legendSlope": "Pente\u00a0: sens de la descente, en\u00a0%",
+      "legendLand": "Point de chute, puis roule",
+      "openBook": "Ouvrir le carnet de parcours",
+      "flipTo": "Voir le trou",
+      "book": "Carnet",
+      "bookHint": "Un point ou une ligne mène à son arrêt",
+      "closeBook": "Fermer le carnet",
+      "fold": "Replier le carnet",
+      "unfold": "Déplier le carnet",
+      "holesAndStops": "Trous et arrêts",
+      "target": "Zone visée",
+      "holed": "Dans le trou",
+      "underPar": "sous le par",
+      "remains": "Reste",
+      "layout": "Tracé",
+      "light": "Lumière",
+      "wind": "Vent",
+      "kmh": "km/h",
+      "backToBall": "Revenir à la balle",
+      "arrived": "Coup {n}\u00a0: {total}, {lie}. Reste {leaves}.",
+      "arrivedHoled": "Coup {n}\u00a0: {total}, {lie}. {score}."
     },
     "en": {
       "skip": "Skip to content",
@@ -116,7 +147,7 @@
       "backToStart": "Back to the tee",
       "resume": "Back to the course",
       "skipFlight": "Skip to landing",
-      "inFlight": "Ball in flight",
+      "inFlight": "In the air",
       "stops": "Course stops",
       "goTo": "Go to",
       "hole": "Hole",
@@ -171,19 +202,174 @@
       "fullPortfolio": "Full portfolio",
       "reducedMotion": "Reduced motion: shots cross-fade.",
       "noScript": "This site replays a film as you scroll. Without JavaScript, all the content remains readable below.",
-      "credits": "Film pre-rendered in Blender. Skies and panoramas: Poly Haven, CC0."
+      "credits": "Film pre-rendered in Blender. Skies and panoramas: Poly Haven, CC0.",
+      "yardageBook": "Yardage book",
+      "caddieNotes": "Caddie’s notes",
+      "travelled": "m travelled",
+      "carry": "Carry",
+      "roll": "Roll",
+      "youAreHere": "You are here",
+      "pin": "Pin",
+      "legendSprinkler": "Sprinkler, distance to the front edge",
+      "legendBunker": "From the tee: to reach · to carry",
+      "legendPin": "Pin: depth · from the edge",
+      "legendSlope": "Slope: direction of fall, in %",
+      "legendLand": "Landing spot, then roll",
+      "openBook": "Open the yardage book",
+      "flipTo": "Show hole",
+      "book": "Book",
+      "bookHint": "Any dot or line takes you to its stop",
+      "closeBook": "Close the yardage book",
+      "fold": "Fold the yardage book",
+      "unfold": "Unfold the yardage book",
+      "holesAndStops": "Holes and stops",
+      "target": "Target",
+      "holed": "Holed",
+      "underPar": "under par",
+      "remains": "Left",
+      "layout": "Layout",
+      "light": "Light",
+      "wind": "Wind",
+      "kmh": "km/h",
+      "backToBall": "Back to the ball",
+      "arrived": "Shot {n}: {total}, {lie}. {leaves} left.",
+      "arrivedHoled": "Shot {n}: {total}, {lie}. {score}."
     }
   },
   "holes": [
     {
       "n": 1,
       "par": 5,
-      "length": 478
+      "length": 478,
+      "shape": {
+        "fr": "Dog-leg droit",
+        "en": "Dogleg right"
+      },
+      "brief": {
+        "fr": "Dog-leg droit",
+        "en": "Dogleg right"
+      },
+      "light": {
+        "fr": "Aube, brume",
+        "en": "Dawn, mist"
+      },
+      "wind": {
+        "kmh": 0,
+        "label": {
+          "fr": "Vent nul",
+          "en": "No wind"
+        }
+      },
+      "green": {
+        "depth": 34,
+        "width": 28
+      },
+      "pin": {
+        "on": 17,
+        "side": 7,
+        "from": {
+          "fr": "D",
+          "en": "R"
+        }
+      },
+      "bunkers": [
+        {
+          "id": "fairway-droite",
+          "reach": 229,
+          "carry": 250
+        },
+        {
+          "id": "fairway-gauche",
+          "reach": 259
+        }
+      ],
+      "sprinklers": [
+        298,
+        258,
+        221,
+        187,
+        149,
+        113,
+        78,
+        45
+      ],
+      "score": 4,
+      "scoreName": {
+        "fr": "Birdie",
+        "en": "Birdie"
+      }
     },
     {
       "n": 2,
       "par": 3,
-      "length": 152
+      "length": 152,
+      "shape": {
+        "fr": "Tout en portée, au-dessus de l’eau",
+        "en": "All carry, over the water"
+      },
+      "brief": {
+        "fr": "Tout en portée",
+        "en": "All carry"
+      },
+      "light": {
+        "fr": "Fin d’après-midi",
+        "en": "Late afternoon"
+      },
+      "wind": {
+        "kmh": 8,
+        "to": 180,
+        "label": {
+          "fr": "Vent contre, 8\u00a0km/h",
+          "en": "Into the wind, 8\u00a0km/h"
+        }
+      },
+      "green": {
+        "depth": 28,
+        "width": 24
+      },
+      "pin": {
+        "on": 14,
+        "side": 5,
+        "from": {
+          "fr": "G",
+          "en": "L"
+        }
+      },
+      "marks": [
+        {
+          "m": 130,
+          "label": {
+            "fr": "eau",
+            "en": "water"
+          }
+        },
+        {
+          "m": 138,
+          "label": {
+            "fr": "entrée",
+            "en": "front"
+          }
+        },
+        {
+          "m": 152,
+          "label": {
+            "fr": "drapeau",
+            "en": "pin"
+          }
+        },
+        {
+          "m": 166,
+          "label": {
+            "fr": "fond",
+            "en": "back"
+          }
+        }
+      ],
+      "score": 2,
+      "scoreName": {
+        "fr": "Birdie",
+        "en": "Birdie"
+      }
     }
   ],
   "stops": [
@@ -203,6 +389,60 @@
       "body": {
         "fr": "Je transforme la donnée en décisions et les tâches répétitives en workflows automatisés. En alternance chez Sage en 2026–2027, côté data et IA pour les équipes Customer Success.",
         "en": "I turn data into decisions and repetitive tasks into automated workflows. Apprentice at Sage for 2026–2027, working on data and AI for the Customer Success teams."
+      },
+      "golf": {
+        "view": "hole",
+        "lie": {
+          "fr": "Départ, tee bas",
+          "en": "Tee box, teed low"
+        },
+        "toPin": 478,
+        "what": {
+          "fr": "m, par 5",
+          "en": "m, par 5"
+        },
+        "side": [
+          [
+            {
+              "fr": "Zone",
+              "en": "Landing"
+            },
+            "244"
+          ],
+          [
+            {
+              "fr": "Bunker g.",
+              "en": "Left bunker"
+            },
+            "259"
+          ]
+        ],
+        "facts": [
+          [
+            {
+              "fr": "Lie",
+              "en": "Lie"
+            },
+            {
+              "fr": "Départ, tee bas",
+              "en": "Tee box, teed low"
+            }
+          ],
+          [
+            {
+              "fr": "Air",
+              "en": "Air"
+            },
+            {
+              "fr": "Frais\u00a0: la balle porte moins",
+              "en": "Cool: the ball carries shorter"
+            }
+          ]
+        ],
+        "say": {
+          "fr": "Bois 3, léger fade. Rester court du bunker de gauche.",
+          "en": "3 wood, soft fade. Stay short of the left bunker."
+        }
       }
     },
     {
@@ -287,6 +527,60 @@
         "role": {
           "fr": "Conception et construction de l’architecture n8n\u00a0: quatre pipelines, de l’ingestion des factures à l’agent conversationnel.",
           "en": "Design and build of the n8n architecture: four pipelines, from invoice ingestion to the conversational agent."
+        }
+      },
+      "golf": {
+        "view": "approach",
+        "lie": {
+          "fr": "Fairway, dans la rosée",
+          "en": "Fairway, in the dew"
+        },
+        "toPin": 234,
+        "what": {
+          "fr": "m au drapeau",
+          "en": "m to the pin"
+        },
+        "side": [
+          [
+            {
+              "fr": "Entrée",
+              "en": "Front"
+            },
+            "217"
+          ],
+          [
+            {
+              "fr": "Fond",
+              "en": "Back"
+            },
+            "251"
+          ]
+        ],
+        "facts": [
+          [
+            {
+              "fr": "Repère",
+              "en": "Marker"
+            },
+            {
+              "fr": "Arroseur 221, moins 4",
+              "en": "Sprinkler 221, minus 4"
+            }
+          ],
+          [
+            {
+              "fr": "Lie",
+              "en": "Lie"
+            },
+            {
+              "fr": "Fairway, dans la rosée",
+              "en": "Fairway, in the dew"
+            }
+          ]
+        ],
+        "say": {
+          "fr": "Porter 204, laisser rouler jusqu’à l’entrée. Surtout pas long.",
+          "en": "Carry it 204, let it run to the front edge. Whatever happens, not long."
         }
       }
     },
@@ -373,6 +667,60 @@
           "fr": "Projet mené dans le cadre du BDD Licter × Fnac Darty\u00a0: pipeline complet construit en 5\u00a0jours, du scraping au dashboard.",
           "en": "Built for the Licter × Fnac Darty BDD: the full pipeline in 5\u00a0days, from scraping to dashboard."
         }
+      },
+      "golf": {
+        "view": "green",
+        "lie": {
+          "fr": "Avant-green, herbe rase",
+          "en": "Apron, tight lie"
+        },
+        "toPin": 19,
+        "what": {
+          "fr": "m au trou",
+          "en": "m to the hole"
+        },
+        "side": [
+          [
+            {
+              "fr": "Avant-green",
+              "en": "Apron"
+            },
+            "2"
+          ],
+          [
+            {
+              "fr": "Green",
+              "en": "Green"
+            },
+            "17"
+          ]
+        ],
+        "facts": [
+          [
+            {
+              "fr": "Lie",
+              "en": "Lie"
+            },
+            {
+              "fr": "Avant-green, herbe rase",
+              "en": "Apron, tight lie"
+            }
+          ],
+          [
+            {
+              "fr": "Green",
+              "en": "Green"
+            },
+            {
+              "fr": "En montée, 2\u00a0%",
+              "en": "Uphill, 2%"
+            }
+          ]
+        ],
+        "say": {
+          "fr": "Poser 4\u00a0m après l’entrée, laisser rouler. Rester sous le trou.",
+          "en": "Land it 4\u00a0m on, let it release. Stay below the hole."
+        }
       }
     },
     {
@@ -457,6 +805,63 @@
           "fr": "Construction du pipeline n8n complet en 5\u00a0étapes, de la collecte des mots-clés à la publication, pendant le hackathon PayFit.",
           "en": "Built the complete 5-step n8n pipeline, from keyword collection to publishing, during the PayFit hackathon."
         }
+      },
+      "golf": {
+        "view": "green",
+        "lie": {
+          "fr": "Green, sous le trou",
+          "en": "On the green, below the hole"
+        },
+        "toPin": 3,
+        "what": {
+          "fr": "m pour birdie",
+          "en": "m for birdie"
+        },
+        "side": [
+          [
+            {
+              "fr": "Montée",
+              "en": "Uphill"
+            },
+            "2 %"
+          ],
+          [
+            {
+              "fr": "Ligne",
+              "en": "Line"
+            },
+            {
+              "fr": "bord g.",
+              "en": "left edge"
+            }
+          ]
+        ],
+        "facts": [
+          [
+            {
+              "fr": "Lie",
+              "en": "Lie"
+            },
+            {
+              "fr": "Green, sous le trou",
+              "en": "On the green, below the hole"
+            }
+          ],
+          [
+            {
+              "fr": "Ligne",
+              "en": "Line"
+            },
+            {
+              "fr": "Bord gauche, ferme",
+              "en": "Left edge, firm"
+            }
+          ]
+        ],
+        "say": {
+          "fr": "En montée\u00a0: ne pas la laisser courte.",
+          "en": "Uphill: don’t leave it short."
+        }
       }
     },
     {
@@ -478,6 +883,7 @@
         "en": "Tool orchestration"
       },
       "name": "Revenue Engine Hackathon",
+      "short": "Revenue Engine",
       "sentence": {
         "fr": "Un moteur de prospection IA pour les ESN, construit en une journée\u00a0: lemlist repère, Clay trie, HubSpot reçoit.",
         "en": "An AI prospecting engine for IT services firms, built in one day: lemlist spots, Clay filters, HubSpot receives."
@@ -540,6 +946,60 @@
         "role": {
           "fr": "Hackathon HubSpot × Clay × lemlist × OpenAI, en une journée, avec l’équipe Sage. J’ai construit la méthode Spy Influence\u00a0; mon binôme Sales a construit le scoring des entreprises\u00a0: une note sur 1000 face au profil client idéal, puis un classement en tiers 1, 2 ou 3.",
           "en": "HubSpot × Clay × lemlist × OpenAI hackathon, in one day, with the Sage team. I built the Spy Influence method; my Sales teammate built the company scoring: a score out of 1,000 against the ideal customer profile, then tiers 1, 2 or 3."
+        }
+      },
+      "golf": {
+        "view": "hole",
+        "lie": {
+          "fr": "Départ, tee au ras du sol",
+          "en": "Tee box, teed just off the ground"
+        },
+        "toPin": 152,
+        "what": {
+          "fr": "m au drapeau",
+          "en": "m to the pin"
+        },
+        "side": [
+          [
+            {
+              "fr": "Joue",
+              "en": "Plays"
+            },
+            "157"
+          ],
+          [
+            {
+              "fr": "Eau",
+              "en": "Water"
+            },
+            "130"
+          ]
+        ],
+        "facts": [
+          [
+            {
+              "fr": "Lie",
+              "en": "Lie"
+            },
+            {
+              "fr": "Départ, tee au ras du sol",
+              "en": "Tee box, teed just off the ground"
+            }
+          ],
+          [
+            {
+              "fr": "Vent",
+              "en": "Wind"
+            },
+            {
+              "fr": "Contre, 8\u00a0km/h\u00a0: +\u00a05\u00a0m",
+              "en": "Into, 8\u00a0km/h: +5\u00a0m"
+            }
+          ]
+        ],
+        "say": {
+          "fr": "Fer 7 plein, 2\u00a0m à droite du drapeau. Court ou à gauche\u00a0: l’eau.",
+          "en": "Full 7 iron, 2\u00a0m right of the pin. Short or left is wet."
         }
       }
     },
@@ -624,6 +1084,63 @@
           "fr": "Conception et construction de la plateforme, jusqu’à la mise en ligne de la démo.",
           "en": "Design and build of the platform, through to putting the demo online."
         }
+      },
+      "golf": {
+        "view": "green",
+        "lie": {
+          "fr": "Green, à hauteur du drapeau",
+          "en": "On the green, pin high"
+        },
+        "toPin": 1.5,
+        "what": {
+          "fr": "m pour birdie",
+          "en": "m for birdie"
+        },
+        "side": [
+          [
+            {
+              "fr": "Descente",
+              "en": "Downhill"
+            },
+            "1 %"
+          ],
+          [
+            {
+              "fr": "Ligne",
+              "en": "Line"
+            },
+            {
+              "fr": "int. droit",
+              "en": "inside right"
+            }
+          ]
+        ],
+        "facts": [
+          [
+            {
+              "fr": "Lie",
+              "en": "Lie"
+            },
+            {
+              "fr": "Green, à hauteur du drapeau",
+              "en": "On the green, pin high"
+            }
+          ],
+          [
+            {
+              "fr": "Ligne",
+              "en": "Line"
+            },
+            {
+              "fr": "Intérieur droit, balle mourante",
+              "en": "Inside right, dying pace"
+            }
+          ]
+        ],
+        "say": {
+          "fr": "Juste la mettre en route.",
+          "en": "Just get it started."
+        }
       }
     },
     {
@@ -660,7 +1177,27 @@
           "label": "Portfolio complet",
           "url": "https://antoine-millot.up.railway.app"
         }
-      ]
+      ],
+      "golf": {
+        "view": "green",
+        "lie": {
+          "fr": "Dans le trou",
+          "en": "In the hole"
+        },
+        "toPin": 0,
+        "card": {
+          "strokes": 6,
+          "toPar": -2,
+          "label": {
+            "fr": "Carte signée",
+            "en": "Card signed"
+          },
+          "line": {
+            "fr": "6 coups, 2 sous le par",
+            "en": "6 shots, 2 under par"
+          }
+        }
+      }
     }
   ],
   "next": [
@@ -672,6 +1209,27 @@
       "shot": {
         "fr": "Mise en jeu",
         "en": "Tee shot"
+      },
+      "carry": 235,
+      "roll": 9,
+      "total": 244,
+      "apex": 29,
+      "shape": {
+        "fr": "Léger fade",
+        "en": "Soft fade"
+      },
+      "lands": {
+        "fr": "Fairway, centre gauche",
+        "en": "Fairway, left centre"
+      },
+      "lie": {
+        "fr": "Fairway",
+        "en": "Fairway"
+      },
+      "leaves": 234,
+      "sync": {
+        "impact": 9,
+        "land": 37
       }
     },
     {
@@ -682,6 +1240,23 @@
       "shot": {
         "fr": "Attaque du green",
         "en": "Going for the green"
+      },
+      "carry": 204,
+      "roll": 11,
+      "total": 215,
+      "apex": 30,
+      "lands": {
+        "fr": "Avant-green, à 19\u00a0m du trou",
+        "en": "Front apron, 19\u00a0m from the hole"
+      },
+      "lie": {
+        "fr": "Avant-green",
+        "en": "Apron"
+      },
+      "leaves": 19,
+      "sync": {
+        "impact": 9,
+        "land": 36
       }
     },
     {
@@ -692,6 +1267,23 @@
       "shot": {
         "fr": "Approche roulée",
         "en": "Chip and run"
+      },
+      "carry": 6,
+      "roll": 10,
+      "total": 16,
+      "apex": 1.5,
+      "lands": {
+        "fr": "Green, 3\u00a0m sous le trou",
+        "en": "On the green, 3\u00a0m below the hole"
+      },
+      "lie": {
+        "fr": "Green, à 3\u00a0m",
+        "en": "Green, 3\u00a0m away"
+      },
+      "leaves": 3,
+      "sync": {
+        "impact": 8,
+        "land": 16
       }
     },
     {
@@ -702,6 +1294,21 @@
       "shot": {
         "fr": "Putt pour birdie",
         "en": "Putt for birdie"
+      },
+      "total": 3,
+      "lands": {
+        "fr": "Dans le trou\u00a0: birdie",
+        "en": "Holed: birdie"
+      },
+      "lie": {
+        "fr": "Dans le trou",
+        "en": "Holed"
+      },
+      "leaves": 0,
+      "sync": {
+        "impact": 6,
+        "land": 20,
+        "pageTurn": 28
       }
     },
     {
@@ -712,6 +1319,23 @@
       "shot": {
         "fr": "Au-dessus de l’eau",
         "en": "Over the water"
+      },
+      "carry": 150,
+      "roll": 2,
+      "total": 152,
+      "apex": 32,
+      "lands": {
+        "fr": "Green, à 1,5\u00a0m, à hauteur du drapeau",
+        "en": "On the green, 1.5\u00a0m, pin high"
+      },
+      "lie": {
+        "fr": "Green, à 1,5\u00a0m",
+        "en": "Green, 1.5\u00a0m away"
+      },
+      "leaves": 1.5,
+      "sync": {
+        "impact": 9,
+        "land": 36
       }
     },
     {
@@ -722,6 +1346,20 @@
       "shot": {
         "fr": "Le dernier putt",
         "en": "The last putt"
+      },
+      "total": 1.5,
+      "lands": {
+        "fr": "Dans le trou\u00a0: birdie",
+        "en": "Holed: birdie"
+      },
+      "lie": {
+        "fr": "Dans le trou",
+        "en": "Holed"
+      },
+      "leaves": 0,
+      "sync": {
+        "impact": 8,
+        "land": 30
       }
     }
   ],
