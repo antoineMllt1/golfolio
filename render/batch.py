@@ -4,6 +4,7 @@
 #   python render/batch.py --dry                   # ce qui reste à faire et le temps estimé, sans rien calculer
 #   python render/batch.py --order h1,l0:9,l0:17   # quelques images seulement, dans cet ordre
 #   python render/batch.py --order l2,l5 --leg-samples 48 --leg-noise 0.03
+#   python render/batch.py --dry --stop-scale 133 --leg-samples 16 --out /tmp/vide   # chiffrer d'autres réglages
 #
 # Chaque image est calculée par render/scene.py, lancé ici en sous-processus (un par arrêt, un par
 # trajet : les plans d'un trajet gardent leurs données d'une image à l'autre). Les images vont dans
@@ -33,10 +34,15 @@ SCENE = os.path.join(HERE, 'scene.py')
 LEG_FRAMES = 44
 ORDER = 'h0,h1,h2,h3,h4,h5,h6,l0,l1,l2,l3,l4,l5'
 
-# Durées de départ, en secondes par image, mesurées sur cette machine (4 cœurs, pas de carte
-# graphique) aux réglages par défaut ci-dessous : un arrêt (construction comprise) ; une image de
-# chaque trajet. Le journal les remplace dès qu'il a des mesures.
-DUREES = {'h': 1980.0, 'l0': 200.0, 'l1': 200.0, 'l2': 200.0, 'l3': 200.0, 'l4': 200.0, 'l5': 200.0}
+# Durées de départ, en secondes par image, sur cette machine (4 cœurs, pas de carte graphique) aux
+# réglages par défaut ci-dessous. Un arrêt : mesuré sur l'arrêt 1 (1977 s, construction comprise). Une
+# image de chaque trajet : moyenne estimée, le profil image par image vient du brouillon animé et
+# l'échelle de six images mesurées en 1920 × 1080 (de 26 s pour un ciel à 256 s pour un gros plan sur
+# l'herbe, à 64 échantillons ; moitié moins à 32). D'autres réglages : la durée suit le nombre de
+# pixels et d'échantillons. Le journal corrige ces durées à mesure que les images arrivent.
+DUREES = {'h': 1980.0, 'l0': 72.0, 'l1': 76.0, 'l2': 135.0, 'l3': 74.0, 'l4': 49.0, 'l5': 127.0}
+REGLAGES = {'h': (200, 128), 'l': (100, 32)}  # échelle et échantillons auxquels DUREES a été établi
+POIDS = 4  # ce que pèse la durée de départ face aux mesures du journal, en nombre d'images
 
 ap = argparse.ArgumentParser(description='Rend le film en haute définition, en sautant ce qui existe déjà.')
 ap.add_argument('--order', default=ORDER, help='quoi rendre et dans quel ordre (voir en tête du fichier)')
@@ -47,7 +53,7 @@ ap.add_argument('--stop-scale', type=int, default=200, help='arrêts : 200 → 3
 ap.add_argument('--stop-samples', type=int, default=128)
 ap.add_argument('--stop-noise', type=float, default=0.02, help="arrêts : seuil de bruit de l'échantillonnage adaptatif")
 ap.add_argument('--leg-scale', type=int, default=100, help='trajets : 100 → 1920 × 1080, 67 → 1286 × 724')
-ap.add_argument('--leg-samples', type=int, default=64)
+ap.add_argument('--leg-samples', type=int, default=32)
 ap.add_argument('--leg-noise', type=float, default=0.02, help="trajets : seuil de bruit de l'échantillonnage adaptatif")
 ap.add_argument('--shutter', type=float, default=None, help='trajets : obturateur du flou de mouvement (0,5 par défaut)')
 ap.add_argument('--blur-steps', type=int, default=None, help='trajets : étapes du flou de mouvement')
@@ -120,31 +126,33 @@ def missing(job):
 
 
 def measured():
-    """Durée moyenne d'une image par famille (« h », « l0 » … « l5 »), d'après le journal."""
-    sums = {}
+    """Durée d'une image par famille (« h », « l0 » … « l5 ») : la durée de départ, ramenée aux réglages
+    demandés, puis corrigée par les durées du journal de ce dossier."""
+    mean = {}
+    for key, sec in DUREES.items():
+        scale0, samples0 = REGLAGES[key[0]]
+        scale, samples = (args.stop_scale, args.stop_samples) if key == 'h' else (args.leg_scale, args.leg_samples)
+        mean[key] = [sec * (scale / scale0) ** 2 * samples / samples0 * POIDS, POIDS]
     if os.path.exists(JOURNAL):
         with open(JOURNAL, encoding='utf8') as fh:
             for line in fh:
                 m = re.search(r'\b(h)_\d\d\.png\s+(\d+) s|\b(l\d)_\d{4}\.png\s+(\d+) s', line)
                 if m:
                     key, sec = (m.group(1), m.group(2)) if m.group(1) else (m.group(3), m.group(4))
-                    s = sums.setdefault(key, [0.0, 0])
-                    s[0] += float(sec)
-                    s[1] += 1
-    return {k: s / n for k, (s, n) in sums.items()}
+                    mean[key][0] += float(sec)
+                    mean[key][1] += 1
+    return {k: s / n for k, (s, n) in mean.items()}
 
 
-def remaining(jobs, done=()):
+def remaining(jobs):
     """Secondes et images qui restent, toutes tâches confondues."""
-    mean = {**DUREES, **measured()}
+    mean = measured()
     seconds, images = 0.0, 0
     for kind, k, frames in jobs:
         for n in frames:
-            path = stop_path(n) if kind == 'h' else leg_path(k, n)
-            if path in done or whole(path, size_of(kind)):
-                continue
-            seconds += mean['h' if kind == 'h' else f'l{k}']
-            images += 1
+            if not whole(stop_path(n) if kind == 'h' else leg_path(k, n), size_of(kind)):
+                seconds += mean['h' if kind == 'h' else f'l{k}']
+                images += 1
     return seconds, images
 
 
@@ -236,7 +244,6 @@ def locked():
 
 
 def main():
-    os.makedirs(OUT, exist_ok=True)
     jobs = parse(args.order)
     seconds, images = remaining(jobs)
     total = sum(len(frames) for _, _, frames in jobs)
@@ -248,6 +255,9 @@ def main():
                 kind, k, _ = job
                 print(('  arrêt ' if kind == 'h' else '  trajet ') + f'{k} : ' + ((f'{len(todo)} images ({todo[0]} à {todo[-1]})' if len(todo) > 1 else f'image {todo[0]}') if kind == 'l' else '1 image'))
         return 0
+    if not images:
+        return 0  # tout est là : rien à lancer, rien à noter
+    os.makedirs(OUT, exist_ok=True)
     if locked():
         raise SystemExit(f'un lot tourne déjà dans {OUT} (voir {VERROU})')
     with open(VERROU, 'w') as fh:

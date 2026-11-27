@@ -262,6 +262,12 @@ def look(exposure, warmth=6500.0):
 
 
 # ---------------------------------------------------------------- caméra
+# Essai (--set near=0.017) : le plan net avancé d'autant de mètres vers la caméra. Le point net d'un
+# arrêt est le centre de la balle ; son tampon, 2 cm plus près, est alors flou d'une dizaine de pixels
+# en 3840 × 2160. À 0, rien ne change. Les suivis de caméra (K.track) ne le lisent pas.
+NEAR = opt('near', 0.0)
+
+
 def camera(pos, target, lens, fstop, focus):
     cd = bpy.data.cameras.new('Cam')
     cd.lens = lens
@@ -270,7 +276,7 @@ def camera(pos, target, lens, fstop, focus):
     cd.dof.use_dof = True
     cd.dof.aperture_fstop = fstop
     cd.dof.aperture_blades = 9
-    cd.dof.focus_distance = (V(focus) - V(pos)).length
+    cd.dof.focus_distance = (V(focus) - V(pos)).length - NEAR
     cam = P.link(bpy.data.objects.new('Camera', cd))
     cam.location = pos
     P.look_at(cam, target)
@@ -931,7 +937,7 @@ def key_view(cam, frame, view):
     cam.keyframe_insert('location', frame=frame)
     cam.keyframe_insert('rotation_euler', frame=frame)
     cam.data.lens = view.lens
-    cam.data.dof.focus_distance = (view.focus - view.pos).length
+    cam.data.dof.focus_distance = (view.focus - view.pos).length - NEAR
     cam.data.dof.aperture_fstop = view.fstop
     cam.data.keyframe_insert('lens', frame=frame)
     cam.data.dof.keyframe_insert('focus_distance', frame=frame)
