@@ -13,7 +13,8 @@
 #   fly = K.Flight.of('long', centre)            sa trajectoire réelle (mètres, secondes)
 #   K.launch(ball, fly, clock, last=21)          écrasée à l'impact, puis en vol
 #   K.burst(K.divot(turf_mat), …)                la motte, les brins, le tee qui sautent
-#   K.Trace(fly, cam_pos, lens)                  la trace ambre de la balle dans le ciel
+#   K.Trace(fly, cam_pos, lens)                  la trace ambre de la balle dans le ciel (fly : un vol,
+#                                                ou K.Path(images, places) pour la chute d'une arrivée)
 #   K.track(cam, frames, pos, target, …)         la caméra, image par image
 #   K.arrival(…)                                 la fin du vol vue de l'arrêt suivant : chute, rebonds, roule
 #   K.settle(club, 39, 44, lie)                  le club du coup suivant vient se poser derrière la balle
@@ -64,9 +65,12 @@ def ease_out(u, power=3.0):
     return 1.0 - (1.0 - np.clip(u, 0.0, 1.0)) ** power
 
 
-def half_frames(first, last):
-    """Les instants où poser les clés : chaque image et chaque demi-image."""
-    return [first + 0.5 * k for k in range(int(round((last - first) * 2)) + 1)]
+def half_frames(first, last, step=0.5):
+    """Les instants où poser les clés : chaque image et chaque demi-image. step=0.25 : chaque quart
+    d'image, pour un plan où la balle passe tout près d'une caméra qui se retourne (l'obturateur
+    s'ouvre un quart d'image avant l'image et se ferme un quart d'image après : avec une clé à ces
+    deux instants, la visée reste sur la balle pendant toute la pose et elle ne bave pas)."""
+    return [first + step * k for k in range(int(round((last - first) / step)) + 1)]
 
 
 # ---------------------------------------------------------------- le temps
@@ -211,22 +215,23 @@ class Flight:
         return self.origin + np.stack([x, y, z], axis=-1)
 
 
-def launch(ball, flight, clock, first=1, last=None, squash=0.85):
+def launch(ball, flight, clock, first=1, last=None, squash=0.85, step=0.5):
     """La balle attend, s'écrase à l'impact (une image, puis une autre où elle se reforme en partant),
-    et vole. Renvoie {image: place} pour la caméra."""
+    et vole. Renvoie {image: place} pour la caméra. step : écart entre deux clés (voir half_frames)."""
     impact = clock.impact
     last = last if last is not None else impact + 8
     rest = V(flight.origin)
     ball.key(first, rest)
     ball.key(impact - 0.12, rest)  # elle ne bouge pas avant que la face n'arrive
     ball.turn(impact, ball.rest)
-    where = {f: rest.copy() for f in half_frames(first, impact - 0.5)}
-    for f in half_frames(impact, last):
+    where = {f: rest.copy() for f in half_frames(first, impact - step, step)}
+    for f in half_frames(impact, last, step):
         k = f - impact
         p = V(flight.at(clock.at(f)))
         if k == 0:
             p = rest + V((0.5 * (1 - squash) * ball.radius, 0, 0))  # le dos de la balle est enfoncé par la face
-        ball.key(f, p, squash if k == 0 else (0.5 + 0.5 * squash if k == 0.5 else (1.06 if k == 1 else 1.0)))
+        # Écrasée à l'impact, à moitié reformée une demi-image après, un rien étirée à l'image suivante.
+        ball.key(f, p, float(np.interp(k, [0.0, 0.5, 1.0, 1.5], [squash, 0.5 + 0.5 * squash, 1.06, 1.0])))
         where[f] = p
     # En vol la balle tourne sur elle-même (effet rétro) : son tampon ne reste pas figé face à nous.
     spin = V((0, -1, 0))
@@ -268,6 +273,18 @@ def arrival(rest, first, land, stop, fall=(1.15, 0.95), hops=((2.0, 3.0, 0.45), 
             back = run * (1 - u) ** 2
         points.append(rest - way * back + V((0, 0, z)))
     return frames, points
+
+
+class Path:
+    """Un chemin déjà calculé (les instants et les places que renvoie arrival), à donner à Trace à la
+    place d'un vol : le « temps » y est le numéro d'image."""
+
+    def __init__(self, frames, points):
+        self.frames, self.points = np.array(frames, dtype=float), np.array([tuple(p) for p in points], dtype=float)
+
+    def at(self, t):
+        t = np.asarray(t, dtype=float)
+        return np.stack([np.interp(t, self.frames, self.points[:, k]) for k in range(3)], axis=-1)
 
 
 # ---------------------------------------------------------------- ce qui saute
@@ -353,18 +370,32 @@ def burst(objects, origin, clock, last, speed=(4.0, 10.0), lift=(25.0, 60.0), fa
 
 
 # ---------------------------------------------------------------- la trace de la balle dans le ciel
+# L'ambre du traceur du site (#f2a93b). AgX délave les couleurs vives en les éclaircissant : c'est
+# cet orangé plus rouge, émis à la force amber(exposition), qui s'affiche au plus près (vers #e8a060).
+AMBER = (1.0, 0.25, 0.0)
+
+
+def amber(exposure, glow=2.4):
+    """Force d'émission qui garde la trace ambre à l'écran pour une exposition donnée (glow : la force
+    à −0,6, l'exposition du plan large). À rappeler image par image si l'exposition monte (Trace.glow)."""
+    return glow * 2.0 ** (-0.6 - exposure)
+
+
 class Trace:
     """La trajectoire en trait lumineux ambre, de largeur apparente constante, qui se dessine derrière
     la balle : au loin la balle n'est plus qu'un point, c'est sa trace qu'on suit. `flight` : le vol ;
     `eye` : la caméra (la largeur du trait en dépend) ; `lens` : sa focale ; `span` : secondes de vol
-    tracées ; `tail` : secondes au bout desquelles le trait s'efface derrière la balle (0 : il reste).
-    Poser ensuite key(image, temps de vol) pour chaque image."""
+    tracées ; `tail` : secondes au bout desquelles le trait s'efface derrière la balle (0 : il reste) ;
+    `taper` : de combien le trait s'affine en s'éloignant (0 : largeur apparente constante ; 0,4 : quatre
+    fois plus loin, il est presque deux fois plus fin). `colour` est en linéaire : AMBER est l'ambre du
+    site (#f2a93b). Poser ensuite key(image, temps de vol) pour chaque image."""
 
-    def __init__(self, flight, eye, lens=50.0, span=(0.02, 4.0), strength=7.0, tail=0.0, steps=140, width=0.00055, colour=(1.0, 0.60, 0.16)):
+    def __init__(self, flight, eye, lens=50.0, span=(0.02, 4.0), strength=7.0, tail=0.0, steps=140, width=0.00055, colour=(1.0, 0.60, 0.16), taper=0.0):
         t = np.linspace(span[0], span[1], steps)
         pts = flight.at(t)
-        self.flight, self.eye, self.k = flight, np.array(eye, dtype=float), width * 50.0 / lens
-        rad = self.k * np.linalg.norm(pts - self.eye, axis=1)
+        self.flight, self.eye, self.k, self.taper = flight, np.array(eye, dtype=float), width * 50.0 / lens, taper
+        self.near = float(np.linalg.norm(pts[0] - self.eye))
+        rad = self.radius(pts)
         tan = np.gradient(pts, axis=0)
         tan /= np.linalg.norm(tan, axis=1)[:, None]
         n1 = np.cross(tan, np.array([0, 0, 1.0]))
@@ -377,7 +408,8 @@ class Trace:
         self.line = P.mesh_obj('Trajectoire', ring.reshape(-1, 3), faces)
         self.line.data.attributes.new('vol', 'FLOAT', 'POINT').data.foreach_set('value', np.repeat(t, 8).astype(np.float32))
         # Le trait n'existe que jusqu'à la balle : au-delà, il est transparent.
-        m = P.mat('Trace', (1, 1, 1), rough=1.0, emission_color=(*colour, 1), emission_strength=strength)
+        # Matière noire qui n'émet que sa couleur : éclairée par le ciel, elle virerait au blanc.
+        m = P.mat('Trace', (0, 0, 0), rough=1.0, emission_color=(*colour, 1), emission_strength=strength)
         nt = m.node_tree
         att = nt.nodes.new('ShaderNodeAttribute')
         att.attribute_name = 'vol'
@@ -412,9 +444,23 @@ class Trace:
         bpy.ops.mesh.primitive_uv_sphere_add(segments=16, ring_count=8, radius=1.0)
         self.dot = bpy.context.object
         self.dot.name = 'PointBalle'
-        P.assign(self.dot, P.mat('PointBalle', (1, 1, 1), rough=1.0, emission_color=(*colour, 1), emission_strength=strength))
+        P.assign(self.dot, P.mat('PointBalle', (0, 0, 0), rough=1.0, emission_color=(*colour, 1), emission_strength=strength))
+        self.lit = [P.bsdf(m).inputs['Emission Strength'], P.bsdf(self.dot.data.materials[0]).inputs['Emission Strength']]
         for o in (self.line, self.dot):
             o.visible_shadow = False
+
+    def glow(self, frame, strength):
+        """Clé sur la force de la trace : à baisser quand l'exposition du plan monte, pour qu'elle reste
+        ambre pendant que le ciel blanchit (voir amber)."""
+        for socket in self.lit:
+            socket.default_value = strength
+            socket.keyframe_insert('default_value', frame=frame)
+
+    def radius(self, points):
+        """Rayon du trait en chaque point : proportionnel à la distance à la caméra (largeur apparente
+        constante), moins ce que `taper` lui retire au loin."""
+        d = np.linalg.norm(np.asarray(points, dtype=float) - self.eye, axis=-1)
+        return self.k * d * (self.near / np.maximum(d, self.near)) ** self.taper
 
     def key(self, frame, t):
         """À l'image `frame`, la balle en est à `t` secondes de vol."""
@@ -422,7 +468,7 @@ class Trace:
         self.head.outputs[0].keyframe_insert('default_value', frame=frame)
         p = self.flight.at(t)
         self.dot.location = p
-        r = 2.6 * self.k * float(np.linalg.norm(p - self.eye))
+        r = 2.6 * float(self.radius(p))
         self.dot.scale = (r, r, r)
         self.dot.keyframe_insert('location', frame=frame)
         self.dot.keyframe_insert('scale', frame=frame)

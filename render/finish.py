@@ -236,19 +236,23 @@ def build(args, shot=None):
 
 
 def animate(cam, cam_pos, target, first, last):
-    """Le plan en mouvement : la trace ambre se dessine dans le ciel (même vol que l'image fixe), la
-    caméra la suit d'un léger mouvement vers le haut, puis monte franchement et finit dans le ciel,
-    où le film change de lieu. La silhouette et la trace restent entre x = 0,30 et x = 0,74."""
+    """Le plan en mouvement : la trace ambre de la balle monte dans le ciel à droite d'Antoine, sa tête
+    plus haut à chaque image ; le trait s'affine en s'éloignant et tire un rien à gauche (un léger
+    draw) : vu de derrière, un trait droit et blanc se lirait comme un piquet. La caméra l'accompagne
+    de deux degrés, puis décroche vers le ciel, où le film change de lieu. La silhouette et la trace
+    restent entre x = 0,30 et x = 0,74."""
     K.setup()
-    fly = K.Flight((0.0, 0.0, 0.04), 66.0, 11.5, g=5.2, drag=0.055)
-    trace = K.Trace(fly, cam_pos, lens=cam.data.lens, span=(0.02, 4.4), strength=ARGS.trace, tail=1.0)
+    fly = K.Flight((0.0, 0.0, 0.04), 66.0, 11.5, g=5.2, drag=0.055, draw=(-0.040, 0.00021))
+    trace = K.Trace(fly, cam_pos, lens=cam.data.lens, span=(0.0, 2.4), strength=K.amber(ARGS.exposure, ARGS.glow), width=0.0026, taper=0.4, colour=K.AMBER, steps=200)
     aim = target - cam_pos
     az, pitch, reach = math.atan2(aim.y, aim.x), math.atan2(aim.z, math.hypot(aim.x, aim.y)), aim.length
     frames = K.half_frames(first, last)
     pos, look, focus = [], [], []
     for f in frames:
         u = (f - first) / (last - first)
-        trace.key(f, 0.30 + 3.0 * u ** 1.3)
+        # Vue de derrière, la balle atteint presque sa hauteur apparente en une demi-seconde : le temps
+        # de vol avance lentement d'abord, pour que la tête du trait monte pendant neuf images.
+        trace.key(f, 0.03 + 1.6 * u ** 1.5)
         # D'abord deux degrés, à peine sensibles ; puis la caméra décroche vers le ciel.
         tilt = pitch + math.radians(2.0 * K.smooth(u / 0.55) + 30.0 * max(0.0, (u - 0.42) / 0.58) ** 2.6)
         pos.append(cam_pos + V((0.10 * u, 0, 0.0)))
@@ -271,6 +275,7 @@ def options(argv=()):
     ap.add_argument('--nograss', action='store_true')
     ap.add_argument('--dark', type=float, default=0.5, help='assombrissement de la silhouette (1 = aucun)')
     ap.add_argument('--trace', type=float, default=7.0)
+    ap.add_argument('--glow', type=float, default=2.4, help='force de la trace ambre du plan en mouvement')
     ap.add_argument('--t', type=float, default=1.1, help='secondes de vol déjà tracées')
     ap.add_argument('--samples', type=int, default=32)
     ap.add_argument('--scale', type=int, default=50)

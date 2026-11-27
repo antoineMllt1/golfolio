@@ -2,7 +2,8 @@
 # manifest.json ("placeholder": false) et poster.webp, au format de PLAN.md (section 4).
 #   python3 scripts/frames.py                       # arrêts de render/out/s200, trajets de render/out/s100
 #   python3 scripts/frames.py --check               # dit ce qui serait écrit, sans rien écrire
-#   python3 scripts/frames.py --draft --holds render/out/s50 --dst /tmp/essai   # un essai, ailleurs
+#   python3 scripts/frames.py --draft               # le brouillon animé : arrêts de render/out/s50 (960 px),
+#                                                   # trajets de render/out/anim (480 px)
 #
 # Sources (écrites par render/scene.py) :
 #   <holds>/h_00.png … h_06.png        images nettes des arrêts, 3840 × 2160 (--stop N --scale 200)
@@ -14,8 +15,9 @@
 #
 # Règles :
 #   - les sept arrêts doivent être là, à la bonne taille : sinon rien n'est écrit (le site en ligne se
-#     redéploie à chaque poussée, un film à moitié converti s'y verrait). --draft lève cette exigence,
-#     pour un essai hors de public/frames ;
+#     redéploie à chaque poussée, un film à moitié converti s'y verrait). --draft lève l'exigence de
+#     taille, pour le brouillon animé : les trois tailles s, m, l portent alors les mêmes images, et le
+#     manifeste dit leurs largeurs réelles ("sizes"), sur lesquelles la page choisit ;
 #   - un trajet incomplet n'entre pas dans le manifeste : la page fait alors un fondu entre ses deux
 #     arrêts. On peut donc convertir et pousser lot après lot ;
 #   - une image n'est jamais agrandie ; une image déjà convertie et plus récente que sa source est gardée ;
@@ -69,18 +71,16 @@ def poster(src, dst):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--holds', default=os.path.join(OUT, 's200'), help='dossier des images d\'arrêt (h_00.png …)')
-    ap.add_argument('--legs', default=os.path.join(OUT, 's100'), help='dossier des images de trajet (l0_0001.png …)')
+    ap.add_argument('--holds', default='', help='dossier des images d\'arrêt (h_00.png …) : render/out/s200, ou s50 avec --draft')
+    ap.add_argument('--legs', default='', help='dossier des images de trajet (l0_0001.png …) : render/out/s100, ou anim avec --draft')
     ap.add_argument('--dst', default=os.path.join(ROOT, 'public', 'frames'))
     ap.add_argument('--anchors', default=os.path.join(OUT, 'anchors.json'))
-    ap.add_argument('--draft', action='store_true', help='accepte des images plus petites que prévu (essai, hors de public/frames)')
+    ap.add_argument('--draft', action='store_true', help='le brouillon animé : accepte des images plus petites que prévu')
     ap.add_argument('--check', action='store_true', help='n\'écrit rien : dit seulement ce qui serait fait')
     ap.add_argument('--jobs', type=int, default=os.cpu_count() or 2)
     args = ap.parse_args()
-    live = os.path.realpath(args.dst) == os.path.realpath(os.path.join(ROOT, 'public', 'frames'))
-    if args.draft and live:
-        print('--draft ne s\'écrit pas dans public/frames : donner un autre dossier avec --dst.')
-        return 2
+    args.holds = args.holds or os.path.join(OUT, 's50' if args.draft else 's200')
+    args.legs = args.legs or os.path.join(OUT, 'anim' if args.draft else 's100')
 
     # Les arrêts : tous, et à la bonne taille.
     with open(args.anchors, encoding='utf8') as fh:

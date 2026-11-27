@@ -994,6 +994,12 @@ def arrive(stage, first, land, stop, last, lie, fall, hops, run, settle=None, bu
     K.settle(stage.club, settle if settle is not None else math.ceil(stop) - 2, last, lie)
     key_look(first, stage.exposure + burn, stage.warmth)
     key_look(first + 3, stage.exposure, stage.warmth)
+    # La trace ambre du plan précédent se poursuit : si loin, la balle n'est qu'un point gris dans le
+    # ciel. Elle la suit jusqu'au sol, puis s'efface en trois images ; son point reste dans la balle.
+    trace = K.Trace(K.Path(frames, pts), view.pos, lens=view.lens, span=(first, land), strength=K.amber(stage.exposure), tail=3.0, width=0.0017, colour=K.AMBER, steps=60)
+    for f in frames:
+        trace.key(f, f)
+        trace.glow(f, K.amber(stage.exposure + burn * max(0.0, 1.0 - (f - first) / 3.0)))
 
 
 def fairway_arrival(first, last):
@@ -1016,27 +1022,33 @@ def fairway_shot(first, last):
     clock = K.Clock(impact, slow=0.095 / K.CLUBS['long']['speed'], cap=0.22)  # au plus 0,22 s de vol par image : la balle monte encore à la fin du plan
     K.swing(a.club, 'long', clock, first=first, reach=0.010, last=impact + 3)
     fly = K.Flight.of('long', B1)
-    where = K.launch(K.Ball(a.ball), fly, clock, first=first, last=last)
+    where = K.launch(K.Ball(a.ball), fly, clock, first=first, last=last, step=0.25)
     turf = a.turf.kinds[0].material()
     spot = V((0.055, 0.0, 0.0))  # la tête touche le sol juste après la balle
     K.burst([K.divot(turf)], spot + V((0.03, 0, 0)), clock, last, speed=(7.5, 9.0), lift=(30, 38), fan=6, scatter=0.0, tumble=22, seed=2)
     K.burst(K.crumbs(26), spot, clock, last, speed=(4, 13), lift=(18, 62), fan=30, scatter=0.03, tumble=60, seed=3)
     K.burst(K.loose_blades(34, turf), spot, clock, last, speed=(3, 10), lift=(25, 70), fan=38, scatter=0.035, tumble=50, seed=4)
     # La caméra reste où elle est et se tourne : en deux images elle a rattrapé la balle, puis la tient
-    # au même point de l'image. La motte reste dans le cadre le temps de la voir partir.
-    frames = K.half_frames(first, last)
+    # au même point de l'image (celui où le plan d'arrivée la reprend). La motte reste dans le cadre le
+    # temps de la voir partir. La balle passe à 70 cm de l'objectif : une clé par quart d'image, sans
+    # quoi la visée la quitte pendant la pose et elle bave en tache.
+    frames = K.half_frames(first, last, step=0.25)
     fx, fy = focus_of(a.cam, B1)
     target, focus = [], []
     for f in frames:
         w, p = float(K.smooth((f - impact) / 2.0)), V(where[f])
-        target.append(view.target.lerp(aim(view.pos, p, view.lens, fx + (0.62 - fx) * w, fy + (0.52 - fy) * w), w))
+        target.append(view.target.lerp(aim(view.pos, p, view.lens, fx + (0.62 - fx) * w, fy + (0.60 - fy) * w), w))
         focus.append((p - view.pos).length)
     K.track(a.cam, frames, [view.pos] * len(frames), target, focus=focus)
-    trace = K.Trace(fly, view.pos, lens=view.lens, span=(0.03, 3.4), strength=1.6, tail=0.45, colour=(1.0, 0.45, 0.08))
+    # La trace ambre : au loin la balle n'est plus qu'un point, c'est elle qu'on suit. Le plan finit dans
+    # le blanc du ciel ; la trace baisse d'autant pour rester ambre pendant que le ciel blanchit.
+    burn = 2.2
+    trace = K.Trace(fly, view.pos, lens=view.lens, span=(0.03, 3.4), strength=K.amber(a.exposure), tail=0.9, width=0.0017, colour=K.AMBER)
     for f in frames:
         trace.key(f, max(0.0, clock.at(f)))
+        trace.glow(f, K.amber(a.exposure + burn * min(1.0, max(0.0, (f - (last - 4)) / 4.0))))
     key_look(last - 4, a.exposure, a.warmth)
-    key_look(last, a.exposure + 3.0, a.warmth)
+    key_look(last, a.exposure + burn, a.warmth)
 
 
 def green_arrival(first, last):
@@ -1078,8 +1090,10 @@ def chip_and_run(first, last):
     ball.roll(rolling, [where[f] for f in rolling], b.ball_turn)
     K.burst(K.loose_blades(14, a.turf.kinds[0].material()), V((0.03, 0, 0)), clock, land, speed=(1.2, 3.5), lift=(30, 70), fan=30, tumble=25, seed=5)
     K.settle(b.club, stop, last, 70.0)
-    # La caméra : devant la balle, de plus en plus loin devant ; elle monte avec elle quand elle vole,
-    # pour garder le green dans le cadre, et la tient toujours au même point de l'image.
+    # La caméra : devant la balle, de plus en plus loin devant ; quand la balle vole, elle monte plus
+    # qu'elle et la regarde d'un peu au-dessus (huit degrés), pour la garder sur le vert du green : le
+    # soleil est bas, juste derrière, et une balle blanche devant lui se dissout dans son halo. Elle
+    # la tient toujours au même point de l'image.
     frames = K.half_frames(first, last)
     pts = [V(where[f]) for f in frames]
     soft = K.follow(pts, B2, weight=0.6)
@@ -1088,7 +1102,7 @@ def chip_and_run(first, last):
     for k, f in enumerate(frames):
         g = float(K.smooth((f - impact - 0.5) / (42.5 - impact)))
         early = 2.2 * float(K.smooth((f - impact) / 6.0))
-        p = V((soft[k].x + va.pos.x + early + (ahead - 2.2) * g, va.pos.y + (vb.pos.y - va.pos.y) * g, va.pos.z + (vb.pos.z - va.pos.z) * g + 0.8 * max(0.0, soft[k].z - B2.z)))
+        p = V((soft[k].x + va.pos.x + early + (ahead - 2.2) * g, va.pos.y + (vb.pos.y - va.pos.y) * g, va.pos.z + (vb.pos.z - va.pos.z) * g + opt('lift', 1.45) * max(0.0, soft[k].z - B2.z)))
         p = p.lerp(vb.pos, float(K.smooth((f - 38) / 5.0)))
         mm = math.exp(math.log(va.lens) + (math.log(vb.lens) - math.log(va.lens)) * g)
         w = float(K.smooth((f - impact) / 1.5))
