@@ -20,6 +20,11 @@ const ORDER = ['s', 'm', 'l'];
 // Écran vertical : même seuil que la mise en page « téléphone » de styles.css.
 export const isPortrait = () => window.innerWidth / window.innerHeight < 0.9;
 
+// Écran horizontal : la part de la largeur où se tient la balle (fx : sa place dans l'image). Elle garde
+// sa place dans le cadre ; plus la fenêtre est étroite, plus on la pousse vers la droite, pour laisser
+// la gauche au texte. Le carnet s'en sert pour savoir s'il a la place de s'ouvrir sans la recouvrir.
+export const ballAt = (fx = 0.62, w = window.innerWidth, h = window.innerHeight) => fx + (0.74 - fx) * clamp((16 / 9 - w / h) / (16 / 9 - 0.9), 0, 1);
+
 // Quelle taille de fichier pour cet écran. L'image est recadrée pour couvrir l'écran : sur un téléphone
 // tenu debout on n'en voit qu'une bande, il faut donc une image bien plus large que l'écran.
 // Les images nettes et les images de trajet se choisissent séparément (le flou pardonne plus) ; un
@@ -203,10 +208,8 @@ export class Film {
       const ty = window.innerHeight < 720 ? 0.27 : 0.31;
       return { dx: clamp(cw / 2 - fx * dw, cw - dw, 0), dy: clamp(ch * ty - fy * dh, -0.34 * ch, 0), dw, dh };
     }
-    // Écran horizontal : la balle garde sa place dans le cadre ; plus la fenêtre est étroite, plus on la
-    // pousse vers la droite, pour laisser la gauche au texte.
-    const narrow = clamp((16 / 9 - cw / ch) / (16 / 9 - 0.9), 0, 1);
-    const tx = fx + (0.74 - fx) * narrow;
+    // Écran horizontal : voir ballAt.
+    const tx = ballAt(fx, cw, ch);
     return { dx: clamp(cw * tx - fx * dw, cw - dw, 0), dy: fy * (ch - dh), dw, dh };
   }
 

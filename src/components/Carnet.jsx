@@ -6,12 +6,24 @@
 // réduit à une languette : le trou en petit, la balle, six points.
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { COURSE, HOLES, LAST, NEXT, SITE, STOPS, metres, num, pick, planCtx, shortName, shotInHole, stopLabel } from '../lib/content.js';
+import { ballAt } from '../lib/film.js';
 import { flight as flightStore, ratio, useFlight } from '../lib/flight.js';
 import { between, miniView, pageView, paintFlight } from '../lib/plan.js';
 import { Flag, Fold } from './Icons.jsx';
 
-const ROOMY = '(min-width: 1180px) and (min-height: 700px)'; // assez de place pour la page entière
 const PW = 250; // largeur de la zone de dessin de la page
+// La page entière demande un écran d'ordinateur (au moins 1180 × 700) et ne doit jamais recouvrir la
+// balle : son bord gauche (poignée comprise) reste à droite de la balle, dont le rayon au premier plan
+// fait environ 12 % de la hauteur. Sinon : la languette.
+function hasRoom() {
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  if (w < 1180 || h < 700) return false;
+  const zoom = w >= 3000 && h >= 1600 ? 1.8 : w >= 2200 && h >= 1200 ? 1.36 : w >= 1800 && h >= 960 ? 1.12 : 1; // l'agrandissement des grands écrans (styles.css)
+  const gutter = Math.min(80, Math.max(20, w * 0.05));
+  const left = w - (gutter + 284 + 24) * zoom;
+  return left - (w * ballAt() + h * 0.12) >= 12;
+}
 const first = (n) => STOPS.findIndex((s) => s.hole === n);
 const lower = (s) => s.charAt(0).toLowerCase() + s.slice(1);
 const colon = (lang) => (lang === 'fr' ? ' : ' : ': ');
@@ -329,7 +341,7 @@ function Tag({ at, flying, turned, lang, t, onClick, label }) {
 export default function Carnet({ stop, flight, lang, t, reduce, onOpen }) {
   const flying = flight?.shot ?? null; // le coup en vol (0 à 5), sinon null
   const at = flying ?? stop; // l'arrêt où repose la balle, ou d'où elle vient de partir
-  const [roomy, setRoomy] = useState(() => matchMedia(ROOMY).matches);
+  const [roomy, setRoomy] = useState(hasRoom);
   const [folded, setFolded] = useState(readFolded);
   const [peek, setPeek] = useState(null); // le trou qu'on feuillette, s'il n'est pas celui de la balle
   const [cue, setCue] = useState({ holed: false, turned: false }); // pendant un putt : la balle est tombée ; la page a tourné
@@ -337,10 +349,9 @@ export default function Carnet({ stop, flight, lang, t, reduce, onOpen }) {
   const planBox = useRef(null);
 
   useEffect(() => {
-    const mq = matchMedia(ROOMY);
-    const on = () => setRoomy(mq.matches);
-    mq.addEventListener('change', on);
-    return () => mq.removeEventListener('change', on);
+    const on = () => setRoomy(hasRoom());
+    window.addEventListener('resize', on);
+    return () => window.removeEventListener('resize', on);
   }, []);
   const fold = (value) => {
     setFolded(value);
@@ -356,12 +367,17 @@ export default function Carnet({ stop, flight, lang, t, reduce, onOpen }) {
     if (flying == null) setCue({ holed: false, turned: false });
   }, [flying]);
   // Les deux seuls rendus React d'un vol : la balle tombe dans le trou ; la page tourne vers le trou suivant.
+  const cueRef = useRef(cue);
+  cueRef.current = cue;
   useFlight((s) => {
     if (s.leg == null) return;
     const shot = NEXT[s.leg];
     const holed = shot.leaves === 0 && s.t >= 1;
     const turned = STOPS[s.leg + 1].hole !== STOPS[s.leg].hole && (s.done || (shot.sync?.pageTurn != null && s.frame >= shot.sync.pageTurn));
-    setCue((c) => (c.holed === holed && c.turned === turned ? c : { holed, turned }));
+    if (cueRef.current.holed !== holed || cueRef.current.turned !== turned) {
+      cueRef.current = { holed, turned };
+      setCue(cueRef.current);
+    }
   });
 
   const holed = flying != null && cue.holed;
