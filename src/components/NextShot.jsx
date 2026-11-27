@@ -81,22 +81,3 @@ export default function NextShot({ stop, flight, lang, t, onNext, onPrev, onRepl
     </div>
   );
 }
-
-// Pendant le vol, le coup joué s'affiche en bas à gauche, comme un titre de film.
-export function Flight({ flight, lang, t }) {
-  const k = flight?.shot;
-  const shot = k != null ? NEXT[k] : null;
-  return (
-    <div className={`flight ${shot ? 'on' : ''}`} aria-hidden>
-      {shot && (
-        <>
-          <p className="mono">
-            {t.stroke}&nbsp;{k + 1}
-          </p>
-          <p className="flight-club">{pick(shot.club, lang)}</p>
-          <p className="flight-shot">{pick(shot.shot, lang)}</p>
-        </>
-      )}
-    </div>
-  );
-}

@@ -171,14 +171,36 @@ svg {
   --scrim-top: linear-gradient(180deg, rgb(var(--veil) / 0.62) 0%, rgb(var(--veil) / 0) 18%);
   --scrim-bottom: linear-gradient(0deg, rgb(var(--veil) / 0.94) 0%, rgb(var(--veil) / 0.86) 10%, rgb(var(--veil) / 0.5) 21%, rgb(var(--veil) / 0) 34%);
   --scrim-right: linear-gradient(270deg, rgb(var(--veil) / 0) 0%, rgb(var(--veil) / 0) 100%);
+  --scrim-fly: radial-gradient(120% 78% at 0% 100%, rgb(var(--veil) / 0.62) 0%, rgb(var(--veil) / 0.5) 42%, rgb(var(--veil) / 0.24) 70%, rgb(var(--veil) / 0) 100%);
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: var(--scrim-left), var(--scrim-top), var(--scrim-bottom), var(--scrim-right);
+  background: var(--scrim-top), var(--scrim-bottom), var(--scrim-right);
+}
+.scrim::before,
+.scrim::after {
+  content: '';
+  position: absolute;
+  inset: 0;
   transition: opacity 0.5s ease;
 }
-.flying .scrim {
-  opacity: 0.6;
+.scrim::before {
+  background: var(--scrim-left);
+}
+/* Pendant un vol : la gauche s'allège (place à l'image), le bas s'assombrit sous le traceur. */
+.scrim::after {
+  background: var(--scrim-fly);
+  opacity: 0;
+}
+.flying .scrim::before {
+  opacity: 0.45;
+}
+.flying .scrim::after {
+  opacity: 1;
+}
+/* le carton de trou se lit comme une fiche : la gauche revient */
+.app:has(.carton.on) .scrim::before {
+  opacity: 1;
 }
 .progress {
   position: fixed;
@@ -1423,40 +1445,245 @@ kbd svg {
   transform: translateX(3px);
 }
 
-/* Pendant le vol : le coup joué, en bas à gauche, comme un titre de film. */
-.flight {
+/* ---------- le traceur du vol ----------
+   Pendant qu'un coup joue : en bas à gauche au-dessus de la pastille, la distance qui compte en très
+   grand, et le profil du vol. Tracer.jsx y écrit à chaque image du film. */
+.trace {
   position: absolute;
   left: var(--gutter);
-  bottom: calc(var(--dock) + var(--shot-h) + 40px);
+  right: var(--rail-r);
+  bottom: calc(var(--dock) + var(--shot-h) + 46px);
   z-index: 2;
+  display: flex;
+  align-items: flex-end;
+  visibility: hidden;
   opacity: 0;
-  transform: translateY(10px);
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transform: translateY(8px);
+  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0s linear 0.2s;
 }
-.flight.on {
+.trace.on {
+  visibility: visible;
   opacity: 1;
   transform: none;
-  transition: opacity 0.35s ease 0.08s, transform 0.5s var(--ease) 0.08s;
+  transition: opacity 0.3s ease 0.06s, transform 0.45s var(--ease) 0.06s;
 }
-.flight .mono {
-  font-size: 11.5px;
+/* Le bloc du compteur a une largeur fixe : le profil, à côté, ne bouge pas quand le chiffre change. */
+.trace-hero {
+  flex: none;
+  width: 300px;
+}
+.trace.putt .trace-hero {
+  width: 540px; /* « 3,0 m pour birdie », puis « Birdie · Trou 1 en 4 » */
+}
+/* « Coup 2 · Fer long — vers Licter × Fnac Darty » */
+.trace-head {
+  display: flex;
+  align-items: center;
+  font-size: 10.5px;
   font-weight: 500;
+  line-height: 1.4;
   letter-spacing: 0.16em;
   text-transform: uppercase;
+  color: var(--soft);
+  white-space: nowrap;
+}
+.trace-head b {
+  font-weight: 500;
   color: var(--amber);
 }
-.flight-club {
-  margin-top: 12px;
+.trace-head i {
+  width: 18px;
+  height: 1px;
+  margin: 0 12px 0 10px;
+  background: var(--line-strong);
+}
+/* le compteur : des chiffres en cases de même largeur */
+.big {
+  display: flex;
+  align-items: baseline;
+  margin-top: 10px;
+  font-family: var(--serif);
+  font-size: 132px;
+  line-height: 0.8;
+  letter-spacing: -0.025em;
+  white-space: nowrap;
+}
+.big span {
+  flex: none;
+  width: 0.46em;
+  text-align: center;
+}
+.big span.one {
+  width: 0.33em;
+}
+.big span.sep {
+  width: 0.2em;
+}
+.big span.off {
+  display: none;
+}
+.big em {
+  margin-left: 0.14em;
+  font-style: italic;
+  font-size: 0.38em;
+  letter-spacing: 0;
+  color: var(--soft);
+}
+.big em small {
+  margin-left: 0.34em;
+  font-size: 0.6em;
+}
+/* le putt rentré : « Birdie », et le score du trou */
+.big.word em {
+  margin-left: 0.5em;
+  font-size: 0.23em;
+}
+.pdata {
+  display: none; /* portée, roule, hauteur : sur téléphone seulement (ailleurs le carnet les donne) */
+}
+.profile-box {
+  flex: 1;
+  min-width: 0;
+  height: 226px;
+  margin-bottom: -22px;
+}
+.profile {
+  display: block;
+  overflow: visible;
+}
+.profile .axis {
+  stroke: var(--line-strong);
+  stroke-width: 1;
+}
+.profile .tickl {
+  fill: none;
+  stroke: var(--soft);
+  stroke-width: 1;
+}
+.profile text {
+  font: 500 9.5px var(--mono);
+  letter-spacing: 0.12em;
+  fill: var(--muted);
+}
+.profile text.soft {
+  fill: var(--soft);
+}
+.profile .path {
+  fill: none;
+  stroke: var(--amber);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+.profile .glow {
+  fill: none;
+  stroke: var(--amber);
+  stroke-width: 6;
+  stroke-linecap: round;
+  opacity: 0.13;
+}
+.profile .apex {
+  stroke: var(--soft);
+  stroke-width: 1;
+  stroke-dasharray: 1.5 3.5;
+}
+.profile .head {
+  fill: #fbf9f4;
+}
+.profile .halo {
+  fill: none;
+  stroke: var(--amber);
+  stroke-width: 1.2;
+}
+.profile .flagp {
+  fill: var(--ink);
+  stroke: var(--ink);
+  stroke-width: 1;
+  stroke-linejoin: round;
+}
+.profile .green {
+  stroke: var(--ink);
+  stroke-width: 2;
+}
+
+/* ---------- le carton de trou ----------
+   Quand le film change de trou : le score du trou fini, puis le trou qui vient. Sobre, sans bandeau ;
+   il s'efface avant l'arrivée. */
+.carton {
+  position: absolute;
+  left: var(--gutter);
+  top: 50%;
+  z-index: 2;
+  width: min(600px, 100% - 2 * var(--gutter));
+  visibility: hidden;
+  opacity: 0;
+  transform: translateY(-56%);
+  transition: opacity 0.25s ease, visibility 0s linear 0.25s;
+}
+.carton.on {
+  visibility: visible;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+.carton-prev {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 10.5px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--soft);
+  white-space: nowrap;
+}
+.carton-prev b {
+  font-weight: 500;
+  color: var(--ink);
+}
+.carton-prev .ring {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding-bottom: 1px;
+  border: 1px solid var(--ink);
+  border-radius: 50%;
+  font: 400 16px/1 var(--serif);
+  letter-spacing: 0;
+  color: var(--ink);
+}
+.carton-prev .under {
+  color: var(--amber);
+}
+.carton-prev i {
+  width: 1px;
+  height: 12px;
+  background: var(--line-strong);
+}
+.carton h2 {
+  margin-top: 56px;
+  font-family: var(--serif);
+  font-size: 168px;
+  line-height: 0.82;
+  letter-spacing: -0.03em;
+  white-space: nowrap;
+}
+.carton h2 em {
+  font-style: italic;
+}
+.carton-sub {
+  margin-top: 26px;
   font-family: var(--serif);
   font-style: italic;
-  font-size: clamp(2.6rem, 4.6vw, 4.2rem);
-  line-height: 1;
-  letter-spacing: -0.01em;
-}
-.flight-shot {
-  margin-top: 8px;
-  font-size: 16px;
+  font-size: 34px;
+  line-height: 1.1;
   color: var(--soft);
+  text-wrap: balance;
+}
+.carton-sub i {
+  margin: 0 0.32em;
+  font-style: normal;
+  color: var(--muted);
 }
 
 /* ---------- le carnet de parcours : la page du trou ----------
@@ -3679,6 +3906,26 @@ kbd svg {
     width: 38px;
     height: 38px;
   }
+  .trace-hero {
+    width: 260px;
+  }
+  .trace.putt .trace-hero {
+    width: 470px;
+  }
+  .big {
+    font-size: 112px;
+  }
+  .profile-box {
+    height: 196px;
+  }
+  .carton h2 {
+    margin-top: 40px;
+    font-size: 132px;
+  }
+  .carton-sub {
+    margin-top: 20px;
+    font-size: 28px;
+  }
   .pv {
     bottom: calc(100% + 6px);
     padding: 12px 17px 13px;
@@ -3835,8 +4082,11 @@ kbd svg {
       linear-gradient(0deg, rgb(var(--veil) / 1) 0%, rgb(var(--veil) / 1) 26%, rgb(var(--veil) / 0.9) 40%, rgb(var(--veil) / 0.55) 52%, rgb(var(--veil) / 0) 66%),
       linear-gradient(180deg, rgb(var(--veil) / 0.7) 0%, rgb(var(--veil) / 0) 17%);
   }
-  .flying .scrim {
-    opacity: 1; /* le bas de l'écran doit rester plein : l'image s'arrête au-dessus */
+  .scrim {
+    --scrim-fly: linear-gradient(0deg, rgb(var(--veil) / 1) 0%, rgb(var(--veil) / 1) 36%, rgb(var(--veil) / 0.9) 46%, rgb(var(--veil) / 0.5) 56%, rgb(var(--veil) / 0) 68%);
+  }
+  .scrim::before {
+    display: none; /* la fiche est en bas : pas de voile à gauche */
   }
   .poster {
     object-position: 62% 0;
@@ -3979,7 +4229,7 @@ kbd svg {
     letter-spacing: 0.13em;
   }
   /* La place manque : « Coup suivant » s'efface devant le club et la distance, le concept devant le nom. */
-  .shot-text .mono.long .lead,
+  .shot-text .mono.long:not(.live) .lead,
   .shot-line i {
     display: none;
   }
@@ -4002,8 +4252,80 @@ kbd svg {
     width: 40px;
     height: 40px;
   }
-  .flight {
-    bottom: calc(100px + env(safe-area-inset-bottom));
+  /* Le traceur prend la place de la fiche : le profil, puis la distance, puis trois cotes. */
+  .trace {
+    right: var(--gutter);
+    bottom: calc(var(--dock) + var(--shot-h) + var(--strip) + 26px);
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .trace .trace-hero {
+    width: auto;
+  }
+  .trace-head {
+    font-size: 10px;
+    letter-spacing: 0.13em;
+  }
+  .trace-head i {
+    width: 12px;
+    margin: 0 8px 0 6px;
+  }
+  .big {
+    font-size: 112px;
+  }
+  .profile-box {
+    order: -1;
+    flex: none;
+    height: 132px;
+    margin: 0 0 30px;
+  }
+  .pdata {
+    display: flex;
+    margin-top: 26px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
+  }
+  .pdata > div {
+    display: grid;
+    gap: 9px;
+    flex: 1;
+    padding-left: 16px;
+    border-left: 1px solid var(--line-strong);
+  }
+  .pdata > div:first-child {
+    padding-left: 0;
+    border-left: 0;
+  }
+  .pdata dt {
+    font: 500 9px/1 var(--mono);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .pdata dd {
+    font-family: var(--serif);
+    font-size: 23px;
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .carton {
+    top: auto;
+    bottom: calc(var(--dock) + var(--shot-h) + var(--strip) + 44px);
+    transform: none;
+  }
+  .carton-prev {
+    gap: 10px;
+    font-size: 9.5px;
+    letter-spacing: 0.13em;
+  }
+  .carton h2 {
+    margin-top: 32px;
+    font-size: 104px;
+  }
+  .carton-sub {
+    margin-top: 18px;
+    font-size: 23px;
   }
   /* La languette du carnet, en haut à gauche sous le nom. */
   .carnet-tag {
@@ -4159,12 +4481,28 @@ kbd svg {
     width: 38px;
     height: 38px;
   }
-  .flight {
-    bottom: calc(88px + env(safe-area-inset-bottom));
+  .big {
+    font-size: 92px;
+  }
+  .profile-box {
+    height: 112px;
+    margin-bottom: 22px;
+  }
+  .pdata {
+    margin-top: 18px;
+    padding-top: 12px;
+  }
+  .carton h2 {
+    margin-top: 24px;
+    font-size: 84px;
+  }
+  .carton-sub {
+    font-size: 20px;
   }
 }
-@media (max-aspect-ratio: 9/10) and (max-height: 690px) {
-  .tools {
+@media (max-aspect-ratio: 9/10) and (max-height: 699px) {
+  .tools,
+  .pdata {
     display: none;
   }
 }
@@ -4221,7 +4559,7 @@ kbd svg {
     width: 12px;
     margin: 0 8px 0 6px;
   }
-  .shot-text .mono .lead {
+  .shot-text .mono:not(.live) .lead {
     display: none; /* la place manque : le club et la distance d'abord */
   }
   .card .links {
@@ -4403,16 +4741,35 @@ kbd svg {
     width: 34px;
     height: 34px;
   }
-  .flight {
+  .trace {
+    right: calc(var(--gutter) + 290px);
     bottom: 16px;
   }
-  .flight-club {
-    margin-top: 6px;
-    font-size: 2.2rem;
+  .trace-hero {
+    width: 170px;
   }
-  .flight-shot {
-    margin-top: 4px;
-    font-size: 14px;
+  .trace.putt .trace-hero {
+    width: 300px;
+  }
+  .trace-head i,
+  .trace-head span {
+    display: none;
+  }
+  .big {
+    margin-top: 6px;
+    font-size: 64px;
+  }
+  .profile-box {
+    height: 120px;
+    margin-bottom: -22px;
+  }
+  .carton h2 {
+    margin-top: 18px;
+    font-size: 72px;
+  }
+  .carton-sub {
+    margin-top: 12px;
+    font-size: 19px;
   }
   /* Très peu de hauteur : la languette sans son plan, sous la barre. */
   .carnet-tag {

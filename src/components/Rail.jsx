@@ -20,7 +20,7 @@ const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
 const colon = (lang) => (lang === 'fr' ? ' : ' : ': ');
 // Les blancs autour des signes, en pixels : la ligne complète et la bande réduite.
 const FULL = { gap: 10, ball: 14 };
-const SMALL = { gap: 7, ball: 14 };
+const SMALL = { gap: 7, ball: 14, small: true };
 
 // La largeur d'un élément (en pixels de mise en page), suivie quand elle change.
 function useWidth(ref) {
@@ -69,7 +69,8 @@ const Tip = () => (
 // de chaque arrêt, cup : le trou du premier trou, entre son dernier arrêt et le départ suivant.
 function Art({ c, cup, stop, flying, holed, g, label, total, lang, t }) {
   const at = flying ?? stop; // l'arrêt où repose la balle, ou d'où elle vient de partir
-  const hole1 = at >= TEE2 || (flying === TEE2 - 1 && holed);
+  // (sur la bande réduite, la balle et le score du trou ne tiennent pas côte à côte : le drapeau reste jusqu'à l'arrivée)
+  const hole1 = at >= TEE2 || (flying === TEE2 - 1 && holed && !g.small);
   const hole2 = (flying == null && stop === LAST) || (flying === LAST - 1 && holed);
   const out = [];
   const line = (key, a, b, ga, gb, cls, inner = null) =>

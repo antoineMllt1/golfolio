@@ -12,10 +12,11 @@ import { ContactCard, IntroCard, ProjectCard } from './components/Cards.jsx';
 import Carnet from './components/Carnet.jsx';
 import { Book } from './components/Icons.jsx';
 import Keys from './components/Keys.jsx';
-import NextShot, { Flight } from './components/NextShot.jsx';
+import NextShot from './components/NextShot.jsx';
 import Rail, { Strip } from './components/Rail.jsx';
 import Scorecard from './components/Scorecard.jsx';
 import Tour from './components/Tour.jsx';
+import Tracer from './components/Tracer.jsx';
 
 const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
 const startIndex = () => Math.max(0, indexOfId(location.hash.slice(1)));
@@ -299,7 +300,7 @@ export default function App() {
           })}
         </main>
 
-        <Flight flight={flight} lang={lang} t={t} />
+        <Tracer flight={flight} lang={lang} t={t} />
         <NextShot
           stop={stop}
           flight={flight}
