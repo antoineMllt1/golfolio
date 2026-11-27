@@ -2,18 +2,25 @@
 #
 #   python3 render/fetch_assets.py && python3 scripts/prints.py           # ciels et impressions
 #   python render/scene.py -- --stop 3 --scale 50 --samples 32            # une image d'arrêt → render/out/s50/h_03.png
+#   python render/scene.py -- --stop 3 --scale 200 --samples 112          # la même en 3840 × 2160 → render/out/s200/
 #   python render/scene.py -- --stop 3 --view top                         # une vue de contrôle → …/h_03_top.png
+#   python render/scene.py -- --stop 3 --name essai --set height=0.4      # un essai : réglages nommés (opt), ancres intactes
 #   python render/scene.py -- --leg 2 --frames 1-44 --scale 100           # un trajet → render/out/s100/l2_0001.png …
+#   python3 render/planches.py                                            # les planches des 7 arrêts, ordinateur et téléphone
 #
 # Principe d'image : le photoréalisme par le gros plan. La balle est le sujet net, vers x = 0,62 de la
 # largeur ; la tête du club est posée derrière elle ; le reste est un flou qui vient d'un vrai panorama
 # photographié et d'un sol proche en vrais brins. Aucun parcours n'est modélisé en plan large.
 #
-# Cinq lieux pour sept arrêts : deux arrêts qu'un coup relie sans coupe partagent le même lieu (même
-# ciel, même soleil, même sol). Repère d'un lieu : le coup part vers +X, le joueur (droitier) est côté +Y.
+# Deux ciels : spruit_sunrise pour le trou 1 (une matinée, brume et rosée), lakeside_sunrise pour le
+# trou 2 (une fin d'après-midi dorée au bord d'un lac : c'est l'eau du panorama qu'on voit, pas un plan
+# d'eau modélisé). Cinq lieux pour sept arrêts : deux arrêts qu'un coup relie sans coupe partagent le
+# même lieu (même ciel, même soleil, même sol). Repère d'un lieu : le coup part vers +X, le joueur
+# (droitier) est côté +Y.
 #   départ du 1 (arrêt 0) · fairway (1) · green du 1 (2 et 3) · départ du 2 au bord de l'eau (4) · green du 2 (5 et 6)
-# Chaque arrêt renvoie un Stage : sa caméra, sa balle, son club, son lieu (sol, trou, gazon à replanter).
-# Les trajets s'appuient dessus : voir LEGS et render_leg en bas du fichier.
+# Chaque arrêt N a sa balle (BN), son cadrage (view_N) et sa scène (stop_N), qui renvoie un Stage : sa
+# caméra, sa balle, son club, son lieu (sol, trou, gazon à replanter). Les trajets s'appuient dessus :
+# voir LEGS, key, key_view et render_leg en bas du fichier.
 import argparse
 import json
 import math
@@ -99,16 +106,28 @@ def reset(samples):
     return scene
 
 
-class Stage:
-    """Ce qu'un arrêt expose aux trajets. id ; cam, cam_pos, target, lens, fstop (la vue de la frappe) ;
-    ball (objet) et ball_pos ; club (vide parent, None à l'arrêt 6) ; hole (centre du trou ou None) ;
-    flag (objet ou None) ; turf (le gazon du lieu, à replanter ailleurs avec turf.grow) ; obstacles
-    (ce que l'herbe ne traverse pas) ; exposure."""
+class View:
+    """Un cadrage : position de la caméra, point visé, focale (mm), ouverture, point net."""
 
-    def __init__(self, **kw):
+    def __init__(self, pos, target, lens, fstop, focus):
+        self.pos, self.target, self.lens, self.fstop, self.focus = V(pos), V(target), lens, fstop, V(focus)
+
+
+class Stage:
+    """Ce qu'un arrêt expose aux trajets. id ; view (son cadrage) et cam (la caméra posée dessus), avec
+    les raccourcis cam_pos, target, lens, fstop ; ball (objet) et ball_pos ; club (vide parent, None à
+    l'arrêt 6) ; hole (centre du trou ou None) ; flag (objet, ou None si le drapeau est retiré) ; turf
+    (le gazon du lieu, à replanter ailleurs avec turf.grow) ; obstacles (ce que l'herbe ne traverse
+    pas) ; exposure."""
+
+    def __init__(self, view=None, **kw):
         self.hole = self.flag = self.club = self.turf = None
         self.obstacles = []
+        self.view = view
+        if view is not None:
+            self.cam_pos, self.target, self.lens, self.fstop = view.pos, view.target, view.lens, view.fstop
         self.__dict__.update(kw)
+        self.exposure = scene.view_settings.exposure
 
 
 # ---------------------------------------------------------------- ciel
@@ -188,6 +207,11 @@ def camera(pos, target, lens, fstop, focus):
     P.look_at(cam, target)
     scene.camera = cam
     return cam
+
+
+def shoot(view):
+    """Pose la caméra sur un cadrage."""
+    return camera(view.pos, view.target, view.lens, view.fstop, view.focus)
 
 
 def aim(pos, ball, lens, fx=0.62, fy=0.56):
@@ -403,10 +427,20 @@ def stop_0():
     P.dew(drops)
     P.ground(color_near=(0.030, 0.085, 0.012), color_far=(0.23, 0.21, 0.10))
     P.bloom()
-    return Stage(id=IDS[0], cam=cam, cam_pos=cam_pos, target=target, lens=lens, fstop=fstop, ball=b, ball_pos=V(b.location), club=club, turf=Turf([TEE]), exposure=scene.view_settings.exposure)
+    return Stage(View(cam_pos, target, lens, fstop, b.location), id=IDS[0], cam=cam, ball=b, ball_pos=V(b.location), club=club, turf=Turf([TEE]))
 
 
 # ---------------------------------------------------------------- arrêt 1 : le fairway
+B1 = V((0, 0, 0.0045 + P.BALL_R))  # la balle repose sur les brins
+
+
+def view_1():
+    """Trois quarts avant, au ras du sol ; l'horizon haut dans l'image."""
+    pos = around(B1, opt('az', -40.4), opt('dist', 1.05), opt('height', 0.095))
+    lens = opt('lens', 115)
+    return View(pos, aim(pos, B1, lens, 0.625, opt('fy', 0.60)), lens, opt('fstop', 2.8), B1)
+
+
 def stop_1():
     """Fairway du 1, dans la rosée du matin : la balle sur l'herbe tondue ras, le fer long derrière.
     Vue trois quarts avant, au ras du sol, à contre-jour : la rosée accroche le soleil. Le soleil est
@@ -414,16 +448,14 @@ def stop_1():
     arbres dans la brume."""
     sky_at('spruit_sunrise', sun=opt('sun', 116), backdrop=opt('backdrop', 1.0))
     scene.view_settings.exposure = args.exposure if args.exposure is not None else -0.9
-    lift = 0.0045  # la balle repose sur les brins
-    centre = V((0, 0, lift + P.BALL_R))
+    centre = B1
     b = P.ball(centre, stamp=STAMP)
     club = C.iron(kind='long')
     C.address(club, centre, gap=0.004, lift=0.003)
 
-    cam_pos = around(centre, opt('az', -40.4), opt('dist', 1.05), opt('height', 0.095))
-    lens, fstop = opt('lens', 115), opt('fstop', 2.8)
-    target = aim(cam_pos, centre, lens, 0.625, opt('fy', 0.60))
-    cam = camera(cam_pos, target, lens=lens, fstop=fstop, focus=centre)
+    view = view_1()
+    cam = shoot(view)
+    cam_pos, target = view.pos, view.target
     face_stamp(b, cam_pos, turn=-9, roll=5)
 
     # Bandes de tonte de 2 m, en biais : deux tons, les brins couchés dans un sens puis dans l'autre.
@@ -440,7 +472,7 @@ def stop_1():
     turf.dew((0.0, 0.0), 3.5, 0.10, size=(0.0006, 0.0015), seed=4)
     P.lawn((0.030, 0.085, 0.012), (0.23, 0.22, 0.11), stripes=(angle, width, 0.22, offset))
     P.bloom()
-    return Stage(id=IDS[1], cam=cam, cam_pos=cam_pos, target=target, lens=lens, fstop=fstop, ball=b, ball_pos=centre, club=club, turf=turf, obstacles=obstacles, exposure=scene.view_settings.exposure)
+    return Stage(view, id=IDS[1], cam=cam, ball=b, ball_pos=centre, club=club, turf=turf, obstacles=obstacles)
 
 
 # ---------------------------------------------------------------- arrêts 2 et 3 : le green du 1
@@ -491,21 +523,38 @@ def place_green1(pin=False):
     return green_turf(G1_C, G1_R, angle=math.radians(opt('stripes', 168))), flag
 
 
-def stop_2():
+B2 = V((0, 0, 0.005 + P.BALL_R))  # la balle est portée par l'herbe de l'avant-green
+B3 = V((G1_BALL3[0], G1_BALL3[1], 0.0015 + P.BALL_R))
+
+
+def view_2():
+    """Trois quarts avant, depuis le green, au ras de l'herbe."""
+    pos = around(B2, opt('az', -58), opt('dist', 1.0), opt('height', 0.09))
+    lens = opt('lens', 105)
+    return View(pos, aim(pos, B2, lens, 0.62, opt('fy', 0.60)), lens, opt('fstop', 3.2), B2)
+
+
+def view_3():
+    """Très longue focale, à 6 m derrière le trou, à hauteur de genou, à peine décalée de la ligne du
+    putt : le trou passe juste à gauche de l'aplomb de la balle."""
+    pos = V((G1_HOLE[0] + opt('back', 6.0), opt('side', 0.07), opt('height', 0.34)))
+    lens = opt('lens', 540)
+    return View(pos, aim(pos, B3, lens, 0.62, opt('fy', 0.30)), lens, opt('fstop', 22.0), B3)
+
+
+def stop_2(pin=False):
     """Bord du green du 1 : la balle dans l'herbe de l'avant-green, à deux doigts du green, la face du
     wedge derrière elle. Vue trois quarts avant, depuis le green, au ras de l'herbe : le tapis ras au
     premier plan, la lisière nette juste devant la balle, puis l'herbe plus haute où elle repose."""
-    turf, flag = place_green1()
-    lift = 0.005  # la balle est portée par l'herbe
-    centre = V((0, 0, lift + P.BALL_R))
+    turf, flag = place_green1(pin)
+    centre = B2
     b = P.ball(centre, stamp=STAMP)
     club = C.iron(kind='wedge')
     C.address(club, centre, gap=0.004, lift=0.004)
 
-    cam_pos = around(centre, opt('az', -58), opt('dist', 1.0), opt('height', 0.09))
-    lens, fstop = opt('lens', 105), opt('fstop', 3.2)
-    target = aim(cam_pos, centre, lens, 0.62, opt('fy', 0.60))
-    cam = camera(cam_pos, target, lens=lens, fstop=fstop, focus=centre)
+    view = view_2()
+    cam = shoot(view)
+    cam_pos, target = view.pos, view.target
     face_stamp(b, cam_pos, turn=8, roll=-6)
 
     obstacles = [ball_obstacle(centre), club_obstacle(club)]
@@ -517,26 +566,22 @@ def stop_2():
     if opt('greendew', 0.03):
         turf.dew((0.3, -0.3), 1.2, opt('greendew', 0.03), size=(0.0003, 0.0007), seed=6, only=(1, 2))
     P.bloom()
-    return Stage(id=IDS[2], cam=cam, cam_pos=cam_pos, target=target, lens=lens, fstop=fstop, ball=b, ball_pos=centre, club=club, hole=G1_HOLE, flag=flag, turf=turf, obstacles=obstacles, exposure=scene.view_settings.exposure)
+    return Stage(view, id=IDS[2], cam=cam, ball=b, ball_pos=centre, club=club, hole=G1_HOLE, flag=flag, turf=turf, obstacles=obstacles)
 
 
-def stop_3():
+def stop_3(pin=False):
     """Sur le green du 1, à 3 m du trou. Très longue focale, de derrière le trou, comme la caméra d'un
     tournoi : le trou en amorce au premier plan, la balle nette trois mètres plus loin, la face du
     putter derrière elle. Tout le cadre est du green : la lumière de côté y allonge les ombres."""
-    turf, flag = place_green1()
-    lift = 0.0015
-    centre = V((G1_BALL3[0], G1_BALL3[1], lift + P.BALL_R))
+    turf, flag = place_green1(pin)
+    centre = B3
     b = P.ball(centre, stamp=STAMP)
     club = C.putter()
     C.address(club, centre, gap=0.004, lift=0.0012)
 
-    # La caméra est à 6 m derrière le trou, à hauteur de genou, à peine décalée de la ligne du putt :
-    # le trou passe juste à gauche de l'aplomb de la balle.
-    cam_pos = V((G1_HOLE[0] + opt('back', 6.0), opt('side', 0.07), opt('height', 0.34)))
-    lens, fstop = opt('lens', 540), opt('fstop', 22.0)
-    target = aim(cam_pos, centre, lens, 0.62, opt('fy', 0.30))
-    cam = camera(cam_pos, target, lens=lens, fstop=fstop, focus=centre)
+    view = view_3()
+    cam = shoot(view)
+    cam_pos, target = view.pos, view.target
     face_stamp(b, cam_pos, turn=6, roll=4)
 
     obstacles = [ball_obstacle(centre), club_obstacle(club)]
@@ -545,7 +590,7 @@ def stop_3():
     if opt('dew', 0.0):
         turf.dew(G1_BALL3, 1.2, opt('dew', 0.0), size=(0.0003, 0.0008))
     P.bloom()
-    return Stage(id=IDS[3], cam=cam, cam_pos=cam_pos, target=target, lens=lens, fstop=fstop, ball=b, ball_pos=centre, club=club, hole=G1_HOLE, flag=flag, turf=turf, obstacles=obstacles, exposure=scene.view_settings.exposure)
+    return Stage(view, id=IDS[3], cam=cam, ball=b, ball_pos=centre, club=club, hole=G1_HOLE, flag=flag, turf=turf, obstacles=obstacles)
 
 
 # ---------------------------------------------------------------- arrêt 4 : le départ du 2, au bord de l'eau
@@ -554,6 +599,17 @@ def stop_3():
 T2_VIEW = 68.0  # azimut du regard (degrés) : la rive du départ est perpendiculaire à lui
 T2_EDGE = 1.7  # distance de la balle à la rive, le long du regard
 T2_SUN = T2_VIEW - 4.8  # le soleil est au-dessus du cadre, à droite : son reflet descend dans l'eau
+
+
+B4 = V((0, 0, 0.019 + P.BALL_R))  # sur un tee bas, comme pour un fer : la coupelle dépasse à peine de l'herbe
+
+
+def view_4():
+    """Trois quarts arrière, caméra basse : la rive passe juste au-dessus de la balle, le lac occupe le
+    tiers de l'image au-dessus d'elle (c'est ce qu'un téléphone garde du cadre)."""
+    pos = around(B4, opt('view', T2_VIEW) + 180, opt('dist', 1.29), opt('height', 0.105))
+    lens = opt('lens', 135)
+    return View(pos, aim(pos, B4, lens, 0.63, opt('fy', 0.62)), lens, opt('fstop', 8.0), B4)
 
 
 def stop_4():
@@ -565,18 +621,16 @@ def stop_4():
     # lac, la colline d'en face et le reflet du soleil. On pose pour le ciel : il est assombri à l'image.
     sky_at('lakeside_sunrise', sun=view - opt('sun', T2_VIEW - T2_SUN), backdrop=opt('backdrop', 0.38), mirror=True)
     scene.view_settings.exposure = args.exposure if args.exposure is not None else -1.3
-    lift = opt('lift', 0.019)  # un tee bas, comme pour un fer : la coupelle dépasse à peine de l'herbe
-    centre = V((0, 0, lift + P.BALL_R))
+    centre = B4
     b = P.ball(centre, stamp=STAMP)
-    tee = P.tee(top=(0, 0, lift + 0.0015))
+    tee = P.tee(top=(0, 0, centre.z - P.BALL_R + 0.0015))
     tee.data.materials[0] = P.mat('TeeBlanc', (0.86, 0.86, 0.82), rough=0.45, coat_weight=0.2, coat_roughness=0.3)  # blanc : il se lit à contre-jour
     club = C.iron(kind='fer7')
     C.address(club, centre, gap=0.004, lift=0.004)
 
-    cam_pos = around(centre, view + 180, opt('dist', 1.29), opt('height', 0.15))
-    lens, fstop = opt('lens', 135), opt('fstop', 8.0)
-    target = aim(cam_pos, centre, lens, 0.63, opt('fy', 0.66))
-    cam = camera(cam_pos, target, lens=lens, fstop=fstop, focus=centre)
+    framing = view_4()
+    cam = shoot(framing)
+    cam_pos, target = framing.pos, framing.target
     face_stamp(b, cam_pos, turn=-10, roll=4)
 
     # Le sol du départ s'arrête à la rive : au-delà, le lac du panorama.
@@ -588,7 +642,7 @@ def stop_4():
     xy = xy[xy[:, 0] * math.cos(phi) + xy[:, 1] * math.sin(phi) < edge - 0.01]
     turf.grow(outside(xy, (0, 0), 0.006), obstacles)
     P.bloom()
-    return Stage(id=IDS[4], cam=cam, cam_pos=cam_pos, target=target, lens=lens, fstop=fstop, ball=b, ball_pos=centre, club=club, turf=turf, obstacles=obstacles, exposure=scene.view_settings.exposure)
+    return Stage(framing, id=IDS[4], cam=cam, ball=b, ball_pos=centre, club=club, tee=tee, turf=turf, obstacles=obstacles)
 
 
 # ---------------------------------------------------------------- arrêts 5 et 6 : le green du 2
@@ -603,7 +657,7 @@ G2_SUN = 0.0  # le soleil de l'heure dorée, bas, dans l'axe du putt : il éclai
 def place_green2(pin=False):
     """Le green du 2, à l'heure dorée, sous le même ciel que le départ au bord de l'eau. Le drapeau
     n'y est que si `pin` : il est retiré pour le putt."""
-    sky_at('lakeside_sunrise', sun=opt('sun', G2_SUN), backdrop=opt('backdrop', 0.8), mirror=True)
+    sky_at('lakeside_sunrise', sun=G2_SUN, backdrop=opt('backdrop', 0.8), mirror=True)
     scene.view_settings.exposure = args.exposure if args.exposure is not None else -1.5
     P.lawn((0.028, 0.080, 0.011), (0.22, 0.20, 0.09), hole=(*G2_HOLE, P.CUP_R), disc=(*G2_C, G2_R, (0.034, 0.095, 0.014)), specular=0.2)
     P.cup(G2_HOLE)
@@ -611,54 +665,75 @@ def place_green2(pin=False):
     return green_turf(G2_C, G2_R, angle=math.radians(opt('stripes', 152)), green=GREEN_GOLD), flag
 
 
-def stop_5():
+B5 = V((0, 0, 0.0015 + P.BALL_R))
+G2_UP = math.radians(G2_SUN + 135)  # le haut de l'image de l'arrêt 6 : le soleil y vient d'en bas à droite
+# Au fond du godet, contre sa paroi du haut de l'image (à une heure) : la caméra, un peu penchée, la voit
+# entière, et le godet reste centré sur elle quand un téléphone recadre.
+B6 = V((G2_HOLE[0] + 0.0312 * math.cos(G2_UP - math.radians(12)), G2_HOLE[1] + 0.0312 * math.sin(G2_UP - math.radians(12)), -P.CUP_DEPTH + P.BALL_R))
+
+
+def view_5():
+    """Trois quarts avant, au ras du green."""
+    pos = around(B5, opt('az', -50), opt('dist', 1.05), opt('height', 0.085))
+    lens = opt('lens', 115)
+    return View(pos, aim(pos, B5, lens, 0.62, opt('fy', 0.60)), lens, opt('fstop', 3.2), B5)
+
+
+def view_6():
+    """Plongée presque à l'aplomb du trou, d'un peu plus d'un mètre : le godet entier tient dans la bande
+    que garde un téléphone."""
+    tilt, dist = math.radians(12), opt('dist', 1.22)
+    pos = V((G2_HOLE[0] - dist * math.sin(tilt) * math.cos(G2_UP), G2_HOLE[1] - dist * math.sin(tilt) * math.sin(G2_UP), dist * math.cos(tilt)))
+    return View(pos, aim(pos, B6, 85, 0.62, opt('fy', 0.47)), 85, 9.0, B6 + V((0, 0, P.BALL_R + 0.012)))
+
+
+def stop_5(pin=False):
     """Green du 2, à 1,5 m du trou, à l'heure dorée : la balle, la face fraisée du putter derrière elle.
     Vue trois quarts avant, au ras du green ; le soleil bas vient de la droite et allonge les ombres.
     Le trou est à droite, hors du cadre : c'est le trajet qui y mène."""
-    turf, flag = place_green2()
-    lift = 0.0015
-    centre = V((0, 0, lift + P.BALL_R))
+    turf, flag = place_green2(pin)
+    centre = B5
     b = P.ball(centre, stamp=STAMP)
     club = C.putter()
     C.address(club, centre, gap=0.004, lift=0.0012)
 
-    cam_pos = around(centre, opt('az', -50), opt('dist', 1.05), opt('height', 0.085))
-    lens, fstop = opt('lens', 115), opt('fstop', 3.2)
-    target = aim(cam_pos, centre, lens, 0.62, opt('fy', 0.60))
-    cam = camera(cam_pos, target, lens=lens, fstop=fstop, focus=centre)
+    view = view_5()
+    cam = shoot(view)
+    cam_pos, target = view.pos, view.target
     face_stamp(b, cam_pos, turn=-13, roll=-5)  # le tampon à gauche du reflet du soleil
 
     obstacles = [ball_obstacle(centre), club_obstacle(club)]
     xy = spread(cam_pos, target, (1_100_000, 0.1, 10.0, 21, 1.0), [((0.15, -0.2), 0.8, 380_000)])
     turf.grow(outside(xy, G2_HOLE, P.CUP_R + 0.001), obstacles)
     P.bloom()
-    return Stage(id=IDS[5], cam=cam, cam_pos=cam_pos, target=target, lens=lens, fstop=fstop, ball=b, ball_pos=centre, club=club, hole=G2_HOLE, flag=flag, turf=turf, obstacles=obstacles, exposure=scene.view_settings.exposure)
+    return Stage(view, id=IDS[5], cam=cam, ball=b, ball_pos=centre, club=club, hole=G2_HOLE, flag=flag, turf=turf, obstacles=obstacles)
 
 
-def stop_6():
+def stop_6(pin=False):
     """Le contact : la balle au fond du trou du 2. Vue plongeante, presque à l'aplomb : le godet blanc,
     la bande de terre, le bord de gazon ras dans la lumière dorée."""
-    turf, flag = place_green2()
-    up = math.radians(opt('sun', G2_SUN) + 135)  # le haut de l'image : le soleil vient d'en bas à droite
-    side = up - math.pi / 2  # la droite de l'image
+    turf, flag = place_green2(pin)
+    up = G2_UP
     hx, hy = G2_HOLE
-    centre = V((hx + 0.0312 * math.cos(side), hy + 0.0312 * math.sin(side), -P.CUP_DEPTH + P.BALL_R))
+    centre = B6
     b = P.ball(centre, stamp=STAMP)
-    scene.view_settings.exposure = args.exposure if args.exposure is not None else 0.3
+    # Le soleil rasant n'entre pas dans le trou : le godet n'est éclairé que par le ciel, bleu. On pose
+    # pour lui, et on réchauffe la balance des blancs, comme le ferait un photographe à l'ombre.
+    scene.view_settings.exposure = args.exposure if args.exposure is not None else 1.0
+    if opt('wb', 9000):
+        scene.view_settings.use_white_balance = True
+        scene.view_settings.white_balance_temperature = opt('wb', 9000)
 
-    tilt, dist = math.radians(12), 0.60
-    cam_pos = V((hx - dist * math.sin(tilt) * math.cos(up), hy - dist * math.sin(tilt) * math.sin(up), dist * math.cos(tilt)))
-    lens, fstop = 85, 9.0
-    target = aim(cam_pos, centre, lens, 0.62, 0.53)
-    top = centre + V((0, 0, P.BALL_R))
-    cam = camera(cam_pos, target, lens=lens, fstop=fstop, focus=top + V((0, 0, 0.012)))
-    face_stamp(b, cam_pos, up=(math.cos(up), math.sin(up), 0), turn=0, roll=-14)
+    view = view_6()
+    cam = shoot(view)
+    cam_pos = view.pos
+    face_stamp(b, cam_pos, up=(math.cos(up), math.sin(up), 0), turn=0, roll=-9)
 
     obstacles = []
-    xy = spread(cam_pos, V((hx, hy, 0)) + V((math.cos(up), math.sin(up), 0)), (60_000, 0.1, 2.0, 180, 1.0), [(G2_HOLE, 0.42, 900_000)], back=0.0)
+    xy = spread(cam_pos, V((hx, hy, 0)) + V((math.cos(up), math.sin(up), 0)), (160_000, 0.1, 2.6, 180, 1.0), [(G2_HOLE, 0.65, 1_700_000)], back=0.0)
     turf.grow(outside(xy, G2_HOLE, P.CUP_R + 0.0008), obstacles)
     P.bloom()
-    return Stage(id=IDS[6], cam=cam, cam_pos=cam_pos, target=target, lens=lens, fstop=fstop, ball=b, ball_pos=centre, hole=G2_HOLE, flag=flag, turf=turf, obstacles=obstacles, exposure=scene.view_settings.exposure)
+    return Stage(view, id=IDS[6], cam=cam, ball=b, ball_pos=centre, hole=G2_HOLE, flag=flag, turf=turf, obstacles=obstacles)
 
 
 STOPS = [stop_0, stop_1, stop_2, stop_3, stop_4, stop_5, stop_6]
@@ -706,14 +781,53 @@ def render_stop(k):
 
 
 # ---------------------------------------------------------------- trajets
-# Un trajet est une suite de plans : (première image, dernière image, fonction). La fonction reçoit ces
-# deux numéros ; elle construit sa scène à partir d'un arrêt (stage = STOPS[k]() : caméra, balle, club,
-# sol), replante au besoin de l'herbe le long du mouvement (stage.turf.grow(spread(...), stage.obstacles)),
-# puis pose ses clés d'animation (keyframe_insert) sur la caméra, la balle et le club : le flou de
-# mouvement vient d'elles. Un raccord entre deux lieux = deux plans (le ciel, ou le noir du trou).
-# La première image d'un trajet est la vue de son arrêt de départ, la dernière celle de l'arrêt d'arrivée.
+# Un trajet est une suite de plans : (première image, dernière image, fonction). Un plan = un lieu, une
+# prise sans coupe ; un raccord entre deux lieux = deux plans (dans le ciel, ou dans le noir du trou).
+# La fonction d'un plan reçoit ses deux numéros d'image et construit sa scène à partir d'un arrêt :
+#
+#   def putt_du_2(first, last):
+#       a = stop_5()                                  # le lieu, la caméra, la balle, le putter, l'herbe
+#       end = view_6()                                # le cadrage d'arrivée, sans construire l'arrêt 6
+#       # L'herbe n'est plantée que là où la vue de l'arrêt en a besoin : on replante le long du mouvement.
+#       a.turf.grow(outside(spread(end.pos, end.target, (60_000, 0.1, 2.4, 180, 1.0), [(G2_HOLE, 0.55, 900_000)], back=0.0), G2_HOLE, P.CUP_R + 0.001), a.obstacles, seed=9)
+#       key(a.club, first, a.club.location)           # clés d'animation : club, balle, caméra
+#       key(a.ball, 12, B5)
+#       key(a.ball, 36, B6)
+#       key_view(a.cam, first, a.view)
+#       key_view(a.cam, last, end)
+#   LEGS[5] = [(1, 44, putt_du_2)]
+#
+# Le flou de mouvement vient des clés. La première image d'un trajet est la vue de son arrêt de départ
+# (a.view), la dernière celle de l'arrêt d'arrivée (view_N) : la page enchaîne sur l'image nette par un
+# fondu. Les arrêts 2, 3, 5 et 6 se construisent sans drapeau ; stop_N(pin=True) le remet dans le trou.
+# Si la frappe et la chute ne tombent pas à 20 % et 85 % du trajet, écrire leurs images dans
+# render/out/legs.json ({"5": {"impact": 12, "land": 36}}) : scripts/frames.py les porte au manifeste.
 LEG_FRAMES = 44
 LEGS = [None] * 6  # LEGS[k] = [(1, 20, plan_a), (21, 44, plan_b)] : à écrire
+
+
+def key(obj, frame, location=None, rotation=None):
+    """Pose une clé d'animation sur un objet : sa position, et son orientation (angles d'Euler) si donnée."""
+    if location is not None:
+        obj.location = location
+        obj.keyframe_insert('location', frame=frame)
+    if rotation is not None:
+        obj.rotation_euler = rotation
+        obj.keyframe_insert('rotation_euler', frame=frame)
+
+
+def key_view(cam, frame, view):
+    """Pose la caméra sur un cadrage à une image donnée : position, visée, focale, mise au point, ouverture."""
+    cam.location = view.pos
+    P.look_at(cam, view.target)
+    cam.keyframe_insert('location', frame=frame)
+    cam.keyframe_insert('rotation_euler', frame=frame)
+    cam.data.lens = view.lens
+    cam.data.dof.focus_distance = (view.focus - view.pos).length
+    cam.data.dof.aperture_fstop = view.fstop
+    cam.data.keyframe_insert('lens', frame=frame)
+    cam.data.dof.keyframe_insert('focus_distance', frame=frame)
+    cam.data.dof.keyframe_insert('aperture_fstop', frame=frame)
 
 
 def render_leg(k):
@@ -742,7 +856,8 @@ def render_leg(k):
             print(f'RESULT {path} rendu {time.time() - t1:.1f}s')
 
 
-if args.leg is not None:
-    render_leg(args.leg)
-else:
-    render_stop(args.stop or 0)
+if __name__ == '__main__':
+    if args.leg is not None:
+        render_leg(args.leg)
+    else:
+        render_stop(args.stop or 0)
