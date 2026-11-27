@@ -142,7 +142,9 @@ function Art({ c, cup, stop, flying, holed, g, label, total, lang, t }) {
         {HOLES[1].score}
       </i>,
     );
-  else out.push(<FlagMark key="cup2" x={c[LAST]} />, <i key="ball" className="g g-ball" style={{ left: c[at] }} />);
+  // En vol, la balle est posée sur l'arrêt visé et le film la ramène en arrière par une
+  // transformation (usePaint) : à l'arrivée elle y est déjà, sans mise en page à chaque image.
+  else out.push(<FlagMark key="cup2" x={c[LAST]} />, <i key="ball" className="g g-ball" style={{ left: c[flying != null ? flying + 1 : stop] }} />);
   if (label) {
     if (hole1)
       out.push(
@@ -166,27 +168,32 @@ function Art({ c, cup, stop, flying, holed, g, label, total, lang, t }) {
   return out;
 }
 
-// La balle avance sur le trait avec les images du film : écriture directe dans le DOM.
+// La balle avance sur le trait avec les images du film : écriture directe dans le DOM, et seulement
+// des transformations et des découpes (ni largeur ni position : aucune mise en page pendant le vol).
 function usePaint(ref, c, cup) {
   const geo = useRef(null);
   geo.current = c ? { c, cup } : null;
   const paint = (s) => {
     const box = ref.current;
     const k = s.leg;
-    if (!box || !geo.current || k == null) return;
+    if (!box || !geo.current) return;
+    const ball = box.querySelector('.g-ball');
+    if (k == null) {
+      // au repos : la balle est là où React l'a posée
+      if (ball && ball.style.transform) ball.style.transform = '';
+      return;
+    }
     const at = geo.current.c;
     const hole = geo.current.cup;
     // un coup : de son arrêt au suivant ; le dernier putt d'un trou : jusqu'au trou, puis à pied au départ
     const x = k === TEE2 - 1 ? (s.t < 1 ? at[k] + (hole - at[k]) * s.t : hole + (at[k + 1] - hole) * s.roll) : at[k] + (at[k + 1] - at[k]) * ratio(NEXT[k], s);
-    const ball = box.querySelector('.g-ball');
-    if (ball) ball.style.left = `${x}px`;
+    if (ball) ball.style.transform = `translate(calc(-50% + ${(x - at[k + 1]).toFixed(2)}px), -50%)`;
     for (const el of box.querySelectorAll('.ln.live')) {
       const l = Number(el.dataset.l);
       const r = Number(el.dataset.r);
       const from = clamp(x + 14, l, r);
-      el.firstChild.style.width = `${clamp(x - 14 - l, 0, r - l)}px`;
-      el.lastChild.style.left = `${from - l}px`;
-      el.lastChild.style.width = `${r - from}px`;
+      el.firstChild.style.clipPath = `inset(0 ${(r - l - clamp(x - 14 - l, 0, r - l)).toFixed(2)}px 0 0)`;
+      el.lastChild.style.clipPath = `inset(0 0 0 ${(from - l).toFixed(2)}px)`;
     }
   };
   useFlight(paint);

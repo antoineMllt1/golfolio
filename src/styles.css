@@ -856,12 +856,15 @@ h1 .role {
   left: 0;
   height: 1px;
 }
+/* les deux morceaux font toute la longueur : le film n'en change que la découpe (Rail.jsx) */
+.ln.live i {
+  width: 100%;
+}
 .ln.live .was {
-  width: 0;
+  clip-path: inset(0 100% 0 0);
   background: rgb(242 239 232 / 0.86);
 }
 .ln.live .will {
-  width: 100%;
   background: rgb(242 239 232 / 0.3);
 }
 .ln.live.walk i {
@@ -911,10 +914,13 @@ h1 .role {
   border: 1.3px solid var(--amber);
   border-radius: 50%;
   background: rgb(242 169 59 / 0.16);
-  transition: left 0.6s var(--ease); /* un saut d'arrêt en arrêt : la balle glisse ; en vol, c'est le film qui la mène */
+  /* un saut d'arrêt en arrêt : la balle glisse (d'où qu'elle parte, vol interrompu compris) ; en vol,
+     c'est le film qui la mène, par une transformation seule */
+  transition: left 0.6s var(--ease), transform 0.6s var(--ease);
 }
 .flying > .g-ball {
   transition: none;
+  will-change: transform;
 }
 .g-ball::after {
   content: '';
@@ -1544,6 +1550,8 @@ kbd svg {
 .big {
   display: flex;
   align-items: baseline;
+  height: 0.8em; /* sa hauteur de ligne : la boîte ne dépend pas de ses chiffres, */
+  contain: size layout; /* qui changent à chaque image sans remettre en page ce qui l'entoure */
   margin-top: 10px;
   font-family: var(--serif);
   font-size: 132px;
@@ -1593,6 +1601,7 @@ kbd svg {
 .profile {
   display: block;
   overflow: visible;
+  contain: size layout; /* le tracé change à chaque image : la mise en page s'arrête au dessin */
 }
 .profile .axis {
   stroke: var(--line-strong);
@@ -1967,6 +1976,7 @@ kbd svg {
   left: 0;
   top: 0;
   transform-origin: 50% 50%;
+  contain: size layout; /* la ligne du coup en vol change à chaque image : la mise en page s'arrête au dessin */
 }
 .plan-art .layer.out {
   pointer-events: none;
@@ -2246,21 +2256,35 @@ kbd svg {
   margin-left: -0.5px;
   background: var(--muted);
 }
+/* --p avance avec le film : le trait s'étire et le point glisse par des transformations seules */
 .gauge .fill {
   position: absolute;
   left: 0;
   top: 6px;
-  width: calc(var(--p) * 100%);
+  width: 100%;
   height: 1px;
   background: var(--amber);
+  transform: scaleX(var(--p));
+  transform-origin: 0 50%;
+  will-change: transform;
 }
 .gauge .dot {
   position: absolute;
-  left: calc(var(--p) * 100%);
+  left: 0;
   top: 3px;
+  width: 100%;
+  height: 7px;
+  transform: translateX(calc((var(--p) - 1) * 100%)); /* le point est au bout droit : rien ne dépasse à droite */
+  will-change: transform;
+  pointer-events: none;
+}
+.gauge .dot::before {
+  content: '';
+  position: absolute;
+  right: -3.5px;
+  top: 0;
   width: 7px;
   height: 7px;
-  margin-left: -3.5px;
   border-radius: 50%;
   background: var(--amber);
   box-shadow: 0 0 0 3px rgb(242 169 59 / 0.2);
@@ -4850,5 +4874,20 @@ kbd svg {
     animation: none !important;
     transition-duration: 0.01ms !important;
     transition-delay: 0s !important;
+  }
+  /* Rien ne bouge, mais un état ne remplace pas l'autre d'un coup : la fiche, le dessin du carnet et
+     ses notes changent par un fondu de 160 ms (comme l'image du film). */
+  .card.on,
+  .notes,
+  .plan-art .layer.in {
+    animation: fade-in 160ms ease both !important;
+  }
+  .plan-art .layer.out {
+    animation: plan-out 160ms ease both !important;
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
   }
 }

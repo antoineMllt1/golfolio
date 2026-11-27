@@ -101,7 +101,7 @@ function Plan({ drawing, reduce, names }) {
   const [tip, setTip] = useState(null);
   if (layers.cur.key !== drawing.key) {
     const same = layers.cur.w === drawing.w && layers.cur.h === drawing.h && layers.cur.lang === drawing.lang;
-    setLayers({ cur: drawing, old: same && !reduce ? layers.cur : null, n: layers.n + 1 });
+    setLayers({ cur: drawing, old: same ? layers.cur : null, n: layers.n + 1 }); // animations réduites : l'ancien dessin reste le temps d'un fondu court, sans mouvement
     if (tip) setTip(null);
   }
   const { cur, old, n } = layers;
