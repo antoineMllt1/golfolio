@@ -1,5 +1,6 @@
 # Télécharge les fichiers Poly Haven (CC0) utilisés par les scènes dans render/assets (non versionné).
 #   python3 render/fetch_assets.py [nom[@8k] ...]      sans argument : tous les ciels de SKIES
+# Puis, une fois : python render/retouche_ciel.py (lakeside_sunrise → lakeside_soir, sans ses arbres morts).
 import json
 import os
 import sys

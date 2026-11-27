@@ -10,7 +10,8 @@
 #                                                de plus en plus rapide en s'en éloignant
 #   K.swing(club, 'long', clock)                 le club : recul hors champ, descente, impact, traversée
 #   ball = K.Ball(obj)                           la balle sur son porteur : place, écrasement, roule
-#   fly = K.Flight.of('long', centre)            sa trajectoire réelle (mètres, secondes)
+#   fly = K.Flight.of('long', centre)            sa trajectoire réelle (mètres, secondes) ; K.Held : réglée
+#                                                sur sa portée et son sommet (le fer 7 du par 3)
 #   K.launch(ball, fly, clock, last=21)          écrasée à l'impact, puis en vol
 #   K.putt(ball, hole, impact, land)             ou bien : elle roule jusqu'au trou et y tombe
 #   K.burst(K.divot(turf_mat), …)                la motte, les brins, le tee qui sautent
@@ -97,15 +98,18 @@ class Clock:
 
 
 # ---------------------------------------------------------------- le club
-def swing(club, kind, clock, first=1, back=5, reach=0.009, finish=2.5, last=None, leave=True, soft=False):
+def swing(club, kind, clock, first=1, back=5, reach=0.009, finish=2.5, last=None, leave=True, soft=False, top=None):
     """Le geste, vu par sa tête : elle part de l'adresse (image `first`), recule hors champ en `back`
     images, revient sur un arc autour d'un pivot placé côté joueur, traverse la balle à l'image
     clock.impact et accompagne. `club` : le vide parent du club, posé à l'adresse ; `reach` : avancée
     de la face entre l'adresse et le fond de l'écrasement de la balle (mètres). Renvoie l'angle de la
     tête (radians, 0 à l'adresse) à chaque instant posé : {image: angle}. Après l'image `last`, le
     club quitte la scène (leave) : sans joueur pour le tenir, il ne doit pas rester en l'air si la
-    caméra se retourne. soft : après l'impact la tête ralentit et s'arrête en douceur à l'angle
-    `finish` (un putt : le joueur tient sa fin de geste), au lieu de traverser à pleine vitesse."""
+    caméra se retourne. soft : un putt, geste de pendule, compté en images et non en temps réel. Le
+    recul part et arrive en douceur (il dure `back` images et monte à `top` radians, 0,13 pour un putt
+    de trois mètres), la tête marque le haut, redescend en accélérant jusqu'à l'impact, puis ralentit
+    et se pose à l'angle `finish` : le joueur tient sa fin de geste, tête basse. `top` : hauteur du
+    recul si elle diffère de celle du club."""
     S = CLUBS[kind]
     lie, attack = math.radians(S['lie']), math.radians(S['attack'])
     along, up = V((1, 0, 0)), V((0, math.cos(lie), math.sin(lie)))  # le plan du geste : la ligne de jeu et le manche
@@ -118,16 +122,24 @@ def swing(club, kind, clock, first=1, back=5, reach=0.009, finish=2.5, last=None
     club.rotation_mode = 'QUATERNION'
     base = club.rotation_quaternion.copy()
     last = last if last is not None else clock.impact + 6
+    top = top if top is not None else S['top']
+    hit = reach / S['radius']  # l'angle de la tête au fond de l'écrasement de la balle
+    high = first + back  # l'image du haut du recul
+    through = (top + hit) * math.pi / 2 / (clock.impact - high) if soft else 0.0  # vitesse de la tête d'un putt à l'impact, en radians par image
     angles = {}
     for f in half_frames(first, last):
-        if f <= first + back:  # le recul : rien pendant une demi-image (la première image est celle de l'arrêt), puis de plus en plus vite
-            phi = -S['top'] * max(0.0, (f - first - 0.5) / (back - 0.5)) ** 2.5
+        if soft and f <= high:  # le recul d'un putt : rien pendant une demi-image, puis un départ et une arrivée en douceur
+            phi = -top * float(smooth((f - first - 0.5) / (back - 0.5)))
+        elif soft and f <= clock.impact:  # sa descente : vitesse nulle en haut, la plus grande à l'impact
+            phi = hit - (top + hit) * math.cos(math.pi / 2 * (f - high) / (clock.impact - high))
+        elif soft:  # sa traversée : la tête garde les trois quarts de son élan, ralentit et se pose
+            phi = hit + (finish - hit) * (1.0 - math.exp(-0.75 * through * (f - clock.impact) / (finish - hit)))
+        elif f <= high:  # le recul : rien pendant une demi-image (la première image est celle de l'arrêt), puis de plus en plus vite
+            phi = -top * max(0.0, (f - first - 0.5) / (back - 0.5)) ** 2.5
         else:
             t = clock.at(f)
-            phi = reach / S['radius'] + rate * t * (1.0 if t < 0 else S['keep'])
-            if soft and t > 0:
-                phi = reach / S['radius'] + finish * (1.0 - math.exp(-rate * S['keep'] * t / finish))
-            phi = max(-S['top'], min(finish, phi))
+            phi = hit + rate * t * (1.0 if t < 0 else S['keep'])
+            phi = max(-top, min(finish, phi))
         turn = Quaternion(axis, phi)
         club.location = pivot + turn @ (start - pivot)
         club.rotation_quaternion = turn @ base
@@ -220,6 +232,43 @@ class Flight:
         t = np.maximum(np.asarray(t, dtype=float), 0.0)
         x = self.speed * math.cos(self.launch) * t * (1 - self.drag * t)
         z = self.speed * math.sin(self.launch) * t - 0.5 * self.g * t * t
+        y = self.draw[0] * x + self.draw[1] * x * x
+        return self.origin + np.stack([x, y, z], axis=-1)
+
+
+class Held(Flight):
+    """Le vol d'un fer tenu dans le vent, réglé sur ce qu'on en voit : sa portée `carry` (mètres), son
+    sommet `apex` (mètres) et sa durée `time` (secondes). La balle part à `speed` m/s sous l'angle
+    `launch` ; son avance s'épuise (freinage exponentiel), elle monte, plane, et retombe plus raide
+    qu'elle n'est montée. Vue de derrière, sa trace monte vite, tient sa hauteur, puis redescend sur
+    le drapeau."""
+
+    def __init__(self, origin, speed, launch, carry, apex, time, draw=(0.0, 0.0)):
+        super().__init__(origin, speed, launch, draw=draw)
+        self.span = time
+        vx, vz = speed * math.cos(self.launch), speed * math.sin(self.launch)
+        lo, hi = 1e-4, 5.0
+        for _ in range(60):  # le freinage qui donne la portée
+            k = 0.5 * (lo + hi)
+            lo, hi = (k, hi) if vx / k * (1 - math.exp(-k * time)) > carry else (lo, k)
+        self.k = k
+        t = np.linspace(0.0, time, 400)
+        lo, hi = -vz / time**2, 0.0  # z = vz·t + b·t² + c·t³, nul à la fin : c règle le sommet
+        for _ in range(60):
+            c = 0.5 * (lo + hi)
+            b = -(vz + c * time**2) / time
+            lo, hi = (lo, c) if (vz * t + b * t * t + c * t**3).max() < apex else (c, hi)
+        self.rise = (vz, b, c)
+
+    @property
+    def time(self):
+        return self.span
+
+    def at(self, t):
+        t = np.clip(np.asarray(t, dtype=float), 0.0, self.span)
+        x = self.speed * math.cos(self.launch) / self.k * (1 - np.exp(-self.k * t))
+        vz, b, c = self.rise
+        z = vz * t + b * t * t + c * t**3
         y = self.draw[0] * x + self.draw[1] * x * x
         return self.origin + np.stack([x, y, z], axis=-1)
 
@@ -465,7 +514,7 @@ class Trace:
     """La trajectoire en trait lumineux ambre, de largeur apparente constante, qui se dessine derrière
     la balle : au loin la balle n'est plus qu'un point, c'est sa trace qu'on suit. `flight` : le vol ;
     `eye` : la caméra (la largeur du trait en dépend) ; `lens` : sa focale ; `span` : secondes de vol
-    tracées ; `tail` : secondes au bout desquelles le trait s'efface derrière la balle (0 : il reste) ;
+    tracées (début, fin), ou la suite des instants à relier si leur pas n'est pas régulier ; `tail` : secondes au bout desquelles le trait s'efface derrière la balle (0 : il reste) ;
     `taper` : de combien le trait s'affine en s'éloignant (0 : largeur apparente constante ; 0,4 : quatre
     fois plus loin, il est presque deux fois plus fin). `colour` est en linéaire : AMBER est l'ambre du
     site (#f2a93b). `foot` : secondes de vol sur lesquelles le trait apparaît à son début (0 : il commence
@@ -473,7 +522,8 @@ class Trace:
     quand la vraie balle se voit). Poser ensuite key(image, temps de vol) pour chaque image."""
 
     def __init__(self, flight, eye, lens=50.0, span=(0.02, 4.0), strength=7.0, tail=0.0, steps=140, width=0.00055, colour=(1.0, 0.60, 0.16), taper=0.0, foot=0.0, dot=True):
-        t = np.linspace(span[0], span[1], steps)
+        t = np.linspace(span[0], span[1], steps) if len(span) == 2 else np.asarray(span, dtype=float)  # ou bien les instants eux-mêmes
+        steps, span = len(t), (float(t[0]), float(t[-1]))
         pts = flight.at(t)
         self.flight, self.eye, self.k, self.taper = flight, np.array(eye, dtype=float), width * 50.0 / lens, taper
         self.born = (span[0], foot)
