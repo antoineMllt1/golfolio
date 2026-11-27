@@ -9,8 +9,8 @@
 # brume à gauche, le soleil derrière lui. Sans --rot, le soleil est placé par --sun : un autre décor.
 #
 # Le trajet 0 → 1 du film reprend ce plan en mouvement (render/scene.py, plan « wide_finish ») :
-# build(options(), shot=(première image, dernière image)) pose alors la trace qui se dessine et la
-# caméra qui monte vers le ciel. Sans `shot`, l'image fixe validée est inchangée.
+# build(options(), shot=(première image, dernière image)) pose alors la trace qui se dessine jusqu'à
+# la coupe, dans un cadre presque fixe. Sans `shot`, l'image fixe validée est inchangée.
 #
 # Repère : la balle part vers +X, le joueur (droitier) est côté +Y, la caméra est derrière lui (−X).
 import argparse
@@ -33,6 +33,8 @@ V = Vector
 ARGS = None  # les réglages du plan : options() par défaut, ou la ligne de commande
 CUT = os.path.join(P.ASSETS, 'joueur', 'finish.png')
 PX = 1.76 / 1271  # mètres par pixel : la silhouette fait 1271 px de haut pour 1,76 m
+HEAD = (0.64, 0.31)  # où la tête de la trace finit dans l'image du plan en mouvement (voir animate)
+BURN = 1.8  # surexposition des deux dernières images du plan en mouvement : la coupe se fait dans le blanc
 
 
 def rim_map(path):
@@ -231,35 +233,52 @@ def build(args, shot=None):
     hgt = (0.011 + 0.008 * rng.random(n) ** 1.4) * clump
     wid = 0.0008 + 0.0006 * rng.random(n)
     P.grass(xy, hgt, wid, seed=11, lean=(0.1, 0.9))
-    P.bloom(strength=0.18, threshold=1.6)
+    P.bloom(strength=args.halo, threshold=1.6)
     return cam
 
 
 def animate(cam, cam_pos, target, first, last):
-    """Le plan en mouvement : la trace ambre de la balle monte dans le ciel à droite d'Antoine, sa tête
-    plus haut à chaque image ; le trait s'affine en s'éloignant et tire un rien à gauche (un léger
-    draw) : vu de derrière, un trait droit et blanc se lirait comme un piquet. La caméra l'accompagne
-    de deux degrés, puis décroche vers le ciel, où le film change de lieu. Le cadre est tourné de deux
-    degrés vers la droite par rapport à l'image fixe : la trace monte vers x = 0,65 et reste à gauche
-    du carnet du site, qui couvre l'image au-delà de x = 0,72 sur un écran 16:10."""
+    """Le plan en mouvement : la trace ambre de la balle se dessine dans le ciel à droite d'Antoine,
+    comme le traceur d'une retransmission : le cadre ne bouge presque pas, c'est la tête du trait qui
+    avance jusqu'à la coupe. Le trait sort du flou au-dessus du tee (pas de pied planté dans l'herbe),
+    s'affine franchement en s'éloignant, part un rien à droite et revient à gauche (un draw de
+    droitier) : il penche, puis se recourbe en haut. Vue de six mètres derrière, la balle prend presque
+    toute sa hauteur apparente en une demi-seconde : le temps de vol avance donc lentement d'abord. Sur
+    ces deux premières secondes la portance tient la balle sur sa ligne de départ (pesanteur apparente
+    2,0) : la tête du trait monte jusqu'au bout, elle ne retombe pas dans l'image.
+    Le cadre est tourné de deux degrés vers la droite par rapport à l'image fixe (la trace part de
+    x = 0,65 et reste à gauche du carnet du site, qui couvre l'image au-delà de x = 0,72 sur un écran
+    16:10) ; il revient d'un degré vers la gauche en accompagnant le draw, et la tête du trait finit à
+    HEAD, là où le plan d'arrivée reprend la balle. Le plan finit dans le blanc en deux images : la
+    trace baisse d'autant pour rester ambre."""
     K.setup()
-    fly = K.Flight((0.0, 0.0, 0.04), 66.0, 11.5, g=5.2, drag=0.055, draw=(-0.030, 0.00030))
-    trace = K.Trace(fly, cam_pos, lens=cam.data.lens, span=(0.0, 2.4), strength=K.amber(ARGS.exposure, ARGS.glow), width=0.0026, taper=0.4, colour=K.AMBER, steps=200)
+    scene = bpy.context.scene
+    lens = cam.data.lens
+    fly = K.Flight((0.0, 0.0, 0.04), 66.0, 11.5, g=2.0, drag=0.055, draw=(-0.030, 0.00045))
+    trace = K.Trace(fly, cam_pos, lens=lens, span=(0.0, 2.4), strength=K.amber(ARGS.exposure, ARGS.glow), width=0.0017, taper=0.6, colour=K.AMBER, steps=240, foot=0.08)
     aim = target - cam_pos
-    az, pitch, reach = math.atan2(aim.y, aim.x) - math.radians(2.0), math.atan2(aim.z, math.hypot(aim.x, aim.y)), aim.length
+    az0, pitch0, reach = math.atan2(aim.y, aim.x) - math.radians(ARGS.turn), math.atan2(aim.z, math.hypot(aim.x, aim.y)), aim.length
+    slide = V((0.25, 0, 0.0))  # la caméra avance d'un rien : le plan respire
+    t1 = 0.03 + 2.2
+    head = V(fly.at(t1)) - (cam_pos + slide)
+    az1 = math.atan2(head.y, head.x) + math.atan((HEAD[0] - 0.5) * 36.0 / lens)
+    pitch1 = math.atan2(head.z, math.hypot(head.x, head.y)) - math.atan((0.5 - HEAD[1]) * 20.25 / lens)
     frames = K.half_frames(first, last)
-    pos, look, focus = [], [], []
+    pos, look, fstop = [], [], []
     for f in frames:
         u = (f - first) / (last - first)
-        # Vue de derrière, la balle atteint presque sa hauteur apparente en une demi-seconde : le temps
-        # de vol avance lentement d'abord, pour que la tête du trait monte pendant neuf images.
-        trace.key(f, 0.03 + 1.6 * u ** 1.5)
-        # D'abord deux degrés, à peine sensibles ; puis la caméra décroche vers le ciel.
-        tilt = pitch + math.radians(2.0 * K.smooth(u / 0.55) + 30.0 * max(0.0, (u - 0.42) / 0.58) ** 2.6)
-        pos.append(cam_pos + V((0.10 * u, 0, 0.0)))
+        trace.key(f, 0.03 + 2.2 * u**2.8)
+        w = float(K.smooth(u))
+        az, tilt = az0 + (az1 - az0) * w, pitch0 + (pitch1 - pitch0) * w
+        pos.append(cam_pos + slide * u)
         look.append(pos[-1] + reach * V((math.cos(tilt) * math.cos(az), math.cos(tilt) * math.sin(az), math.sin(tilt))))
-        focus.append(6.0 - 4.6 * K.smooth((u - 0.55) / 0.45))  # le point revient vers nous : le ciel se floute
-    K.track(cam, frames, pos, look, focus=focus)
+        # Le diaphragme se ferme un peu : la tête du trait, à cent mètres, ne se dissout pas dans le flou.
+        fstop.append(math.exp(math.log(2.8) + (math.log(8.0) - math.log(2.8)) * float(K.smooth((u - 0.15) / 0.5))))
+        e = ARGS.exposure + BURN * float(K.smooth((f - (last - 2)) / 2.0))
+        scene.view_settings.exposure = e
+        scene.keyframe_insert('view_settings.exposure', frame=f)
+        trace.glow(f, K.amber(e, ARGS.glow))
+    K.track(cam, frames, pos, look, focus=[6.0] * len(frames), fstop=fstop)
 
 
 def options(argv=()):
@@ -277,6 +296,8 @@ def options(argv=()):
     ap.add_argument('--dark', type=float, default=0.5, help='assombrissement de la silhouette (1 = aucun)')
     ap.add_argument('--trace', type=float, default=7.0)
     ap.add_argument('--glow', type=float, default=2.4, help='force de la trace ambre du plan en mouvement')
+    ap.add_argument('--turn', type=float, default=2.0, help='plan en mouvement : degrés dont le cadre est tourné vers la droite')
+    ap.add_argument('--halo', type=float, default=0.18, help='force du halo des hautes lumières')
     ap.add_argument('--t', type=float, default=1.1, help='secondes de vol déjà tracées')
     ap.add_argument('--samples', type=int, default=32)
     ap.add_argument('--scale', type=int, default=50)

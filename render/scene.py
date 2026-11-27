@@ -900,7 +900,8 @@ def render_stop(k):
 #   - la première image d'un trajet est la vue de son arrêt de départ, la dernière celle de l'arrêt
 #     d'arrivée (la page enchaîne sur l'image nette par un fondu) : rien ne bouge pendant la première
 #     demi-image, et tout est posé avant la dernière ;
-#   - la caméra suit la balle, gardée vers x = 0,62 (aim) ; à l'arrivée elle reste à la place de l'arrêt ;
+#   - la caméra suit la balle, gardée vers x = 0,62 (aim) ; à l'arrivée elle reste à la place de l'arrêt,
+#     et vise la place de la balle au sol : ce sont ses rebonds qui bougent dans l'image, pas le décor ;
 #   - le club du coup suivant n'est pas là quand la balle arrive : il vient se poser derrière elle
 #     (K.settle), une fois qu'elle est arrêtée ;
 #   - l'herbe d'un arrêt n'est plantée que dans son cadre : on replante là où la caméra regarde
@@ -911,7 +912,7 @@ def render_stop(k):
 # Animatique : --leg N --scale 25 --samples 10 --set density=0.35 --out render/out/anim
 LEG_FRAMES = 44
 CUES = {
-    0: {'impact': 10, 'land': 35},
+    0: {'impact': 10, 'land': 30},
     1: {'impact': 11, 'land': 31},
     2: {'impact': 10, 'land': 20},
     3: {'impact': 8, 'land': 19},
@@ -993,50 +994,67 @@ def tee_shot(first, last):
 
 def wide_finish(first, last):
     """Plan 2 : Antoine de dos au finish, en silhouette (render/finish.py) ; la trace ambre de la balle
-    se dessine dans le ciel, la caméra la suit puis monte et se perd dans le blanc du ciel."""
-    F.build(F.options(['--rot', '324']), shot=(first, last))  # le ciel de l'image validée
-    scene.view_settings.look = 'None'  # l'image validée a été développée sans surcroît de contraste
-    base = scene.view_settings.exposure
-    key_look(first, base)
-    key_look(last - 5, base)
-    key_look(last, base + 1.8)
+    se dessine dans le ciel jusqu'à la coupe, dans un cadre presque fixe, et le plan finit dans le blanc
+    en deux images. L'image est développée comme l'image validée (le contraste posé par reset) : ses
+    noirs restent des noirs. Mesuré sur render/out/test/finish.png : elle a été posée à −1,35 (à −0,6,
+    le réglage par défaut de finish.py, les cuisses et la colline sont une fois et demie trop claires)."""
+    F.build(F.options(['--rot', '324', '--turn', str(opt('turn', 2.0)), '--halo', str(opt('halo', 0.18)), '--glow', str(opt('glow', 2.4)), '--exposure', str(opt('ev', -1.35))]), shot=(first, last))  # le ciel de l'image validée
 
 
-def arrive(stage, first, land, stop, last, lie, fall, hops, run, settle=None, burn=2.2):
+def arrive(stage, first, land, stop, last, lie, fall, hops, run, settle=None, burn=2.2, wide=45.0, high=0.28, pin=None):
     """Plan d'arrivée d'un coup long, dans la scène de l'arrêt `stage` : on sort du blanc du ciel, la
     balle en descend, touche le sol à l'image `land`, rebondit, roule et s'arrête à l'image `stop`, là
-    où l'arrêt la montre. La caméra ne quitte pas la place de l'arrêt : elle suit la balle, gardée au
-    même point de l'image, et finit exactement sur son cadrage. Puis le club du coup suivant (angle de
-    lie `lie`) vient se poser derrière la balle. fall, hops, run : voir K.arrival."""
+    où l'arrêt la montre. La caméra ne quitte pas la place de l'arrêt et attend la balle plus qu'elle
+    ne la suit : elle ouvre son champ (focale `wide` à la première image, celle de l'arrêt une image
+    avant `stop`), la balle descend dans l'image pendant sa chute (de `high` hauteur d'image), et dès
+    qu'elle a touché le sol c'est sa place au sol qui est visée : le sol reste stable, la balle saute
+    dans l'image, ses rebonds se lisent. Au premier impact, une gerbe de rosée. Puis le club du coup
+    suivant (angle de lie `lie`) vient se poser derrière la balle. fall, hops, run : voir K.arrival.
+    `pin` : (x, y) d'un point à garder dans le champ pendant la chute (le drapeau), ou None."""
     view, cam = stage.view, stage.cam
     fx, fy = focus_of(cam, stage.ball_pos)
-    frames, pts = K.arrival(stage.ball_pos, first, land, stop, fall=fall, hops=hops, run=run, last=last)
-    # L'herbe du côté d'où vient la balle : la caméra la regarde arriver avant de revenir sur son cadrage.
-    xy = beside(spread(view.pos, pts[2 * (land - first)], (450_000, 0.1, 14.0, 26, 1.0), seed=31), view, 21)
-    stage.turf.grow(xy, stage.obstacles, seed=33)
+    rest = V(stage.ball_pos)
+    frames, pts = K.arrival(rest, first, land, stop, fall=fall, hops=hops, run=run, last=last)
+    down = pts[frames.index(land)]  # où elle touche le sol
+    # L'herbe du côté d'où vient la balle : la caméra, au grand-angle, la regarde arriver avant de
+    # revenir sur son cadrage.
+    xy = beside(spread(view.pos, down, (1_000_000, 0.1, 14.0, 50, 1.0), seed=31), view, 21)
+    stage.turf.grow(outside(xy, stage.hole, P.CUP_R + 0.001) if stage.hole else xy, stage.obstacles, seed=33)
     K.setup()
     ball = K.Ball(stage.ball)
     for f, p in zip(frames, pts):
         ball.key(f, p)
     ball.roll(frames, pts, ball.rest)
-    target = [view.target if f >= stop else aim(view.pos, p, view.lens, fx, fy) for f, p in zip(frames, pts)]
-    focus = [min((p - view.pos).length, 80.0) for p in pts]
-    K.track(cam, frames, [view.pos] * len(frames), target, focus=focus)
+    target, lens, focus = [], [], []
+    for f, p in zip(frames, pts):
+        mm = math.exp(math.log(wide) + (math.log(view.lens) - math.log(wide)) * float(K.smooth((f - first) / (stop - 1.0 - first))))
+        if f <= land:
+            t = aim(view.pos, p, mm, fx, fy - high * (1.0 - float(K.smooth((f - first) / (land - first)))))
+        else:
+            t = aim(view.pos, V((p.x, p.y, rest.z)), mm, fx, fy)
+        target.append(t.lerp(view.target, float(K.smooth((f - (stop - 1.0)) / 1.0))))
+        lens.append(mm)
+        focus.append(min((p - view.pos).length, 80.0))
+    K.track(cam, frames, [view.pos] * len(frames), target, lens=lens, focus=focus)
     K.settle(stage.club, settle if settle is not None else math.ceil(stop) - 2, last, lie)
     key_look(first, stage.exposure + burn, stage.warmth)
     key_look(first + 3, stage.exposure, stage.warmth)
+    # La gerbe de rosée du premier impact, en temps réel (une image = 1/27 s).
+    real = K.Clock(land, slow=1.0 / 27.0, before=1.0, after=1.0)
+    K.burst(K.spray(22, SUN['dir']), V((down.x, down.y, 0.01)), real, min(last, land + 12), speed=(2.0, 5.0), lift=(40, 70), fan=70, scatter=0.03, tumble=0.0, seed=9)
     # La trace ambre du plan précédent se poursuit : si loin, la balle n'est qu'un point gris dans le
-    # ciel. Elle la suit jusqu'au sol, puis s'efface en trois images ; son point reste dans la balle.
-    trace = K.Trace(K.Path(frames, pts), view.pos, lens=view.lens, span=(first, land), strength=K.amber(stage.exposure), tail=3.0, width=0.0017, colour=K.AMBER, steps=60)
+    # ciel. Elle la suit jusqu'au sol, un tiers d'image derrière elle (pendant la pose, le trait ne
+    # dépasse jamais la balle), puis s'efface en trois images.
+    trace = K.Trace(K.Path(frames, pts), view.pos, lens=wide, span=(first, land), strength=K.amber(stage.exposure), tail=3.0, width=0.0012, colour=K.AMBER, steps=60, dot=False)
     for f in frames:
-        trace.key(f, f)
+        trace.key(f, f - 0.35)
         trace.glow(f, K.amber(stage.exposure + burn * max(0.0, 1.0 - (f - first) / 3.0)))
 
 
 def fairway_arrival(first, last):
-    """Plan 3 : la balle retombe sur le fairway, rebondit deux fois, roule et s'arrête ; le fer long
-    vient se poser derrière elle."""
-    arrive(stop_1(), first, CUES[0]['land'], 41.5, last, 60.5, fall=(1.15, 0.95), hops=((2.0, 2.4, 0.42), (1.5, 1.2, 0.10)), run=1.2, settle=40)
+    """Plan 3 : la balle retombe sur le fairway, fait deux rebonds qui se lisent, roule et s'arrête ;
+    le fer long vient se poser derrière elle."""
+    arrive(stop_1(), first, CUES[0]['land'], 39.5, last, 60.5, fall=(0.85, 0.70), hops=((3.5, 3.0, 0.40), (2.5, 1.2, 0.10)), run=1.5, settle=39)
 
 
 # ---- trajet 1 → 2 : le fer long vers le green
@@ -1353,7 +1371,7 @@ def last_putt(first, last):
 
 
 LEGS = [
-    [(1, 12, tee_shot), (13, 29, wide_finish), (30, 44, fairway_arrival)],
+    [(1, 12, tee_shot), (13, 24, wide_finish), (25, 44, fairway_arrival)],
     [(1, 24, fairway_shot), (25, 44, green_arrival)],
     [(1, 44, chip_and_run)],
     [(1, 26, birdie_putt), (27, 44, tee2_descent)],

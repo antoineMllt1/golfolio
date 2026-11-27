@@ -18,6 +18,7 @@
 #                                                ou K.Path(images, places) pour la chute d'une arrivée)
 #   K.track(cam, frames, pos, target, …)         la caméra, image par image
 #   K.arrival(…)                                 la fin du vol vue de l'arrêt suivant : chute, rebonds, roule
+#   K.burst(K.spray(22, soleil), …)              la gerbe de rosée au premier rebond
 #   K.settle(club, 39, 44, lie)                  le club du coup suivant vient se poser derrière la balle
 #
 # Un coup dure 44 images à 27 images par seconde : le recul du club n'est qu'une amorce (il sort du
@@ -403,6 +404,15 @@ def loose_blades(count, turf, length=(0.008, 0.014), seed=6):
     return out
 
 
+def spray(count, sun, size=(0.0015, 0.003), seed=8):
+    """Des gouttes de rosée, pour la gerbe que soulève une balle qui retombe dans l'herbe mouillée :
+    des billes d'eau qui accrochent le soleil `sun` (vecteur unitaire), à lancer avec burst."""
+    rng = np.random.default_rng(seed)
+    v, f = P.icosphere(1)
+    m = P.drop_material(sun, glint=(60.0, 30.0, 160.0))
+    return [P.assign(P.mesh_obj('Gerbe', v * (size[0] + (size[1] - size[0]) * rng.random()), f), m) for _ in range(count)]
+
+
 def burst(objects, origin, clock, last, speed=(4.0, 10.0), lift=(25.0, 60.0), fan=28.0, scatter=0.02, tumble=40.0, seed=7, ground=0.004, hidden=True):
     """Lance des objets à l'impact : chacun part de `origin` (à `scatter` mètres près) à une vitesse de
     speed m/s, entre lift degrés au-dessus du sol, dans un éventail de ±fan degrés autour de +X, en
@@ -458,12 +468,15 @@ class Trace:
     tracées ; `tail` : secondes au bout desquelles le trait s'efface derrière la balle (0 : il reste) ;
     `taper` : de combien le trait s'affine en s'éloignant (0 : largeur apparente constante ; 0,4 : quatre
     fois plus loin, il est presque deux fois plus fin). `colour` est en linéaire : AMBER est l'ambre du
-    site (#f2a93b). Poser ensuite key(image, temps de vol) pour chaque image."""
+    site (#f2a93b). `foot` : secondes de vol sur lesquelles le trait apparaît à son début (0 : il commence
+    net, comme un piquet planté dans l'herbe) ; `dot` : le point lumineux à la tête du trait (à retirer
+    quand la vraie balle se voit). Poser ensuite key(image, temps de vol) pour chaque image."""
 
-    def __init__(self, flight, eye, lens=50.0, span=(0.02, 4.0), strength=7.0, tail=0.0, steps=140, width=0.00055, colour=(1.0, 0.60, 0.16), taper=0.0):
+    def __init__(self, flight, eye, lens=50.0, span=(0.02, 4.0), strength=7.0, tail=0.0, steps=140, width=0.00055, colour=(1.0, 0.60, 0.16), taper=0.0, foot=0.0, dot=True):
         t = np.linspace(span[0], span[1], steps)
         pts = flight.at(t)
         self.flight, self.eye, self.k, self.taper = flight, np.array(eye, dtype=float), width * 50.0 / lens, taper
+        self.born = (span[0], foot)
         self.near = float(np.linalg.norm(pts[0] - self.eye))
         rad = self.radius(pts)
         tan = np.gradient(pts, axis=0)
@@ -504,6 +517,17 @@ class Trace:
             nt.links.new(shown.outputs[0], both.inputs[0])
             nt.links.new(fade.outputs[0], both.inputs[1])
             amount = both.outputs[0]
+        if foot > 0:  # le début du trait sort du flou : pas de pied net
+            rise = nt.nodes.new('ShaderNodeMapRange')
+            rise.interpolation_type = 'SMOOTHSTEP'
+            rise.inputs['From Min'].default_value = span[0]
+            rise.inputs['From Max'].default_value = span[0] + foot
+            nt.links.new(att.outputs['Fac'], rise.inputs['Value'])
+            both = nt.nodes.new('ShaderNodeMath')
+            both.operation = 'MULTIPLY'
+            nt.links.new(amount, both.inputs[0])
+            nt.links.new(rise.outputs[0], both.inputs[1])
+            amount = both.outputs[0]
         clear = nt.nodes.new('ShaderNodeBsdfTransparent')
         mix = nt.nodes.new('ShaderNodeMixShader')
         nt.links.new(amount, mix.inputs[0])
@@ -511,13 +535,16 @@ class Trace:
         nt.links.new(P.bsdf(m).outputs[0], mix.inputs[2])
         nt.links.new(mix.outputs[0], nt.nodes['Material Output'].inputs['Surface'])
         P.assign(self.line, m)
-        bpy.ops.mesh.primitive_uv_sphere_add(segments=16, ring_count=8, radius=1.0)
-        self.dot = bpy.context.object
-        self.dot.name = 'PointBalle'
-        P.assign(self.dot, P.mat('PointBalle', (0, 0, 0), rough=1.0, emission_color=(*colour, 1), emission_strength=strength))
-        self.lit = [P.bsdf(m).inputs['Emission Strength'], P.bsdf(self.dot.data.materials[0]).inputs['Emission Strength']]
-        for o in (self.line, self.dot):
-            o.visible_shadow = False
+        self.line.visible_shadow = False
+        self.lit = [P.bsdf(m).inputs['Emission Strength']]
+        self.dot = None
+        if dot:
+            bpy.ops.mesh.primitive_uv_sphere_add(segments=16, ring_count=8, radius=1.0)
+            self.dot = bpy.context.object
+            self.dot.name = 'PointBalle'
+            P.assign(self.dot, P.mat('PointBalle', (0, 0, 0), rough=1.0, emission_color=(*colour, 1), emission_strength=strength))
+            self.lit.append(P.bsdf(self.dot.data.materials[0]).inputs['Emission Strength'])
+            self.dot.visible_shadow = False
 
     def glow(self, frame, strength):
         """Clé sur la force de la trace : à baisser quand l'exposition du plan monte, pour qu'elle reste
@@ -536,9 +563,13 @@ class Trace:
         """À l'image `frame`, la balle en est à `t` secondes de vol."""
         self.head.outputs[0].default_value = t
         self.head.outputs[0].keyframe_insert('default_value', frame=frame)
+        if self.dot is None:
+            return
         p = self.flight.at(t)
         self.dot.location = p
         r = 2.6 * float(self.radius(p))
+        if self.born[1] > 0:  # le point naît avec le trait
+            r *= max(0.02, float(smooth((t - self.born[0]) / self.born[1])))
         self.dot.scale = (r, r, r)
         self.dot.keyframe_insert('location', frame=frame)
         self.dot.keyframe_insert('scale', frame=frame)
