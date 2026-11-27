@@ -446,6 +446,15 @@ def spread(cam_pos, target, cone, spots=(), back=0.25, seed=1):
     return np.concatenate(sets)
 
 
+def soft_disc(centre, radius, count, seed=1):
+    """Des points serrés autour d'un sujet, de plus en plus rares vers le bord : vu d'un peu haut, un
+    disque plus dense que ses alentours se détache en tache claire s'il a un bord net."""
+    rng = np.random.default_rng(seed)
+    n = int(count * DENSITY)
+    r, t = radius * rng.random(n) ** 0.75, 2 * math.pi * rng.random(n)
+    return np.stack([centre[0] + r * np.cos(t), centre[1] + r * np.sin(t)], axis=1)
+
+
 def ball_obstacle(centre):
     c = np.array(centre, dtype=np.float64)
     return lambda pts: np.linalg.norm(pts - c, axis=1) - P.BALL_R
@@ -619,7 +628,7 @@ def place_green1(pin=False):
     sky_at('spruit_sunrise', sun=opt('sun', G1_SUN), backdrop=opt('backdrop', 1.0), mist=MIST)
     look(-0.7, MORNING)
     P.lawn(LAWN, FAR_MIST, haze=(40, 240), hole=(*G1_HOLE, P.CUP_R), disc=(*G1_C, G1_R, (0.045, 0.165, 0.050)), specular=0.0)
-    P.cup(G1_HOLE)
+    P.cup(G1_HOLE, soil_tone=opt('soil', 8.0))  # la paroi que montre l'arrêt 3 est à l'ombre : une terre claire s'y lit
     socket_floor(G1_HOLE)
     flag = P.flagstick(G1_HOLE, heading=math.radians(200)) if pin else None
     return green_turf(G1_C, G1_R, angle=math.radians(opt('stripes', 168))), flag
@@ -637,13 +646,19 @@ def view_2():
 
 
 def view_3():
-    """Derrière le trou, bas, à peine décalée de la ligne du putt : le trou en amorce au premier plan,
-    juste à gauche de l'aplomb de la balle, la balle nette trois mètres plus loin, et au-dessus du
-    green la bande des arbres dans la brume. Le diaphragme reste fermé : vu si bas, le trou n'est
-    qu'une ellipse très plate, qu'un flou plus fort effacerait."""
-    pos = V((G1_HOLE[0] + opt('back', 3.0), opt('side', 0.07), opt('height', 0.17)))
-    lens = opt('lens', 250)
+    """Derrière le trou, à hauteur de genou, à peine décalée de la ligne du putt : le trou en amorce au
+    premier plan, juste à gauche de l'aplomb de la balle, la balle nette trois mètres plus loin, et
+    au-dessus du green la bande des arbres dans la brume. D'assez haut (sept degrés de plongée) pour
+    que le trou soit un trou : une ellipse ouverte, sa paroi de terre éclairée par le ciel. Le
+    diaphragme reste fermé : le trou et la balle sont nets ensemble."""
+    pos = V((G1_HOLE[0] + opt('back', 3.3), opt('side', 0.07), opt('height', 0.42)))
+    lens = opt('lens', 135)
     return View(pos, aim(pos, B3, lens, 0.62, opt('fy', 0.45)), lens, opt('fstop', 20.0), B3)
+
+
+def half_3():
+    """Demi-angle (degrés) du secteur que l'arrêt 3 plante devant son cadrage : un peu plus que son champ."""
+    return max(6.0, 1.25 * math.degrees(math.atan(18.0 / view_3().lens)))
 
 
 def stop_2(pin=False, place=None):
@@ -674,7 +689,7 @@ def stop_2(pin=False, place=None):
 
 
 def stop_3(pin=False, place=None, ball=None):
-    """Sur le green du 1, à 3 m du trou. De derrière le trou, bas, au téléobjectif : le trou en amorce
+    """Sur le green du 1, à 3 m du trou. De derrière le trou, à hauteur de genou : le trou en amorce
     au premier plan, la balle nette trois mètres plus loin, la face du putter derrière elle, et la
     lumière du matin qui vient de face : elle fait briller le green et allonge les ombres vers nous.
     `place` : le lieu s'il est déjà posé ; `ball` : la balle si elle existe déjà (un trajet l'amène)."""
@@ -689,10 +704,14 @@ def stop_3(pin=False, place=None, ball=None):
     C.address(club, centre, gap=0.004, lift=0.0012)
 
     obstacles = [ball_obstacle(centre), club_obstacle(club)]
-    xy = spread(cam_pos, target, (int(opt('blades', 1_800_000)), 2.2, 16.0, 6.0, 0.6), [(G1_BALL3, 0.5, 300_000), (G1_HOLE, 0.4, 200_000)], back=0.0)
+    half = half_3()
+    # Vu de cette hauteur, un gazon clairsemé laisse voir le sol entre les brins, et les deux disques
+    # serrés s'y détachent : même pour une animatique, ce secteur garde au moins sept dixièmes de ses brins.
+    keep = max(DENSITY, 0.7) / DENSITY
+    xy = np.concatenate([spread(cam_pos, target, (int(opt('blades', 2_400_000) * keep), 2.2, 16.0, half, 0.6), back=0.0), soft_disc(G1_BALL3, 0.9, 300_000, seed=8), soft_disc(G1_HOLE, 0.7, 200_000, seed=9)])
     turf.grow(outside(xy, G1_HOLE, P.CUP_R + 0.001), obstacles, seed=7)
     # Au-delà, jusqu'à la brume : peu de brins suffisent, vus si rasants, pour que le sol nu ne se voie pas.
-    turf.grow(spread(cam_pos, target, (int(opt('far', 800_000)), 9.0, 75.0, 5.0, 0.0), back=0.0, seed=21), seed=8)
+    turf.grow(spread(cam_pos, target, (int(opt('far', 1_000_000)), 9.0, 75.0, half - 1.0, 0.0), back=0.0, seed=21), seed=8)
     if opt('dew3', 0.0):
         turf.dew(G1_BALL3, 1.2, opt('dew3', 0.0), size=(0.0003, 0.0008), only=(1, 2))
     P.bloom()
@@ -1126,8 +1145,9 @@ def green_arrival(first, last):
 # ---- trajet 2 → 3 : l'approche roulée, sans coupe
 def chip_and_run(first, last):
     """Un seul plan sur le green du 1 : le wedge fait sauter la balle, elle vole six mètres, retombe sur
-    le green, roule et s'arrête à trois mètres du trou. La caméra recule devant elle au ras du sol,
-    passe au-dessus du trou et finit sur le cadrage de l'arrêt 3 ; le putter vient se poser."""
+    le green, roule et s'arrête à trois mètres du trou. La caméra recule devant elle, près du sol, en
+    ouvrant son champ le temps du vol : la cloche de la balle se lit, avec son ombre et l'horizon ; puis
+    elle passe au-dessus du trou et finit sur le cadrage de l'arrêt 3 ; le putter vient se poser."""
     place = place_green1()
     a = stop_2(place=place)
     fya = focus_of(a.cam, B2)[1]
@@ -1136,14 +1156,15 @@ def chip_and_run(first, last):
     bpy.data.objects.remove(a.cam)
     cam, va, vb = b.cam, a.view, b.view
     impact, land, stop = CUES[2]['impact'], CUES[2]['land'], 40
-    # L'herbe du couloir, entre les deux cadrages : la caméra y passe vite, peu de brins suffisent.
+    # L'herbe du couloir, entre les deux cadrages, et loin derrière la balle (la caméra recule en la
+    # regardant : c'est le fond de l'image) : elle y passe vite, peu de brins suffisent.
     rng = np.random.default_rng(51)
-    n = int(1_100_000 * DENSITY)
-    xy = np.stack([-2.5 + 25.5 * rng.random(n), -2.6 + 4.2 * rng.random(n)], axis=1)
-    place[0].grow(outside(beside(beside(xy, va, 22), vb, 6, back=0.0), G1_HOLE, P.CUP_R + 0.001), seed=53)
+    n = int(2_400_000 * DENSITY)
+    xy = np.stack([-12.0 + 35.0 * rng.random(n), -5.0 + 8.0 * rng.random(n)], axis=1)
+    place[0].grow(outside(beside(beside(xy, va, 22), vb, half_3(), back=0.0), G1_HOLE, P.CUP_R + 0.001), seed=53)
     K.setup()
     clock = K.Clock(impact, slow=0.060 / K.CLUBS['wedge']['speed'], before=1.25, after=1.9, cap=0.118)
-    K.swing(a.club, 'wedge', clock, first=first, back=4, reach=0.0125, last=impact + 5)
+    K.swing(a.club, 'wedge', clock, first=first, back=4, reach=0.0125, last=impact + 2)  # il quitte la scène avant que la caméra ne se retourne : sans joueur, son manche suivrait la balle dans le cadre
     ball = K.Ball(a.ball)
     fly = K.Flight.of('wedge', B2, draw=(0.0, 0.0))
     where = K.launch(ball, fly, clock, first=first, last=land)
@@ -1156,26 +1177,32 @@ def chip_and_run(first, last):
     ball.roll(rolling, [where[f] for f in rolling], b.ball_turn)
     K.burst(K.loose_blades(14, a.turf.kinds[0].material()), V((0.03, 0, 0)), clock, land, speed=(1.2, 3.5), lift=(30, 70), fan=30, tumble=25, seed=5)
     K.settle(b.club, stop, last, 70.0)
-    # La caméra : devant la balle, de plus en plus loin devant ; quand la balle vole, elle monte plus
-    # qu'elle et la regarde d'un peu au-dessus (huit degrés), pour la garder sur le vert du green : le
-    # soleil est bas, juste derrière, et une balle blanche devant lui se dissout dans son halo. Elle
-    # la tient toujours au même point de l'image.
+    # La caméra : devant la balle, de plus en plus loin devant. Quand la balle vole, elle s'élève à
+    # peine plus qu'elle (le soleil est bas, juste derrière : une balle blanche qui passe au-dessus de
+    # l'horizon se dissout dans son halo ; vue d'un rien au-dessus, elle reste sur le vert, l'horizon
+    # en haut de l'image) et ne vise que sa mi-hauteur, en ouvrant son champ (60 mm) : la balle monte
+    # de près de quatre dixièmes d'image et redescend, son ombre reste au sol, sa cloche se lit. Puis
+    # le champ se resserre jusqu'au cadrage de l'arrêt 3.
     frames = K.half_frames(first, last)
     pts = [V(where[f]) for f in frames]
     soft = K.follow(pts, B2, weight=0.6)
     ahead = vb.pos.x - B3.x - va.pos.x  # ce dont la caméra s'éloigne de la balle, d'un cadrage à l'autre
+    wide = opt('chipwide', 60.0)
     pos, target, lens, focus, fstop = [], [], [], [], []
     for k, f in enumerate(frames):
         g = float(K.smooth((f - impact - 0.5) / (42.5 - impact)))
         early = 2.2 * float(K.smooth((f - impact) / 6.0))
-        p = V((soft[k].x + va.pos.x + early + (ahead - 2.2) * g, va.pos.y + (vb.pos.y - va.pos.y) * g, va.pos.z + (vb.pos.z - va.pos.z) * g + opt('lift', 1.45) * max(0.0, soft[k].z - B2.z)))
+        p = V((soft[k].x + va.pos.x + early + (ahead - 2.2) * g, va.pos.y + (vb.pos.y - va.pos.y) * g, va.pos.z + (vb.pos.z - va.pos.z) * g + opt('lift', 1.1) * max(0.0, soft[k].z - B2.z)))
         p = p.lerp(vb.pos, float(K.smooth((f - 38) / 5.0)))
         mm = math.exp(math.log(va.lens) + (math.log(vb.lens) - math.log(va.lens)) * g)
+        opened = float(K.smooth((f - impact - 0.5) / 3.0)) * (1.0 - float(K.smooth((f - (land - 1.0)) / 5.0)))
+        mm = math.exp(math.log(mm) + (math.log(wide) - math.log(mm)) * opened)
         w = float(K.smooth((f - impact) / 1.5))
+        look = V((pts[k].x, pts[k].y, pts[k].z - 0.5 * max(0.0, pts[k].z - B2.z)))
         pos.append(p)
         lens.append(mm)
         fstop.append(math.exp(math.log(va.fstop) + (math.log(vb.fstop) - math.log(va.fstop)) * g))
-        target.append(vb.target if f >= 43 else va.target.lerp(aim(p, pts[k], mm, 0.62, fya + (fyb - fya) * g), w))
+        target.append(vb.target if f >= 43 else va.target.lerp(aim(p, look, mm, 0.62, fya + (fyb - fya) * g), w))
         focus.append((pts[k] - p).length)
     K.track(cam, frames, pos, target, lens=lens, focus=focus, fstop=fstop)
 
@@ -1203,7 +1230,7 @@ def birdie_putt(first, last):
     impact, land = CUES[3]['impact'], CUES[3]['land']
     hole = V((G1_HOLE[0], G1_HOLE[1], 0.0))
     # L'herbe autour du trou, hors du couloir étroit que voit le téléobjectif : la plongée la découvre.
-    xy = beside(spread(view.pos, hole, (500_000, 1.2, 9.0, 28, 0.6), seed=61), view, 6, back=0.0)
+    xy = beside(spread(view.pos, hole, (500_000, 1.2, 9.0, 28, 0.6), seed=61), view, half_3(), back=0.0)
     a.turf.grow(outside(xy, G1_HOLE, P.CUP_R + 0.001), a.obstacles, seed=63)
     K.setup()
     # Le putter reste en fin de geste : le joueur regarde sa balle rouler.

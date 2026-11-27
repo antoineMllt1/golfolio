@@ -755,9 +755,10 @@ CUP_LIP = 0.025  # le godet est enfoncé de 25 mm sous le bord
 CUP_DEPTH = 0.110  # fond du godet
 
 
-def cup(center=(0.0, 0.0)):
+def cup(center=(0.0, 0.0), soil_tone=1.0):
     """Le trou et son godet : une bande de terre de 25 mm sous le bord du gazon, puis le godet blanc,
-    son fond percé de six lumières et la douille où s'emboîte le drapeau."""
+    son fond percé de six lumières et la douille où s'emboîte le drapeau. soil_tone : clarté de la
+    terre (plus de 1 : une terre plus claire, pour une paroi vue à l'ombre, éclairée par le seul ciel)."""
     d = CUP_DEPTH
     prof = [(CUP_R, 0.0), (CUP_R + 0.0005, -0.006), (CUP_R, -CUP_LIP), (CUP_INNER, -CUP_LIP), (CUP_INNER, -d), (0.016, -d), (0.0125, -d + 0.010), (0.0090, -d + 0.010), (0.0090, -d - 0.030)]
     segs = 128
@@ -772,9 +773,9 @@ def cup(center=(0.0, 0.0)):
     nt.links.new(tc.outputs['Object'], noise.inputs['Vector'])
     ramp = nt.nodes.new('ShaderNodeValToRGB')
     ramp.color_ramp.elements[0].position = 0.3
-    ramp.color_ramp.elements[0].color = (0.022, 0.014, 0.008, 1)
+    ramp.color_ramp.elements[0].color = (0.022 * soil_tone, 0.014 * soil_tone, 0.008 * soil_tone, 1)
     ramp.color_ramp.elements[1].position = 0.75
-    ramp.color_ramp.elements[1].color = (0.105, 0.070, 0.040, 1)
+    ramp.color_ramp.elements[1].color = (0.105 * soil_tone, 0.070 * soil_tone, 0.040 * soil_tone, 1)
     nt.links.new(noise.outputs['Fac'], ramp.inputs[0])
     nt.links.new(ramp.outputs[0], bsdf(soil).inputs['Base Color'])
     bump = nt.nodes.new('ShaderNodeBump')
